@@ -55,11 +55,11 @@
 
 ## 特点
 - 运行：参考上交2018代码写法，通过运行可执行程序时输入参数，控制代码的执行，相比较于预编译的写法而言，在使用上更加方便，也更易于调试。可输入的参数包括：
-	- 兵种（-hero -infantry -sentry -UAV -video），其中-video表示使用视频运行代码
+	- 兵种（-hero -melee -track -sentry -UAV -video），其中-video表示使用视频运行代码
 	- 目标颜色(-blue -red)
-	- 调试选项(-origin -boxes -lamp 等等)
+	- 调试选项(-origin -box -l 等等)
 	- 相机编号(-cameraIndex = )
-	- 打开视频路径(-path = )，
+	- 打开视频路径(-path= )，
 	具体参数可在运行时添加 -help 参数查看。 
 
 - 统一的相机驱动接口：我们使用了包括支持UVC协议的USB摄像头，Intel D435双目摄像头，大华A5131CU210工业摄像头在内的多种摄像头，这在一定程度上造成了我们在不同机器人上往往需要采取不同的摄像头驱动，为代码的移植更新带来了不便，为此我们提供统一的接口driver(虚函数)来根据机器人的种类选择不同的驱动，一定程度上减小了多种摄像头带来的困扰。
@@ -117,25 +117,79 @@ Pnp的原理部分可以参见
 https://blog.csdn.net/KYJL888/article/details/81319422?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-3.channel_param&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-3.channel_param
 
 ### 2.3 能量机关
+能量机关Energy类通过接口函数 ```EnergyTask(Mat& src)``` 调用能量机关识别。该接口函数由以下功能函数顺序执行，最终计算出预测打击坐标```predict_point```。
+#### 2.3.1  **detectArmor**
+该函数用以检测所有装甲。调用```isValidArmorContour```来判断找到的装甲尺寸是否合格。将所有合理的装甲板传入Energy类成员```armors```中。
+#### 2.3.2  detectFlowStripFan
+该函数用以检测所有可能的流动条所在的扇叶。调用```isValidFlowStripFanContour```来判断找到的扇叶尺寸是否合格。将所有合理的装甲板传入Energy类成员```flow_strip_fans```中。
+#### 2.3.3  detectR
+该函数用以确定唯一中心点```centerR```。 首先检测所有可能的中心R，然后调用```isValidCenterRContour```进行初筛，再通过判断是否与```flow_strip_fans```有重合部分作二次筛选。若有多个候选R，通过比较与上一帧R距离大小打分，筛选出唯一中心点```centerR```，确定R中心坐标（作为风车旋转中心点）```circle_center_point```。
+#### 2.3.4 getTargetPoint
+该函数用以确定目标装甲板。在本算法中主要以两大因素评判装甲板：
+- 装甲板与流动条所在扇叶交集面积    
+
+- 装甲板与上一次目标装甲板距离
+
+选取得分最高的装甲板传入```target_armor```，将其中心点传入```target_point```
+#### 2.3.5  getPredictPoint
+1. 转为极坐标系。先将目标打击点转为极坐标```target_polar_angle```便于后续角度计算。
+2. 执行大小符提前角度计算。
+
+- 大符模式
+创建Energy类成员```target_angle_1second```记录一秒内目标极坐标。
+通过```target_angle_1second```里的部分值计算角速度```v0_rate```。再判断该角速度是否合理。若不合理，用预测速度替代测量速度，使用预测速度算出提前角：
+```c++
+    if ((v0_rate < 0.52) || (v0_rate > 2.09)) {
+        t1_real = getTickCount();
+        t1 = (t1_real - t0_real)*0.000000001 + t0;     //ms->s
+        predict_rad_norm = calPreAngle(t1, t1 + shoot_Debug);    //用预测速度替代测量速度
+    }
+```
+若合理，使用当前速度算出提前角
+```c++
+    else{
+            float wt = asin(((v0_rate) - 1.305) / 0.785);       //wt--rad/s ,[-1,1]
+            if (wt > 0) {
+                if (v0_rate_1 > v0_rate_2)
+                    wt += 90 * (PI / 180);      //90~180
+            } else {
+                if (v0_rate_1 > v0_rate_2)
+                    wt -= 90 * (PI / 180);      //-90~-180
+            }
+            t0_real = getTickCount();       //获得开始点时间
+            t0 = wt / OMEGA;      //映射到速度三角函数里
+            predict_rad_norm = calPreAngle(t0, t0 + shoot_Debug);
+        }
+```
+在大符模式中，通过调用```calPreAngle(float start_time, float end_time) ```计算提前角。该函数根据官方给出的正弦速度曲线以及总射击时间计算出射击提前角。所以只需在找到第一个目标点时确定```t0_real```以及其角度映射在正弦速度曲线上的```t0```，后续任务中获取```t1_real```即可确定该时刻在速度曲线上的```t1```，调用```calPreAngle```即可获得此时刻的提前角```predict_rad_norm```。
+- 小符模式
+由于小符模式速度恒定，即每秒角速度一定，预测提前角度即为射击时间与小符转速的乘积。
+
+- 解算回直角坐标系
+
+确定提前角后，结合旋转方向将其与目标极坐标做加减运算。再将其转回直角坐标系，解算回```predict_point```。
+
 
 
 ### 2.4 神经网络
+神经网络的应用上，使用YOLOv4和YOLOv4-Tiny作为主要的网络作为尝试，相比与传统的视觉算法来说，神经网络的优点在于它的高效和能够更深入地调用我们所选
+用的硬件平台的计算资源。我们曾尝试过对传统视觉方法进行一定的CUDA加速，但是由于任务中需要并行的部分并不多，导致加速效果其实微乎其微。
 
+但如果使用神经网络进行装甲板或者车体的识别，可以将整个模型推理的过程结合NVIDIA生态的DEEPSTREAM平台进行加速，可能效果会好很多，可能未来比赛场会上以
+神经网络为主，传统方法为辅的视觉处理结构为主流。
 
-### 2.5 通信控制
+鉴于我们对神经网络的使用很粗糙，且没有训练模型的一些合适的数据，导致实际使用效果并不理想，因此这部分并不展开说明，具体使用参见Detector类中的`ModelDetectTask`。
 
-
-### 2.7 多线程及自启动
+### 2.6 多线程及自启动
 多线程上使用C++11开始提供的thread头文件，通过创建多个线程来同时执行多个耦合程度较小的任务，通过锁机制和通信量管理任务流程的进行，合理分配计算和数据资源，避免线程间的混乱执行。项目的线程包括：
 - 图像采集线程
 - 装甲板检测线程
 - 能量机关线程
 - 神经网络线程
 - 反馈接收线程
-
 其中装甲板检测、能量机关和神经网络线程可以并行执行，这也是多线程起作用的主要原因之一。
+
 ![multi-threads](https://github.com/luojunhui1/BlogPicture/blob/master/Windows/threads%20(1).jpg)
-
-
+(图例仅为设计图，实际实现并不与图中说明完全一致)
 ## 注意
 本代码中所有所需链接库及头文件，除openCV相关文件外均置于项目文件夹内，但须注意，当使用DAHUA工业摄像头及Intel435D摄像头时，存在链接库平台问题，需及时替换链接库版本。
