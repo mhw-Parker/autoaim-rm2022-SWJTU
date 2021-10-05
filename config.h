@@ -1,0 +1,2 @@
+/* #undef DAHUA */
+#define MIND
