@@ -1,2 +1,3 @@
 #cmakedefine DAHUA
 #cmakedefine MIND
+#cmakedefine REALSENSE

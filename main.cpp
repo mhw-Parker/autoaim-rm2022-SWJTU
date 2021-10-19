@@ -41,24 +41,15 @@ int main(int argc, char** argv)
 #endif
 
     ImgProdCons pro;
-    pro.Init();
-
-    std::thread produceThread(&rm::ImgProdCons::Produce, &pro);
-    producePThreadHandler = produceThread.native_handle();
-
-    std::thread detectThread(&rm::ImgProdCons::Detect, &pro);
-    detectPThreadHandler = detectThread.native_handle();
-
-    std::thread energyThread(&rm::ImgProdCons::Energy, &pro);
-    energyPThreadHandler = energyThread.native_handle();
-
-    std::thread feedbackThread(&rm::ImgProdCons::Feedback, &pro);
-    feedbackPThreadHandler = feedbackThread.native_handle();
-
-    produceThread.join();
-    detectThread.join();
-    energyThread.join();
-    feedbackThread.join();
+    if(pro.Init()){
+        while(1){
+            pro.Produce();
+            pro.Detect();
+            pro.Feedback();
+            cout << endl;
+            if(!pro.GrabFlag) break;
+        }
+    }
 
     return 0;
 }
