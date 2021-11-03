@@ -22,11 +22,13 @@ option (MIND  "enable mind"  OFF)
 option (REALSENSE "enable realsense" OFF)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
-include_directories(${PROJECT_SOURCE_DIR}/Thread/include)
-include_directories(${PROJECT_SOURCE_DIR}/Serials/include)
+include_directories(${PROJECT_SOURCE_DIR}/Thread)
+include_directories(${PROJECT_SOURCE_DIR}/Serials)
 include_directories(${PROJECT_SOURCE_DIR}/Detector/Armor)
 include_directories(${PROJECT_SOURCE_DIR}/Other/include)
-include_directories(${PROJECT_SOURCE_DIR}/Pose/include)
+include_directories(${PROJECT_SOURCE_DIR}/Math/Kalman)
+include_directories(${PROJECT_SOURCE_DIR}/Math/SolveAngle)
+include_directories(${PROJECT_SOURCE_DIR}/Math/Filter)
 include_directories(${PROJECT_SOURCE_DIR}/Predictor/include)
 include_directories(${PROJECT_SOURCE_DIR}/Detector/Energy)
 include_directories(${PROJECT_SOURCE_DIR}/Drivers/V4L2KAS/include)
@@ -66,8 +68,8 @@ MESSAGE(STATUS "MindVision CAMERA is : ${MIND}")
 MESSAGE(STATUS "DAHUA CAMERA is : ${DAHUA}")
 MESSAGE(STATUS "realsense CAMERA is : ${REALSENSE}")
 
-FILE(GLOB_RECURSE sourcefiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detector/Armor/*.cpp" "Serials/src/*.cpp" "Thread/src/*.cpp"
-        "Pose/src/*.cpp" "Predictor/src/*.cpp" "Drivers/V4L2KAS/src/*.cpp" "Drivers/VideoDriver/src/*.cpp" )
+FILE(GLOB_RECURSE sourcefiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detector/Armor/*.cpp" "Serials/*.cpp" "Thread/*.cpp"
+        "Math/Filter/*.cpp" "Math/SolveAngle/*.cpp" "Math/Kalman/*.cpp" "Drivers/V4L2KAS/src/*.cpp" "Drivers/VideoDriver/src/*.cpp" )
 
 #when "Drivers/DAHUA/src/*.cpp" is added to the sourcefiles at last line, these .cpp files looks like not been complied
 ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourcefiles} ${DRIVER_SRC})
