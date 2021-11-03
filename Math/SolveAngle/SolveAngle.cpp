@@ -10,7 +10,7 @@ using namespace cv;
 
 SolveAngle::SolveAngle()
 {
-	string filename ="../camera.xml";
+	string filename ="./camera.xml";
 	FileStorage fs(filename, FileStorage::READ);
 	if (!fs.isOpened()) {
 		cout << "no such file" << endl;
