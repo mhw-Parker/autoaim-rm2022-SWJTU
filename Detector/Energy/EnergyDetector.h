@@ -117,6 +117,7 @@ private:
 	void getPredictRect();
 
     Point2f calPredict(float theta) const;
+    void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src);
 
 /*** new solve angle ***/
@@ -159,7 +160,8 @@ private:
     float predict_rad;//预测提前角
     float predict_rad_norm;//预测提前角的绝对值
 
-    
+    int misscount = 0;
+
     float target_polar_angle;//待击打装甲板的极坐标角度
     float last_target_polar_angle_judge_rotation;//上一帧待击打装甲板的极坐标角度（用于判断旋向）
 
@@ -171,16 +173,7 @@ private:
     int64 last_frame_time;
     int64 frame_time;
 
-    int small_rate = 60;    //小符60°/s = 1.05rad/s
-    vector<int> target_angle_1second;//1s内每帧的目标点角度
-    float v0_rate;
-    float v1_rate;
-    float t0;
-    float t1;
-    int64 t0_real;
-    int64 t1_real;
-    int tiao_armor_f = 0;
-    float shoot_Debug = 0.2;
+
 };
 
 #endif //ENERGY_H

@@ -101,22 +101,22 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
 
 ///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 3000; 
-    _flow.armor_contour_area_min = 1200;
-    _flow.armor_contour_length_max = 100;
-    _flow.armor_contour_length_min = 40;
-    _flow.armor_contour_width_max = 60;
-    _flow.armor_contour_width_min = 20;
+    _flow.armor_contour_area_max = 1500;
+    _flow.armor_contour_area_min = 400;
+    _flow.armor_contour_length_max = 50;
+    _flow.armor_contour_length_min = 25;
+    _flow.armor_contour_width_max = 30;
+    _flow.armor_contour_width_min = 15;
     _flow.armor_contour_hw_ratio_max = 3;
     _flow.armor_contour_hw_ratio_min = 1;
 
 ///流动条所在扇叶的相关筛选参数
     _flow.flow_strip_fan_contour_area_max = 6200;
-    _flow.flow_strip_fan_contour_area_min = 4400;
+    _flow.flow_strip_fan_contour_area_min = 1400;
     _flow.flow_strip_fan_contour_length_max = 200;
-    _flow.flow_strip_fan_contour_length_min = 120;
+    _flow.flow_strip_fan_contour_length_min = 30;
     _flow.flow_strip_fan_contour_width_max = 110;
-    _flow.flow_strip_fan_contour_width_min = 40;
+    _flow.flow_strip_fan_contour_width_min = 20;
     _flow.flow_strip_fan_contour_hw_ratio_max = 2.8;
     _flow.flow_strip_fan_contour_hw_ratio_min = 1.2;
     _flow.flow_strip_fan_contour_area_ratio_max = 0.55;
@@ -128,9 +128,9 @@ void EnergyDetector::initEnergyPartParam() {
 
 ///流动条相关参数筛选
     _flow.flow_strip_contour_area_max = 700;
-    _flow.flow_strip_contour_area_min = 50;
+    _flow.flow_strip_contour_area_min = 200;
     _flow.flow_strip_contour_length_max = 55;
-    _flow.flow_strip_contour_length_min = 40;//32
+    _flow.flow_strip_contour_length_min = 20;//32
     _flow.flow_strip_contour_width_max = 20;
     _flow.flow_strip_contour_width_min = 4;
     _flow.flow_strip_contour_hw_ratio_min = 3;
@@ -142,7 +142,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.twin_point_max = 20;
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
-    _flow.Center_R_Control_area_max = 3000;
+    _flow.Center_R_Control_area_max = 1500;
     _flow.Center_R_Control_area_min = 600;
     _flow.Center_R_Control_length_max = 20;
     _flow.Center_R_Control_length_min = 6;
@@ -154,12 +154,12 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.Center_R_Control_area_intersection_area_min = 10;
 
 ///扇叶筛选相关参数
-    _flow.flow_area_max = 5000;
-    _flow.flow_area_min = 1500;
+    _flow.flow_area_max = 2000;
+    _flow.flow_area_min = 500;
     _flow.flow_length_max = 100;
-    _flow.flow_length_min = 45;
+    _flow.flow_length_min = 30;
     _flow.flow_width_max = 52;
-    _flow.flow_width_min = 10;
+    _flow.flow_width_min = 5;
     _flow.flow_aim_max = 3.5;
     _flow.flow_aim_min = 1.2;
     _flow.flow_area_ratio_min = 0.6;
@@ -192,17 +192,27 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode) {
     BIG_MODE = mode;
 
     binary = preprocess(img);
-
+    //imshow("binary",binary);
     if (detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)) {
         calR();
-        getPredictPoint(binary);
+        getPredictPointSmall(binary);
 		OutputAngle(target_point);
+        getPts(target_armor);
         detect_flag = true;
-    }else detect_flag = false;
+        misscount = 0;
+    }else{
+        misscount++;
+        yaw = 0;
+        pitch = 0;
+        if(misscount>5){
+            misscount = 0;
+            detect_flag = false;
+        }
+    }
 
     circle(outline, Point(IMGWIDTH/2, IMGHEIGHT/2), 2, Scalar(255, 255, 255), 3); //画出图像中心
-    imshow("outline", outline);
-
+    //imshow("outline", outline);
+    //waitKey(1);
 }
 
 /**
@@ -553,7 +563,7 @@ Point2f EnergyDetector::calPredict(float theta) const {
  * @brief 通过相邻帧的圆心指向目标的向量叉乘来达到既能判断方向，又可以通过叉乘求角度相邻帧转过的角度（因为已知R在图像中为168）
  * @remark 给出预测射击点位置predict_point
  */
-void EnergyDetector::getPredictPoint(const Mat& src) {
+void EnergyDetector::getPredictPointSmall(const Mat& src) {
     cv::Point3i last_target_vector = Point3i(last_target_point - last_circle_center_point);
     cv::Point3i target_vector = Point3i(target_point - circle_center_point);
     cv::Point3i last_cross_cur = last_target_vector.cross(target_vector);
@@ -568,6 +578,12 @@ void EnergyDetector::getPredictPoint(const Mat& src) {
     predict_point = calPredict(predict_rad);
     circle(outline, predict_point, 4, Scalar(0, 0, 255), -1);
     updateLastValues();
+}
+
+/***/
+void EnergyDetector::getPredictPoint(const Mat &src)
+{
+
 }
 
 /**
