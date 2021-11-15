@@ -15,6 +15,7 @@ void getsystime(systime& t) {
 	t = tv.tv_usec / 1000.0 + tv.tv_sec * 1000.0 - time_base;
 }
 
+
 #elif defined(Windows) || defined(_WIN32)
 
 void getsystime(systime& t) {

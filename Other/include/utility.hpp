@@ -8,6 +8,7 @@
 #include <utility>
 #include <thread>
 #include <string>
+#include <time.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -128,12 +129,30 @@ namespace RMTools
     /**
  * 求平均值
  */
-    inline double average(const double *x, int len)
-    {
+    inline double average(const double *x, int len);
+
+    double average(const double *x, int len) {
         double sum = 0;
         for (int i = 0; i < len; i++) // 求和
             sum += x[i];
         return sum/len; // 得到平均值
+    }
+
+    inline double CalWasteTime(double BeginTime, double freq)
+    {
+        return (getTickCount()-BeginTime) * 1000 / freq ;
+    }
+/**
+ * @brief 获得系统当前时间，放在这里定义有bug
+ * @return string
+ */
+    inline string getSysTime()
+    {
+        time_t timep;
+        time (&timep);
+        char tmp[64];
+        strftime(tmp, sizeof(tmp), "%Y-%m-%d_%H:%M:%S",localtime(&timep));
+        return tmp;
     }
 
 /**

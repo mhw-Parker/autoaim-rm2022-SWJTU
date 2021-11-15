@@ -16,11 +16,11 @@
 #endif
 
 #ifndef SMALL_ENERGY_STATE
-#define  SMALL_ENERGY_STATE 2
+#define  SMALL_ENERGY_STATE 12
 #endif
 
 #ifndef BIG_ENERGY_STATE
-#define  BIG_ENERGY_STATE 2
+#define  BIG_ENERGY_STATE 13
 #endif
 
 #ifndef MODEL_MODE
@@ -82,7 +82,7 @@
 #endif
 
 #ifndef SAVE_VIDEO
-#define  SAVE_VIDEO 1
+#define  SAVE_VIDEO 0
 #endif
 
 #ifndef SAVE_LOG
@@ -94,12 +94,14 @@
 #endif
 
 #ifndef SVM_PARAM_PATH
-#define  SVM_PARAM_PATH "../Armor/resource/svm.xml"
+#define  SVM_PARAM_PATH "../Detector/resource/svm.xml"
 #endif
 
 #ifndef SVM_IMAGE_SIZE
 #define  SVM_IMAGE_SIZE 40
 #endif
+
+#include "config.h"
 
 extern bool showArmorBox;
 extern bool showOrigin;
