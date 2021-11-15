@@ -300,9 +300,8 @@ namespace rm
             if (armorDetectorPtr->findState)
             {
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
-                solverPtr->GetPoseV(Point2f(0, 0),
-                                    armorDetectorPtr->targetArmor.pts,
-                                    15, armorDetectorPtr->IsSmall());
+                solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
+                                    armorDetectorPtr->IsSmall());
                 /**record distance for debug**/
                 dis_count++;
                 dis_sum += solverPtr->dist;
@@ -469,9 +468,8 @@ namespace rm
         }
         else
         {
-            solverPtr->GetPoseV(Point2f(0, 0),
-                                energyPtr->pts,
-                                15, false);
+            solverPtr->GetPoseV(energyPtr->pts,
+                                false);
             /* do energy things */
             if (showEnergy)
             {
@@ -482,10 +480,10 @@ namespace rm
                 putText(energyFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(energyPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(energyPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "deltaX: ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 putText(energyFrame, to_string(energyPtr->deltaX), Point(120, 120), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
@@ -498,37 +496,39 @@ namespace rm
                     circle(energyFrame, Point(160, 180), 4, Scalar(255, 255, 255), 3);
 
                 imshow("energy", energyFrame);
+                waitKey(1);
             }
 
-            serialPtr->pack(-energyPtr->yaw,
-                            energyPtr->pitch,
+            serialPtr->pack(-solverPtr->yaw,
+                            solverPtr->pitch,
                             solverPtr->dist,
                             solverPtr->shoot,
                             energyPtr->detect_flag,
                             curControlState,
                             0);
 #if SAVE_LOG == 1
-            string s = getSysTime();
-            logWrite <<"=========== produce mission ==========="<< endl;
-            logWrite << s << endl;
-            logWrite << "yaw angle : " << energyPtr->yaw << endl;
-            logWrite << "pitch angle : " << energyPtr->pitch << endl;
-            logWrite << "detect or not : " << energyPtr->detect_flag << endl;
+//            string s = getSysTime();
+//            logWrite <<"=========== produce mission ==========="<< endl;
+//            logWrite << s << endl;
+//            logWrite << "yaw angle : " << solverPtr->yaw << endl;
+//            logWrite << "pitch angle : " << solverPtr->pitch << endl;
+//            logWrite << "detect or not : " << energyPtr->detect_flag << endl;
+            logWrite << solverPtr->tvecs << endl;
 #endif
         }
 
 
         /**press key 'p' to pause or continue task**/
-//        if(DEBUG || showOrigin || showEnergy)
-//        {
-//            if(!pauseFlag && waitKey(30) == 'p'){pauseFlag = true;}
-//
-//            if(pauseFlag)
-//            {
-//                while(waitKey() != 'p'){}
-//                pauseFlag = false;
-//            }
-//        }
+        if(DEBUG || showOrigin || showEnergy)
+        {
+            if(!pauseFlag && waitKey(30) == 32){pauseFlag = true;}
+
+            if(pauseFlag)
+            {
+                while(waitKey() != 32){}
+                pauseFlag = false;
+            }
+        }
 
         /** send data from host to low-end machine to instruct holder's movement **/
         if(serialPtr->WriteData())
