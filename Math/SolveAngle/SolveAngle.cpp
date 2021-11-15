@@ -10,7 +10,7 @@ using namespace cv;
 
 SolveAngle::SolveAngle()
 {
-	string filename ="./camera.xml";
+	string filename ="../Math/SolveAngle/camera.xml";
 	FileStorage fs(filename, FileStorage::READ);
 	if (!fs.isOpened()) {
 		cout << "no such file" << endl;
@@ -23,12 +23,14 @@ SolveAngle::SolveAngle()
             fs["Intrinsic_Matrix_Realsense"] >> cameraMatrix;
             break;
         case INFANTRY_MELEE:
-            fs["Distortion_Coefficients4_MIND"] >> distortionCoefficients;
+            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
             break;
         case INFANTRY_TRACK:
             break;
         case VIDEO:
+            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
         case SENTRY:
             fs["Distortion_Coefficients4_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
@@ -118,28 +120,25 @@ void SolveAngle::GetPose(const Rect& rect, float ballet_speed, bool small)
     targetPoints3D.clear();
 }
 
-void SolveAngle::GetPoseV(Point2f predictOffset, const vector<Point2f>& pts, float ballet_speed, bool small)
+
+void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode)
 {
     cv::Mat Rvec;
     cv::Mat_<float> Tvec;
-    Generate3DPoints(small);
+    Generate3DPoints(armor_mode);
     rvecs = Mat::zeros(3, 1, CV_64FC1);
     tvecs = Mat::zeros(3, 1, CV_64FC1);
 
     if(pts.size() != 4)return;
 
-    for(auto p:pts)
-    {
-        p += predictOffset;
-    }
-
     solvePnP(targetPoints3D, pts, cameraMatrix, distortionCoefficients, rvecs, tvecs,false, SOLVEPNP_ITERATIVE);
     rvecs.convertTo(Rvec, CV_32F);    //旋转向量
     tvecs.convertTo(Tvec, CV_32F);   //平移向量
 
-    yaw = atan(tvecs.at<double>(0, 0) / tvecs.at<double>(2, 0)) / 2 / CV_PI * 360;
-    pitch = -1.0*atan(tvecs.at<double>(1, 0) / tvecs.at<double>(2, 0)) / 2 / CV_PI * 360;
-    dist = sqrt(tvecs.at<double>(0, 0)*tvecs.at<double>(0, 0) + tvecs.at<double>(1, 0)*tvecs.at<double>(1, 0) + tvecs.at<double>(2, 0)* tvecs.at<double>(2, 0));
+    camXYZ2YPD(tvecs);
+//    yaw = atan(tvecs.at<double>(0, 0) / tvecs.at<double>(2, 0)) / 2 / CV_PI * 360;
+//    pitch = -1.0*atan(tvecs.at<double>(1, 0) / tvecs.at<double>(2, 0)) / 2 / CV_PI * 360;
+//    dist = sqrt(tvecs.at<double>(0, 0)*tvecs.at<double>(0, 0) + tvecs.at<double>(1, 0)*tvecs.at<double>(1, 0) + tvecs.at<double>(2, 0)* tvecs.at<double>(2, 0));
 
     averageX = 0;
     averageY = 0;
@@ -161,24 +160,53 @@ void SolveAngle::GetPoseV(Point2f predictOffset, const vector<Point2f>& pts, flo
     targetPoints3D.clear();
 }
 
+/**
+ * @brief 相机坐标系xyz变为 yaw pitch dist
+ * */
+void SolveAngle::camXYZ2YPD(Mat tvecs)
+{
+    cv2eigen(tvecs,p_cam_xyz);
+    yaw = atan2(p_cam_xyz[0],p_cam_xyz[2]) / (2*CV_PI) * 360 ; //arctan(x/z)
+    pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360; //arctan(y/sqrt(x^2 + z^2))
+    dist = sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[1]*p_cam_xyz[1] + p_cam_xyz[2]*p_cam_xyz[2]); //sqrt(x^2 + y^2 + z^2)
+}
+
+/**
+ * @brief 将装甲板中心设为 pnp 解算 4 点模型的解算原点
+ * @remark 装甲板的实际大小可能要根据情况修改
+ * */
 void SolveAngle::Generate3DPoints(bool mode)
 {
     //because the armor is  incline,so the height of the armor should be smaller than reality.
-	if (mode)
-	{
+	if (mode){
         targetHeight3D = 125;
         targetWidth3D = 135;
-
 	}
-	else
-	{
+	else{
         targetHeight3D = 125;
         targetWidth3D = 230;
-
 	}
     targetPoints3D.emplace_back(-targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(-targetWidth3D / 2, targetHeight3D / 2, 0);
+}
+
+/**
+ * @brief 将预测点反投影到图像上
+ * @param obj_p_ypd 预测点的（ yaw, pitch, dist ）坐标
+ * @param tvecs 平移矩阵
+ * @param rvecs 旋转矩阵
+ * @param img_p 反投影图像上的坐标
+ * */
+void SolveAngle::backProjection(Mat tvecs, Mat rvecs, Vector3d obj_p_ypd, vector<Point2f> &img_p) {
+    vector<Point3f> obj_p_xyz;
+    float a = tan(obj_p_ypd[0] / 360 * 2*CV_PI); //tan(yaw)，转为弧度值
+    float b = tan(obj_p_ypd[1] / 360 * 2*CV_PI); //tan(pitch)
+    float d = pow(obj_p_ypd[2],2);        //dist^2
+    obj_p_xyz[0].x = sqrt((a*a*d*d)/(a*a+1)/(b*b+1) ) * (obj_p_ypd[0]<0?-1:1); //若yaw为负值，x也为负值
+    obj_p_xyz[0].y = sqrt(d/(1+1/(b*b)) ) * (obj_p_ypd[1]<0?1:-1); //若pitch为负值，由于相机坐标系下为正，所以此时y为正值
+    obj_p_xyz[0].z = sqrt(d*d/(a*a+1)/(b*b+1) );
+    projectPoints(obj_p_xyz, rvecs, tvecs, cameraMatrix, distortionCoefficients, img_p);
 }
 

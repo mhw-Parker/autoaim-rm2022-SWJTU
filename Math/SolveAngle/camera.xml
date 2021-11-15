@@ -42,17 +42,17 @@
     <cols>3</cols>
     <dt>d</dt>
     <data>
-      1271.9000000000 0.0000000000000 0.0000000000000
-      0.0000000000000 1176.9000000000 0.0000000000000
-      726.52700000000 529.27510000000 1.0000000000000
+      1351.657656385913 0.000000000000000 676.3608797375953
+      0.000000000000000 1349.760819492449 500.4147922454784
+      0.000000000000000 0.000000000000000 1.000000000000000
     </data>
   </Intrinsic_Matrix_MIND>
-  <Distortion_Coefficients4_MIND type_id="opencv-matrix">
-    <rows>4</rows>
+  <Distortion_Coefficients5_MIND type_id="opencv-matrix">
+    <rows>5</rows>
     <cols>1</cols>
     <dt>d</dt>
-    <data>-0.2477 0.3822 0.0000 0.0000
+    <data>-0.02972117950492351 -0.1979342313490821 0.006255281843520727 0.006100406627488073 1.107617381613446
     </data>
-  </Distortion_Coefficients4_MIND>
+  </Distortion_Coefficients5_MIND>
 
 </opencv_storage>
