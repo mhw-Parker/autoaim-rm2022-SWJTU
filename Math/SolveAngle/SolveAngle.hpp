@@ -29,7 +29,8 @@ public:
 
 	void Generate2DPoints(Rect rect);
 	void GetPose(const Rect& rect, float ballet_speed, bool small);
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode);
+    void GetPoseV(const vector<Point2f>& pts, bool armor_mode); //Pnp模型
+    void GetPoseSH(const Point2f p); //小孔成像模型
 	void Generate3DPoints(bool mode);
 
     void camXYZ2YPD(Mat tvecs);
@@ -44,6 +45,7 @@ private:
 	float targetWidth3D{};
 	float targetHeight3D{};
 
+    Matrix3f camMat_E;
 	int shootPriority = 0;
 	float averageX;
 	float averageY;

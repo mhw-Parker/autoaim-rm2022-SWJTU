@@ -5,7 +5,7 @@
 #include "mydefine.h"
 
 bool showArmorBox = true;
-bool showOrigin = true;
+bool showOrigin = false;
 bool showLamps = true;
 bool showEnergy = false;
 bool showBianryImg = false;

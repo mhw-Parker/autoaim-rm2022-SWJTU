@@ -61,11 +61,11 @@
 
 /*IMAGEHEIGHT AND IMAGEWIDTH just for initialize the camera, maybe not the real frame format*/
 #ifndef IMAGEWIDTH
-#define  IMAGEWIDTH 640
+#define  IMAGEWIDTH 1280
 #endif
 
 #ifndef IMAGEHEIGHT
-#define  IMAGEHEIGHT 480
+#define  IMAGEHEIGHT 1024
 #endif
 
 #ifndef CARNAME_
@@ -75,6 +75,10 @@
 
 #ifndef DEBUG
 #define  DEBUG 0
+#endif
+
+#ifndef SHOWTIME
+#define SHOWTIME 0
 #endif
 
 #ifndef DEBUG_MSG

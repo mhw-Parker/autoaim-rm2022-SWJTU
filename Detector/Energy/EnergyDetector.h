@@ -66,15 +66,16 @@ public:
     cv::Point2f circle_center_point;//风车圆心坐标
     std::vector<cv::Point2f> target_armor_centers;//get R
 
-	bool detect_flag;
-    float deltaX;
-    float deltaY;
+	bool detect_flag = false;
+    float deltaX = 0;
+    float deltaY = 0;
     float yaw;
 	float pitch;
 
 private:
     const float R = 168;
     const float PI = 3.14;
+    const float K = 8; //半径倍数
 
     polarLocal polar_t;
     bool show_armors; //是否显示所有装甲
@@ -102,6 +103,10 @@ private:
     bool getTargetPoint(Mat &src);
 	void detectCircleCenter(Mat &src);
 
+    void findROI(Mat &src);
+    void roiPoint2rc();
+    Point2f roi_sp; //roi的左上角起始点
+
     bool isValidArmorContour(const vector<cv::Point>& armor_contour) const;//装甲板矩形尺寸要求
     bool isValidCenterRContour(const vector<cv::Point>& center_R_contour);//风车中心选区尺寸要求
     bool isValidFlowStripFanContour(cv::Mat& src, const vector<cv::Point>& flow_strip_fan_contour) const;//流动条扇叶矩形尺寸要求
@@ -120,6 +125,8 @@ private:
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src);
 
+    Mat roi;
+
 /*** new solve angle ***/
     void getImageDeltaXY(Point2f p);
 	void OutputAngle(Point2f p);
@@ -132,6 +139,13 @@ private:
     float dpy = 529.27;
 #endif
 
+/*** *** *** *** *** ***/
+
+/*** new predict ***/
+    float spd_int(float t);
+    float delta_theta[4]; //定义一个4维的向量存放theta差值
+    float angle[4];
+    float last_angle;
 /*** *** *** *** *** ***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板

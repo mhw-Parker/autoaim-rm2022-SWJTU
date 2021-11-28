@@ -119,6 +119,10 @@ namespace rm
 
         double taskTime;
         double freq;
+
+        int cnt1 = 0;
+        float tt;
+
         /*Camera Driver Instanc -es*/
 #ifdef DAHUA
         RMDriver dahuaCapture;
@@ -146,6 +150,9 @@ namespace rm
         Mat frame;
         Mat detectFrame;
         Mat energyFrame;
+
+        float yaw_abs;
+        float pitch_abs;
 
         struct ReceiveData receiveData;
         int armorType;

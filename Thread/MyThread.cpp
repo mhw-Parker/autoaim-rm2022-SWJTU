@@ -234,10 +234,16 @@ namespace rm
 #if SAVE_VIDEO == 1
     videowriter.write(frame);
 #endif
-        //serialPtr->ReadData(receiveData); //get current gimbal degree while capture
+        //get current gimbal degree while capture
+        if(!serialPtr->ReadData(receiveData)){
+            receiveData.yawAngle = 0;
+            receiveData.pitchAngle = 0;
+        }
         detectFrame = frame.clone();
         energyFrame = frame.clone();
+#if SHOWTIME == 1
         cout << "Frame Produce Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
+#endif
     }
     
     void ImgProdCons::Detect() 
@@ -290,7 +296,13 @@ namespace rm
             /* do energy detection */
             energyPtr->EnergyTask(energyFrame, curControlState);
         }
+#if SHOWTIME == 1
         cout << "Energy Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
+        tt += CalWasteTime(taskTime,freq);
+        cnt1++;
+
+        cout << "average time = " << tt / cnt1 << endl;
+#endif
     }
 
     void ImgProdCons::Feedback()
@@ -470,6 +482,9 @@ namespace rm
         {
             solverPtr->GetPoseV(energyPtr->pts,
                                 false);
+            //cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
+            //solverPtr->GetPoseSH(energyPtr->target_point);
+            //cout << "by small hole : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
             /* do energy things */
             if (showEnergy)
             {
@@ -492,20 +507,30 @@ namespace rm
                 putText(energyFrame, to_string(energyPtr->deltaY), Point(120, 150), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                if (energyPtr->detect_flag)
-                    circle(energyFrame, Point(160, 180), 4, Scalar(255, 255, 255), 3);
+                if (energyPtr->detect_flag){
+                    for (int i = 0; i < 4; i++) {
+                        line(energyFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
+                             Scalar(255, 255, 255), 2, LINE_8);
+                    }
+                    circle(energyFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
+                    circle(energyFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                }
+
 
                 imshow("energy", energyFrame);
                 waitKey(1);
             }
+            yaw_abs = receiveData.yawAngle - solverPtr->yaw; //绝对yaw角度
+            pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
 
-            serialPtr->pack(-solverPtr->yaw,
-                            solverPtr->pitch,
+            serialPtr->pack(yaw_abs,
+                            pitch_abs,
                             solverPtr->dist,
                             solverPtr->shoot,
                             energyPtr->detect_flag,
                             curControlState,
                             0);
+            //cout << yaw_abs << "\t" << pitch_abs << endl;
 #if SAVE_LOG == 1
 //            string s = getSysTime();
 //            logWrite <<"=========== produce mission ==========="<< endl;
@@ -517,11 +542,11 @@ namespace rm
 #endif
         }
 
-
-        /**press key 'p' to pause or continue task**/
+        /**press key 'space' to pause or continue task**/
         if(DEBUG || showOrigin || showEnergy)
         {
-            if(!pauseFlag && waitKey(30) == 32){pauseFlag = true;}
+
+            if(!pauseFlag && waitKey(0) == 32){pauseFlag = true;}
 
             if(pauseFlag)
             {
@@ -577,7 +602,9 @@ namespace rm
 //            logWrite<<"[Receive Data from USB2TTL FAILED]"<<endl;
 //#endif
 //        }
+#if SHOWTIME == 1
         cout << "FeedBack Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
+#endif
     }
 
     void ImgProdCons::Receive()
