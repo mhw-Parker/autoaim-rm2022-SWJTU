@@ -99,28 +99,28 @@ void EnergyDetector::initEnergy() {
 void EnergyDetector::initEnergyPartParam() {
     _flow.BLUE_GRAY_THRESH = 100;//敌方红色时的阈值
     _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
-
+    // area change to 1/3
 ///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 1500;
-    _flow.armor_contour_area_min = 400;
-    _flow.armor_contour_length_max = 50;
-    _flow.armor_contour_length_min = 25;
-    _flow.armor_contour_width_max = 30;
-    _flow.armor_contour_width_min = 15;
-    _flow.armor_contour_hw_ratio_max = 3;
-    _flow.armor_contour_hw_ratio_min = 1;
+    _flow.armor_contour_area_max = 1700;//1500
+    _flow.armor_contour_area_min = 1400;//400
+    _flow.armor_contour_length_max = 55;//50
+    _flow.armor_contour_length_min = 25;//25
+    _flow.armor_contour_width_max = 40;//30
+    _flow.armor_contour_width_min = 30;//15
+    _flow.armor_contour_hw_ratio_max = 2;//3
+    _flow.armor_contour_hw_ratio_min = 1;//1
 
 ///流动条所在扇叶的相关筛选参数
-    _flow.flow_strip_fan_contour_area_max = 6200;
-    _flow.flow_strip_fan_contour_area_min = 1400;
-    _flow.flow_strip_fan_contour_length_max = 200;
-    _flow.flow_strip_fan_contour_length_min = 30;
-    _flow.flow_strip_fan_contour_width_max = 110;
-    _flow.flow_strip_fan_contour_width_min = 20;
+    _flow.flow_strip_fan_contour_area_max = 3600;
+    _flow.flow_strip_fan_contour_area_min = 1000;
+    _flow.flow_strip_fan_contour_length_max = 160;
+    _flow.flow_strip_fan_contour_length_min = 90;
+    _flow.flow_strip_fan_contour_width_max = 70;
+    _flow.flow_strip_fan_contour_width_min = 45;
     _flow.flow_strip_fan_contour_hw_ratio_max = 2.8;
     _flow.flow_strip_fan_contour_hw_ratio_min = 1.2;
     _flow.flow_strip_fan_contour_area_ratio_max = 0.55;
-    _flow.flow_strip_fan_contour_area_ratio_min = 0.35;
+    _flow.flow_strip_fan_contour_area_ratio_min = 0.20;
 
 ///流动条到装甲板距离参数
     _flow.Strip_Fan_Distance_max = 56;
@@ -138,7 +138,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.flow_strip_contour_area_ratio_min = 0.6;
     _flow.flow_strip_contour_intersection_area_min = 100;
 
-    _flow.target_intersection_contour_area_min = 40;//重合面积
+    _flow.target_intersection_contour_area_min = 40/4;//重合面积
     _flow.twin_point_max = 20;
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
@@ -177,6 +177,7 @@ void EnergyDetector::clearAll() {
     target_blades.clear();
     centerRs.clear();
     armor_centers.clear();
+
 }
 
 /**
@@ -192,12 +193,16 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode) {
     BIG_MODE = mode;
 
     binary = preprocess(img);
-    //imshow("binary",binary);
-    if (detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)) {
-        calR();
-        getPredictPointSmall(binary);
-		OutputAngle(target_point);
+    //roi = binary;
+    findROI(binary);
+    imshow("roi",roi);
+
+    if (detectArmor(roi) && detectFlowStripFan(roi) && getTargetPoint(roi)) {
         getPts(target_armor);
+        calR();
+        getPredictPointSmall(roi);
+        getPredictPoint(roi);
+        roiPoint2rc();
         detect_flag = true;
         misscount = 0;
     }else{
@@ -211,8 +216,10 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode) {
     }
 
     circle(outline, Point(IMGWIDTH/2, IMGHEIGHT/2), 2, Scalar(255, 255, 255), 3); //画出图像中心
-    //imshow("outline", outline);
-    //waitKey(1);
+    imshow("outline", outline);
+    //rectangle(binary,Rect(roi_sp.x,roi_sp.y,600,600),Scalar::all(255));
+    //imshow("binary",binary);
+    waitKey(1);
 }
 
 /**
@@ -238,12 +245,47 @@ Mat EnergyDetector::preprocess(Mat &src) {
 
     threshold(single, binary, 90, 255, THRESH_BINARY);
 
-    Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(7, 7));
+    Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
     dilate(binary, binary, element_dilate_1);
     morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
     threshold(binary, binary, 0, 255, THRESH_BINARY);
 
     return binary;
+}
+
+void EnergyDetector::findROI(Mat &src) {
+    if(detect_flag && circle_center_point != Point2f(0,0)){
+
+        if(circle_center_point.x < 300)
+            roi_sp.x = 0;
+        else if(circle_center_point.x > IMGWIDTH - 300)
+            roi_sp.x = IMGWIDTH - 600;
+        else
+            roi_sp.x = circle_center_point.x - 300;
+
+        if(circle_center_point.y < 300)
+            roi_sp.y = 0;
+        else if(circle_center_point.y > IMGHEIGHT - 300)
+            roi_sp.y = IMGHEIGHT - 600;
+        else
+            roi_sp.y = circle_center_point.y - 300;
+
+
+        roi = src(Rect(roi_sp.x,roi_sp.y,600,600));
+
+    }else
+    {
+        roi = src;
+        roi_sp = Point2f (0,0);
+    }
+
+}
+void EnergyDetector::roiPoint2rc() {
+    target_point = roi_sp + target_point;
+    circle_center_point = roi_sp + circle_center_point;
+    for(int i = 0;i<=pts.size();i++){
+        pts[i] = pts[i] + roi_sp;
+    }
 }
 
 /**
@@ -302,29 +344,29 @@ bool EnergyDetector::detectArmor(Mat &src) {
 	//2. Calculate R.
 	//3. Calculate distances between adjacent armors, that is, find for armor_i, the nearest armor of it and count the distance in for the answer.(adjacent_distance)
 	//Result(1024*820): center_of_fan, R = (double)168.5, adjacent_distance = (double)196.5, all of which are distances in camera coordinates.
-	if (valid_armors.size() == 5) {
-		double tx = 0, ty = 0, R = 0;
-		for (int i = 0; i < valid_armors.size(); i++) {
-			putText(outline, to_string(i), valid_armors[i].center, cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 1, 8);
-			tx += valid_armors[i].center.x / 5.0; ty += valid_armors[i].center.y / 5.0;
-		}
-		Point2f center_of_fan(tx, ty);
-		circle(outline, center_of_fan, 2, Scalar(0, 255, 0), -1);
-		for (int i = 0; i < valid_armors.size(); i++) {
-			R += pointDistance(center_of_fan, valid_armors[i].center) / 5;
-		}
-		//LOGE("Radius: %.2lf", R);
-		double adjacent_distance = 0;
-		for (int i = 0; i < valid_armors.size(); i++) {
-			double temp_distance = 7777;
-			for (int j = 0; j < valid_armors.size(); j++) {
-				if (i == j) continue;
-				temp_distance = min(temp_distance, pointDistance(valid_armors[i].center, valid_armors[j].center));
-			}
-			adjacent_distance += temp_distance / 5;
- 		}
-		//LOGE("Adjacent distance: %.2lf", adjacent_distance);
-	}
+//	if (valid_armors.size() == 5) {
+//		double tx = 0, ty = 0, R = 0;
+//		for (int i = 0; i < valid_armors.size(); i++) {
+//			putText(outline, to_string(i), valid_armors[i].center, cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 1, 8);
+//			tx += valid_armors[i].center.x / 5.0; ty += valid_armors[i].center.y / 5.0;
+//		}
+//		Point2f center_of_fan(tx, ty);
+//		circle(outline, center_of_fan, 2, Scalar(0, 255, 0), -1);
+//		for (int i = 0; i < valid_armors.size(); i++) {
+//			R += pointDistance(center_of_fan, valid_armors[i].center) / 5;
+//		}
+//		//LOGE("Radius: %.2lf", R);
+//		double adjacent_distance = 0;
+//		for (int i = 0; i < valid_armors.size(); i++) {
+//			double temp_distance = 7777;
+//			for (int j = 0; j < valid_armors.size(); j++) {
+//				if (i == j) continue;
+//				temp_distance = min(temp_distance, pointDistance(valid_armors[i].center, valid_armors[j].center));
+//			}
+//			adjacent_distance += temp_distance / 5;
+// 		}
+//		//LOGE("Adjacent distance: %.2lf", adjacent_distance);
+//	}
 
     if (armors.empty()) {
         yaw = 0;
@@ -358,7 +400,12 @@ bool EnergyDetector::detectFlowStripFan(Mat &src) {
         if (!isValidFlowStripFanContour(flow_fan_dilate, flow_strip_fan_contour)) {
             continue;
         }
+        Mat c = src.clone();
+        cout << "flow Area : " << contourArea(flow_strip_fan_contour) << endl;
+
         RotatedRect flow_rect = cv::minAreaRect(flow_strip_fan_contour);
+        cout << "flow width : "<< flow_rect.size.width << "\tflow height : " << flow_rect.size.height << endl;
+
         Point2f flow_pts[4];
         flow_rect.points(flow_pts);
 
@@ -449,8 +496,11 @@ bool EnergyDetector::getTargetPoint(Mat &src) {
             if (cur_contour_area > _flow.target_intersection_contour_area_min) {
                 target_blades.emplace_back(Blade_(i, j));
             }//返回目标装甲板参数
+            //TODO
+            cout << "target_intersection_contour_area" << cur_contour_area << endl;
         }
     }
+
 
     if (!target_blades.empty()) {
         if (target_blades.size() == 1) {
@@ -519,17 +569,39 @@ void EnergyDetector::calR() {
             valid_fan_strip[target_blade.flow_strip_fan_index].center - target_armor.center;
     Point2f origin_center_blade_edge =
             blade_points[(center_blade_edge_index + 1) % 4] - blade_points[center_blade_edge_index];
+
+    Point2f blade_bounding_mid = (blade_points[center_blade_edge_index] + blade_points[(center_blade_edge_index+1)%4])/2; //扇叶靠近圆心的边的中点
+    //circle(outline, blade_bounding_mid, 2, Scalar(0, 255, 0), 3);
     Point2f vertical_center_blade_edge;
 
-    vertical_center_blade_edge.x = -origin_center_blade_edge.y;
-    vertical_center_blade_edge.y = origin_center_blade_edge.x;
-
-    if (fan_center_diff_armor_center.dot(vertical_center_blade_edge) < 0) {
-        vertical_center_blade_edge *= -1.0;//指向中心
+    //vector<Point2f> armor_bounding_mid[4]; //目标装甲板4边的中心
+    //vector<Point2f> armor_mid_vec[4];
+    Point2f armor_bounding_mid;
+    Point2f armor_mid_vec;
+    Point2f armor2center_vec;
+    for(int j=0;j<4;j++){
+        //Point2f p = (pts[j] + pts[(j+1)%4]) / 2;
+        armor_bounding_mid = (pts[j] + pts[(j+1)%4]) / 2;
+        armor_mid_vec = armor_bounding_mid - target_point;
+        float d = (blade_bounding_mid - target_point).dot(armor_mid_vec);
+        if(d > 500){
+            armor2center_vec = armor_mid_vec;
+            break;
+        }
     }
+    Point2f center_point = target_point + K * armor2center_vec;
+    //circle(outline, , 2, Scalar(0, 255, 255), 3);
 
-    Point2f center_point = (blade_points[(center_blade_edge_index + 1) % 4] + blade_points[center_blade_edge_index]) / 2
-            + vertical_center_blade_edge * 0.5;
+
+//    vertical_center_blade_edge.x = -origin_center_blade_edge.y;
+//    vertical_center_blade_edge.y = origin_center_blade_edge.x;
+//
+//    if (fan_center_diff_armor_center.dot(vertical_center_blade_edge) < 0) {
+//        vertical_center_blade_edge *= -1.0;//指向中心
+//    }
+//
+//    Point2f center_point = (blade_points[(center_blade_edge_index + 1) % 4] + blade_points[center_blade_edge_index]) / 2
+//            + vertical_center_blade_edge * 0.5;
     center_r_area = Rect(center_point - Point2f(max_length / 2, max_length / 2), Size(max_length, max_length));
     //just for detectR not working
     circle_center_point = center_point;
@@ -583,46 +655,36 @@ void EnergyDetector::getPredictPointSmall(const Mat& src) {
 /***/
 void EnergyDetector::getPredictPoint(const Mat &src)
 {
+    Point2f p = circle_center_point - target_point;
+    float theta = atan2(p.y,p.x) / (2*CV_PI) * 360;
+    for(int i = 0;i<3;i++) {
+        angle[i] = angle[i + 1];
+        delta_theta[i] = delta_theta[i + 1];
+    }
+    angle[3] = theta;
+    delta_theta[3] = angle[3] - angle[2];
+    if(delta_theta[3] > 350)
+        delta_theta[3] = 360 - delta_theta[3];
+//    if(delta_theta[3]*delta_theta[2]<0 && angle[3]*angle[2]>0) //若同方向变化差值且突然出现正值被视为不正常
+//        delta_theta[3] = delta_theta[2];
 
+    cout << "======= angle =======" << endl;
+    for(int i = 0 ;i<4;i++)
+        cout << angle[i] << endl;
+    cout << "====== delta theta ======" << endl;
+    for(int i = 0 ;i<4;i++)
+        cout << delta_theta[i] << endl;
+
+    //cout << theta << "\t" << p << endl;
+}
+float EnergyDetector::spd_int(float t) {
+    return 1.305*t - 0.4167*cos(1.884*t);
 }
 
 /**
  * @remark: 在预测位置画出待打击装甲板
  */
-//void EnergyDetector::getPredictRect() {
-//    Point2f rectPoints[4];//定义矩形的4个顶点
-//    target_armor.points(rectPoints); //计算矩形的4个顶点
-//
-//    //judge long side
-//    if (sqrt(pow((rectPoints[0].x - rectPoints[1].x), 2) + pow((rectPoints[0].y - rectPoints[1].y), 2))
-//        > sqrt(pow((rectPoints[2].x - rectPoints[1].x), 2) + pow((rectPoints[2].y - rectPoints[1].y), 2))) {
-//        //pts[0]-pts[1] is long side
-//        pts[0] = rectPoints[0];
-//        pts[1] = rectPoints[1];
-//        pts[2] = rectPoints[2];
-//        pts[3] = rectPoints[3];
-//    } else {
-//        //pts[1]-pts[2] is long side
-//        pts[0] = rectPoints[1];
-//        pts[1] = rectPoints[2];
-//        pts[2] = rectPoints[3];
-//        pts[3] = rectPoints[0];
-//    }
-//
-//    polarLocal cur_polar_point;
-//
-//    for (int i = 0; i < 4; i++) {
-//        cur_polar_point = toPolar(pts[i], 0.0);
-//        cur_polar_point.angle += (predict_polar.angle - target_polar.angle);
-//        pts[i] = toCartesian(cur_polar_point);
-//    }
-//
-//    for (int i = 0; i < 4; i++) {
-//        line(outline, pts[i], pts[(i + 1) % (4)],
-//             Scalar(203, 192, 255), 2, LINE_8);
-//    }
-//
-//}
+
 
 /**
  * @brief EnergyDetector::initRotation
@@ -711,6 +773,8 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
 //    LOGW("Count : %d\t Area : %lf", debug_cur_count++, cur_contour_area);
     if (cur_contour_area > _flow.armor_contour_area_max ||
         cur_contour_area < _flow.armor_contour_area_min) {
+        //TODO
+        cout << "armor_contour_area:" << cur_contour_area << endl;
         return false;
     }
 
@@ -721,6 +785,9 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
 //    LOGW("Length : %f\t Width : %f", length, width);
     if (length < _flow.armor_contour_length_min || width < _flow.armor_contour_width_min ||
         length > _flow.armor_contour_length_max || width > _flow.armor_contour_width_max) {
+        //TODO
+        cout << "armor_contour_length:" << length << endl;
+        cout << "armor_contour_width:" << width << endl;
         return false;
     }
 
@@ -728,6 +795,8 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
 
     if (length_width_ratio > _flow.armor_contour_hw_ratio_max ||
         length_width_ratio < _flow.armor_contour_hw_ratio_min) {
+        //TODO
+        cout << "armor_contour_hw_ratio" << length_width_ratio <<endl;
         return false;
     }
 
@@ -747,6 +816,8 @@ bool EnergyDetector::isValidFlowStripFanContour(cv::Mat &src, const vector<cv::P
 //    LOGW("Area : %lf", cur_contour_area);
     if (cur_contour_area > _flow.flow_strip_fan_contour_area_max ||
         cur_contour_area < _flow.flow_strip_fan_contour_area_min) {
+        //TODO
+        cout << "flow_strip_fan_contour_area" << cur_contour_area << endl;
         return false;
     }
 
@@ -760,6 +831,9 @@ bool EnergyDetector::isValidFlowStripFanContour(cv::Mat &src, const vector<cv::P
         || width < _flow.flow_strip_fan_contour_width_min
         || length > _flow.flow_strip_fan_contour_length_max
         || width > _flow.flow_strip_fan_contour_width_max) {
+        //TODO
+        cout << "flow_strip_fan_contour_length" << length << endl;
+        cout << "flow_strip_fan_contour_width" << width << endl;
         return false;
     }
 
@@ -768,11 +842,15 @@ bool EnergyDetector::isValidFlowStripFanContour(cv::Mat &src, const vector<cv::P
 //    LOGW("Rect Size : %f\t Contour Size : %lf", cur_size.area(), cur_contour_area);
     if (length_width_ratio > _flow.flow_strip_fan_contour_hw_ratio_max ||
         length_width_ratio < _flow.flow_strip_fan_contour_hw_ratio_min) {
+        //TODO
+        cout << "flow_strip_fan_contour_hw_ratio" << length_width_ratio << endl;
         return false;
     }
 
     if (cur_contour_area / cur_size.area() < _flow.flow_strip_fan_contour_area_ratio_min
         || cur_contour_area / cur_size.area() > _flow.flow_strip_fan_contour_area_ratio_max) {
+        //TODO
+        cout << "flow_strip_fan_contour_area_ratio" << cur_contour_area / cur_size.area() << endl; //流动条轮廓占总面积的比例
         return false;
     }
 
