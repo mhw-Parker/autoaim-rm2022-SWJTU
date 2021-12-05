@@ -63,7 +63,8 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
         return false;
     }
     if ((fd = open(name.data(), O_RDWR|O_APPEND|O_SYNC)) < 0) {
-        LOGE("Serial Port set failed !");
+        LOGE("fd failed!");
+        //cout<<"fd failed!"<<endl;
         return false;
     }
     return set_opt(fd, nSpeed_,nEvent_, nBits_, nStop_) >= 0;
@@ -115,28 +116,23 @@ bool Serial::WriteData() {
     //cout<<"Write Over to USB!!!!!!!!!!!!!!!!!"<<endl;
     if (curr < 0) {
         LOGW("Write Serial offline!");
+        //cout<<("Write Serial offline!")<<endl;
         close(fd);
         if (wait_uart) {
             InitPort(nSpeed, nEvent, nBits, nStop);
         }
         return false;
     }
-    //memset(buff,0,VISION_LENGTH); //将buff清空
+
     return true;
 }
 
 /**
  * @brief read data sent by lower computer
  * @param buffer_ instance should be updated by data sent from lower computer
- * @param yawAngle the current yaw angle sent by lower machine
- * @param pitchAngle the current pitch angle sent by lower machine
- * @param yawSpeed the current yaw speed  degree
- * @param targetMode current control state
- * @param targetColor the enemy color
  * @return on finding the right data in a limited length of received data, return true, if not, return false
  */
 bool Serial::ReadData(struct ReceiveData &buffer_) {
-    InitPort(nSpeed, nEvent, nBits, nStop);
     memset(buffRead,0,VISION_LENGTH);
     maxReadTime = VISION_LENGTH;
     static int onceReadCount = 0;

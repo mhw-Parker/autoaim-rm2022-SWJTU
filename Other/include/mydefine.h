@@ -78,7 +78,7 @@
 #endif
 
 #ifndef SHOWTIME
-#define SHOWTIME 0
+#define SHOWTIME 1
 #endif
 
 #ifndef DEBUG_MSG

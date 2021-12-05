@@ -22,7 +22,7 @@ extern pthread_t feedbackPThreadHandler;
 string root_path = "../Output/";
 string now_time = getSysTime();
 string path = ( string(root_path + now_time).append(".avi"));
-VideoWriter videowriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
+VideoWriter videowriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 50.0, cv::Size(1280, 1024));
 #endif
 
 #if SAVE_LOG == 1
@@ -83,10 +83,6 @@ namespace rm
     {
         LOGE("Process Shut Down By SIGINT\n");
         ImgProdCons::quitFlag = true;
-
-#if SAVE_VIDEO == 1
-        videowriter.release();
-#endif
 
 #if SAVE_LOG == 1
         logWrite.close();
@@ -220,6 +216,10 @@ namespace rm
     void ImgProdCons::Produce()
     {
         taskTime = (double)getTickCount();
+        if(tmp_t!=0)
+            mission_time = CalWasteTime(tmp_t,freq);
+        tmp_t = taskTime;
+
         if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH)
         {
             missCount++;
@@ -228,16 +228,16 @@ namespace rm
             {
                 driver->StopGrab();
                 GrabFlag = false;
-                raise(SIGINT);
+                 raise(SIGINT);
             }
         }
 #if SAVE_VIDEO == 1
-    videowriter.write(frame);
+        if(carName!=VIDEO)
+            videowriter.write(frame);
 #endif
         //get current gimbal degree while capture
         if(!serialPtr->ReadData(receiveData)){
-            receiveData.yawAngle = 0;
-            receiveData.pitchAngle = 0;
+
         }
         detectFrame = frame.clone();
         energyFrame = frame.clone();
@@ -294,7 +294,7 @@ namespace rm
         if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
         {
             /* do energy detection */
-            energyPtr->EnergyTask(energyFrame, curControlState);
+            energyPtr->EnergyTask(energyFrame, curControlState, 22);
         }
 #if SHOWTIME == 1
         cout << "Energy Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
@@ -480,16 +480,14 @@ namespace rm
         }
         else
         {
-            solverPtr->GetPoseV(energyPtr->pts,
-                                false);
-            //cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
+            solverPtr->GetPoseV(energyPtr->predict_pts,false);
+            cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
             //solverPtr->GetPoseSH(energyPtr->target_point);
             //cout << "by small hole : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
             /* do energy things */
             if (showEnergy)
             {
                 circle(energyFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
-                circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
 
                 putText(energyFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 putText(energyFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
@@ -508,12 +506,14 @@ namespace rm
 
                 putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 if (energyPtr->detect_flag){
+                    circle(energyFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
                     for (int i = 0; i < 4; i++) {
                         line(energyFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
                              Scalar(255, 255, 255), 2, LINE_8);
                     }
-                    circle(energyFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
+                    circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
                     circle(energyFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                    circle(energyFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
                 }
 
 

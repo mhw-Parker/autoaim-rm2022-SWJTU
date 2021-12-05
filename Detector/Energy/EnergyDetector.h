@@ -6,6 +6,8 @@
 #include <chrono>
 
 #include <opencv2/opencv.hpp>
+#include <Eigen/Dense>
+#include <opencv2/core/eigen.hpp>
 #include <utility.hpp>
 
 #include "mydefine.h"
@@ -55,10 +57,11 @@ class EnergyDetector {
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyTask(const Mat &src, bool mode);//接口
+    void EnergyTask(const Mat &src, bool mode, const float deltaT);//接口
     Point getPredict();
     Point getOffset();
     vector<Point2f> pts;
+    vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
     cv::Point2f last_target_point;//上一次目标装甲板坐标
     cv::Point2f predict_point;//预测的击打点坐标
@@ -69,13 +72,11 @@ public:
 	bool detect_flag = false;
     float deltaX = 0;
     float deltaY = 0;
-    float yaw;
-	float pitch;
 
 private:
     const float R = 168;
     const float PI = 3.14;
-    const float K = 8; //半径倍数
+    const float K = 9; //半径倍数
 
     polarLocal polar_t;
     bool show_armors; //是否显示所有装甲
@@ -99,12 +100,13 @@ private:
     bool detectArmor(Mat &src);
     bool detectFlowStripFan(Mat &src);
     bool detectR(Mat &src, Mat &show);
-    void calR();
     bool getTargetPoint(Mat &src);
-	void detectCircleCenter(Mat &src);
 
-    void findROI(Mat &src);
-    void roiPoint2rc();
+    Point2f calR();
+	bool detectCircleCenter(Mat &src);
+
+    void findROI(Mat &src, Mat &dst);
+    void roiPoint2src();
     Point2f roi_sp; //roi的左上角起始点
 
     bool isValidArmorContour(const vector<cv::Point>& armor_contour) const;//装甲板矩形尺寸要求
@@ -119,17 +121,13 @@ private:
     float calPreAngle(float start_time,float end_time);
     //void getPredictPoint(Mat src);
     void getPts(RotatedRect armor);
-	void getPredictRect();
 
-    Point2f calPredict(float theta) const;
-    void getPredictPointSmall(const Mat& src);
-    void getPredictPoint(const Mat& src);
+
+    //Point2f calPredict(float theta) const;
+    Point2f calPredict(Point2f p, Point2f center, float theta) const;
 
     Mat roi;
 
-/*** new solve angle ***/
-    void getImageDeltaXY(Point2f p);
-	void OutputAngle(Point2f p);
 #ifdef DAHUA
     float dpx = 1811.5;
 	float dpy = 1682.2;
@@ -143,9 +141,14 @@ private:
 
 /*** new predict ***/
     float spd_int(float t);
-    float delta_theta[4]; //定义一个4维的向量存放theta差值
-    float angle[4];
-    float last_angle;
+    float spd_phi(float omega, int flag);
+    float delta_theta[6]; //存放两帧差角
+    float angle[6]; //存放角度
+    float omega[6]; //存放角速度
+    float predict_arr[5];
+    void getPredictPointSmall(const Mat& src);
+    void getPredictPoint(const Mat& src,float deltaT);
+    void getPredictRect(float theta);
 /*** *** *** *** *** ***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板

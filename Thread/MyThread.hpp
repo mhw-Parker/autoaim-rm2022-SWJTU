@@ -118,6 +118,8 @@ namespace rm
         //double calFPS(double BeginTime, double freq);
 
         double taskTime;
+        double tmp_t = 0;
+        double mission_time; //任务总体耗时
         double freq;
 
         int cnt1 = 0;
