@@ -136,8 +136,8 @@ void SolveAngle::Generate3DPoints(bool mode)
         targetWidth3D = 135;
 	}
 	else{
-        targetHeight3D = 125;
-        targetWidth3D = 230;
+        targetHeight3D = 140;
+        targetWidth3D = 225;
 	}
     targetPoints3D.emplace_back(-targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, -targetHeight3D / 2, 0);

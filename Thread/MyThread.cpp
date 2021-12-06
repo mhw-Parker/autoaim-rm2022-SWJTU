@@ -18,9 +18,10 @@ extern pthread_t detectPThreadHandler;
 extern pthread_t energyPThreadHandler;
 extern pthread_t feedbackPThreadHandler;
 
-#if SAVE_VIDEO == 1
 string root_path = "../Output/";
 string now_time = getSysTime();
+
+#if SAVE_VIDEO == 1
 string path = ( string(root_path + now_time).append(".avi"));
 VideoWriter videowriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 50.0, cv::Size(1280, 1024));
 #endif
@@ -28,6 +29,12 @@ VideoWriter videowriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 50.0,
 #if SAVE_LOG == 1
 std::ofstream logWrite("../Output/log.txt",ios::out);
 std::ofstream fileClean("../Output/log.txt",ios::trunc);
+#endif
+
+#if SAVE_TEST_DATA == 1
+string data_path = ( string(root_path + now_time + string("_data")).append(".txt") );
+ofstream fout(data_path);
+ofstream dataWrite(data_path,ios::out);
 #endif
 
 namespace rm
@@ -86,6 +93,10 @@ namespace rm
 
 #if SAVE_LOG == 1
         logWrite.close();
+#endif
+#if SAVE_TEST_DATA == 1
+        fout.close();
+        dataWrite.close();
 #endif
         if(pthread_kill(producePThreadHandler,0) == ESRCH)
         {
@@ -146,6 +157,7 @@ namespace rm
         /*initialize signal*/
         InitSignals();
         freq = getTickFrequency();
+        whole_time_arr.resize(3);
         /*initialize camera*/
 
         switch (carName) {
@@ -216,9 +228,19 @@ namespace rm
     void ImgProdCons::Produce()
     {
         taskTime = (double)getTickCount();
+        /*******/
         if(tmp_t!=0)
-            mission_time = CalWasteTime(tmp_t,freq);
+            mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
         tmp_t = taskTime;
+        total_time = 0;
+        for(int i = 0; i<whole_time_arr.size()-1; i++){
+            whole_time_arr[i] = whole_time_arr[i+1];
+            total_time += whole_time_arr[i];
+        }
+        whole_time_arr.back() = mission_time;
+        deltat = (total_time + mission_time) / whole_time_arr.size();
+        cout << "deltat = " << deltat <<endl;
+        /*****/
 
         if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH)
         {
@@ -236,9 +258,7 @@ namespace rm
             videowriter.write(frame);
 #endif
         //get current gimbal degree while capture
-        if(!serialPtr->ReadData(receiveData)){
-
-        }
+        serialPtr->ReadData(receiveData);
         detectFrame = frame.clone();
         energyFrame = frame.clone();
 #if SHOWTIME == 1
@@ -294,8 +314,12 @@ namespace rm
         if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
         {
             /* do energy detection */
-            energyPtr->EnergyTask(energyFrame, curControlState, 22);
+            energyPtr->EnergyTask(energyFrame, curControlState, deltat);
         }
+#if SAVE_TEST_DATA == 1
+        // **** 当前相角  当前角速度  预测弧度值 **** //
+        dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
+#endif
 #if SHOWTIME == 1
         cout << "Energy Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
         tt += CalWasteTime(taskTime,freq);
@@ -481,7 +505,7 @@ namespace rm
         else
         {
             solverPtr->GetPoseV(energyPtr->predict_pts,false);
-            cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
+            //cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
             //solverPtr->GetPoseSH(energyPtr->target_point);
             //cout << "by small hole : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
             /* do energy things */
@@ -497,12 +521,6 @@ namespace rm
 
                 putText(energyFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 putText(energyFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-                putText(energyFrame, "deltaX: ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(energyPtr->deltaX), Point(120, 120), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-                putText(energyFrame, "deltaY: ", Point(0, 150), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(energyPtr->deltaY), Point(120, 150), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 if (energyPtr->detect_flag){
@@ -546,7 +564,7 @@ namespace rm
         if(DEBUG || showOrigin || showEnergy)
         {
 
-            if(!pauseFlag && waitKey(0) == 32){pauseFlag = true;}
+            if(!pauseFlag && waitKey(1) == 32){pauseFlag = true;}
 
             if(pauseFlag)
             {

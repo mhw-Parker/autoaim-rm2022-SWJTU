@@ -78,7 +78,7 @@
 #endif
 
 #ifndef SHOWTIME
-#define SHOWTIME 1
+#define SHOWTIME 0
 #endif
 
 #ifndef DEBUG_MSG
@@ -86,11 +86,15 @@
 #endif
 
 #ifndef SAVE_VIDEO
-#define  SAVE_VIDEO 0
+#define  SAVE_VIDEO 1
 #endif
 
 #ifndef SAVE_LOG
-#define  SAVE_LOG 1
+#define  SAVE_LOG 0
+#endif
+
+#ifndef SAVE_TEST_DATA
+#define SAVE_TEST_DATA 0
 #endif
 
 #ifndef GPUMODE

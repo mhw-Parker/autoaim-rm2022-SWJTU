@@ -70,8 +70,9 @@ public:
     std::vector<cv::Point2f> target_armor_centers;//get R
 
 	bool detect_flag = false;
-    float deltaX = 0;
-    float deltaY = 0;
+    float cur_phi = 0;
+    float cur_omega = 0;
+    float predict_rad = 0;
 
 private:
     const float R = 168;
@@ -142,10 +143,16 @@ private:
 /*** new predict ***/
     float spd_int(float t);
     float spd_phi(float omega, int flag);
-    float delta_theta[6]; //存放两帧差角
-    float angle[6]; //存放角度
-    float omega[6]; //存放角速度
-    float predict_arr[5];
+    //float delta_theta[6]; //存放两帧差角
+    //float angle[6]; //存放角度
+    //float omega[6]; //存放角速度
+    vector<float> delta_theta;
+    vector<float> angle;
+    vector<float> omega;
+    float filter_rad;
+    //vector<float> predict_arr;
+    float predict_arr[10];
+    int predict_cnt = 0;
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src,float deltaT);
     void getPredictRect(float theta);
@@ -174,7 +181,7 @@ private:
     void initRotation();//对能量机关旋转方向进行初始化
     void updateLastValues();//更新上一次的各种值
 
-    float predict_rad;//预测提前角
+    //预测提前角
     float predict_rad_norm;//预测提前角的绝对值
 
     int misscount = 0;
