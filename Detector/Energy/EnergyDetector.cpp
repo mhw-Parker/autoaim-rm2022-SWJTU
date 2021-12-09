@@ -53,7 +53,7 @@ static Mat polyfit(list<float> &in_point, int n) {
  * @return null
  * @remark Energy类构造函数，初始化有关参数
  */
-EnergyDetector::EnergyDetector() {
+EnergyDetector::EnergyDetector() : waveClass(4,600,1000){
     initEnergy();
     initEnergyPartParam();//对能量机关参数进行初始化
 }
@@ -89,10 +89,17 @@ void EnergyDetector::initEnergy() {
     predict_point = Point(0, 0);//预测打击点初始化
     pts.resize(4);
     predict_pts.resize(4);
+
     //predict_arr.resize(10); //预测角度数组初始化
-    delta_theta.resize(4);
-    angle.resize(4);
-    omega.resize(4);
+    delta_theta.resize(vec_length);
+    angle.resize(vec_length);
+
+    omega.resize(10);
+    x_list.resize(10);
+    for (int i = 0; i < omega.size(); ++i) {
+        x_list[i] = i * 0.1;
+        omega[i] = 0;
+    }
 }
 
 /**
@@ -664,6 +671,9 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
     for(int i = 0; i < angle.size()-1; i++) {
         angle[i] = angle[i + 1];
         delta_theta[i] = delta_theta[i + 1];
+
+    }
+    for(int i = 0; i < omega.size(); i++){
         omega[i] = omega[i+1];
     }
     angle.back() = cur_theta;
@@ -672,7 +682,10 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
         delta_theta.back() = 360 - delta_theta.back();
     omega.back() = abs(delta_theta.back() ) / (deltaT * (angle.size() - 1)/1000) * (2*CV_PI/360); //转为弧度制
     cur_omega = omega.back();
-    int flag = cur_omega - omega.front() > 0 ? 1 : 0; //判断是速度增区间还是减区间
+    //int flag = cur_omega - omega.front() > 0 ? 1 : 0; //判断是速度增区间还是减区间
+    Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,omega,1);
+    //cout << rate << endl;
+    int flag = rate(0,0) > 0 ? 1 : 0;
     cout << "current omega = " << cur_omega << endl;
     if(cur_omega > 0.52 && cur_omega < 2.09){
         cur_phi = spd_phi(cur_omega,flag);
@@ -685,6 +698,8 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
 
     float t = cur_phi / 1.884 ;
     predict_rad = spd_int(t + 0.45) - spd_int(t);
+
+    waveClass.displayWave(predict_rad);
 
     float total_rad = 0;
     for(int i=0;i<10;i++){

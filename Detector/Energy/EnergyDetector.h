@@ -143,19 +143,18 @@ private:
 /*** new predict ***/
     float spd_int(float t);
     float spd_phi(float omega, int flag);
-    //float delta_theta[6]; //存放两帧差角
-    //float angle[6]; //存放角度
-    //float omega[6]; //存放角速度
     vector<float> delta_theta;
     vector<float> angle;
     vector<float> omega;
+    vector<float> x_list;
     float filter_rad;
-    //vector<float> predict_arr;
     float predict_arr[10];
     int predict_cnt = 0;
+    int vec_length = 4;
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src,float deltaT);
     void getPredictRect(float theta);
+    RMTools::DisPlayWaveCLASS waveClass;
 /*** *** *** *** *** ***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板

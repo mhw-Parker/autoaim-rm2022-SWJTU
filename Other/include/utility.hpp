@@ -14,6 +14,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
 
+#include <Eigen/Dense>
+
 using namespace cv;
 using namespace std;
 
@@ -50,7 +52,15 @@ namespace RMTools
         int spacing = 10;
         Scalar lc = Scalar(0,0,255);
         Scalar wc = Scalar(0,146,125);
+
         Mat left,copy;
+        /** new wave form **/
+        int h, w, mid_h;
+        float ratio;
+        Mat background;
+        Point2f last_p;
+        int cnt = 0;
+
     public:
 
         DisPlayWaveCLASS(Mat src_,int* value_): m_isExit(false),src(std::move(src_)),value(value_)
@@ -73,6 +83,11 @@ namespace RMTools
         {
             copy = src.clone();
         };
+        DisPlayWaveCLASS(float dataRange, int height, int width):ratio((height/2)/dataRange), h(height), w(width), mid_h(height/2){
+            background = Mat(h,w,CV_8UC3, Scalar::all(0));
+            copy = background.clone();
+            line(copy,Point2f(0,height/2),Point2f(w,height/2),Scalar::all(255));
+        }
 
         void DisplayWave()
         {
@@ -124,26 +139,49 @@ namespace RMTools
             flip(copy,src,0);
             imshow(wn,src);
         }
+
+        /** 2021-12-9 tyy **/
+        //因为没看懂上面的波形显示调用方法，决定重写一个
+        void displayWave(const float input) {
+            int amplitude = mid_h - ratio * input;
+            if (amplitude < 0) {
+                amplitude = 0;
+                cout << "[SHOW WAVE WARNING] -- higher than the dataRange !" << endl;
+            }
+            if (amplitude > h) {
+                amplitude = h;
+                cout << "[SHOW WAVE WARNING] -- lower than the dataRange ! " << endl;
+            }
+            Point2f cur_p = Point2f(cnt, amplitude);
+            circle(copy, cur_p, 1, Scalar(0, 0, 255));
+            if (last_p != Point2f(0, 0))
+                line(copy, cur_p, last_p, Scalar(0, 255, 0));
+            imshow("WaveForm", copy);
+            cnt += 2;
+            last_p = cur_p;
+            //cout << count << endl;
+            if (cnt > w) {
+                cnt = 0;
+                last_p = Point2f(0, 0);
+                copy = background.clone();
+                line(copy, Point2f(0, h / 2), Point2f(w, h / 2), Scalar::all(255));
+            }
+        }
+
     };
 
-    /**
- * 求平均值
- */
-    inline double average(const double *x, int len);
-
-    double average(const double *x, int len) {
-        double sum = 0;
-        for (int i = 0; i < len; i++) // 求和
-            sum += x[i];
-        return sum/len; // 得到平均值
-    }
-
+/**
+ * @brief 计算耗时
+ * @param BeginTime 开始时间，利用 getTickCount() 获得
+ * @param freq 内部频率，由 getTickFrequency() 获得
+ * @return 耗时，单位 ms
+ * */
     inline double CalWasteTime(double BeginTime, double freq)
     {
         return (getTickCount()-BeginTime) * 1000 / freq ;
     }
 /**
- * @brief 获得系统当前时间，放在这里定义有bug
+ * @brief 获得系统当前时间
  * @return string
  */
     inline string getSysTime()
@@ -154,7 +192,17 @@ namespace RMTools
         strftime(tmp, sizeof(tmp), "%Y-%m-%d_%H:%M:%S",localtime(&timep));
         return tmp;
     }
+/**
+ * 求平均值
+ */
+    inline double average(const double *x, int len);
 
+    double average(const double *x, int len) {
+        double sum = 0;
+        for (int i = 0; i < len; i++) // 求和
+            sum += x[i];
+        return sum/len; // 得到平均值
+    }
 /**
  * 求方差
  */
@@ -175,7 +223,34 @@ namespace RMTools
         return sqrt(variance1); // 得到标准差
     }
 
-    /**
+/**
+ * @brief 最小二乘法
+ * @param x 输入的参数的 x 坐标系，连续时可采用相差 1 的等差数列
+ * @param y 对应的幅值
+ * @return 返回 Eigen 的 MatrixXd
+ * @remark 参考 CSDN 的最小二乘法写法
+ * */
+    inline Eigen::MatrixXd LeastSquare(vector<float> x, vector<float> y, int N)
+    {
+        Eigen::MatrixXd A(x.size(), N+1);
+        Eigen::MatrixXd B(y.size(), 1);
+        Eigen::MatrixXd W;
+        for (unsigned int i = 0; i < x.size(); ++i) {
+            for(int n = N, dex = 0; n >= 1; --n,++dex){
+                A(i,dex) = pow(x[i],2);
+            }
+            A(i,N) = 1;
+            B(i,0) = y[i]; //用于存放 y 的结果
+        }
+        //cout << A << endl;
+//        for(unsigned int i = 0; i < y.size(); ++i){
+//            B(i,0) = y[i];
+//        }
+        W = (A.transpose() * A).inverse() * A.transpose() * B;
+        return W;
+    }
+
+/**
  *  the descriptor of the point in the route, including the color, location, velocity and the situation of point.
  */
     class RoutePoint

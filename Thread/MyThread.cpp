@@ -283,23 +283,19 @@ namespace rm
         {
             case MODEL_MODE:
             {
-                if (armorDetectorPtr->ModelDetectTask(detectFrame))
-                {
+                if (armorDetectorPtr->ModelDetectTask(detectFrame)){
                     curDetectMode = MODEL_MODE;
                 }
-                else
-                {
+                else{
                     curDetectMode = MODEL_MODE;
                 }
             }
             case TRADITION_MODE:
             {
-                if (armorDetectorPtr->ArmorDetectTask(detectFrame))
-                {
+                if (armorDetectorPtr->ArmorDetectTask(detectFrame)){
                     curDetectMode = MODEL_MODE;
                 }
-                else
-                {
+                else{
                     if(++armorDetectorPtr->lossCnt >= 2)
                         curDetectMode = TRADITION_MODE;
                 }
@@ -564,7 +560,7 @@ namespace rm
         if(DEBUG || showOrigin || showEnergy)
         {
 
-            if(!pauseFlag && waitKey(1) == 32){pauseFlag = true;}
+            if(!pauseFlag && waitKey(10) == 32){pauseFlag = true;}
 
             if(pauseFlag)
             {
