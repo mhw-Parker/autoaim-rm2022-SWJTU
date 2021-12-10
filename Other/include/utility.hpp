@@ -58,7 +58,8 @@ namespace RMTools
         int h, w, mid_h;
         float ratio;
         Mat background;
-        Point2f last_p;
+        Point2f last_p1;
+        Point2f last_p2;
         int cnt = 0;
 
     public:
@@ -142,27 +143,37 @@ namespace RMTools
 
         /** 2021-12-9 tyy **/
         //因为没看懂上面的波形显示调用方法，决定重写一个
-        void displayWave(const float input) {
-            int amplitude = mid_h - ratio * input;
-            if (amplitude < 0) {
-                amplitude = 0;
+        void displayWave(const float input1,const float input2) {
+            int amplitude1 = mid_h - ratio * input1;
+            int amplitude2 = mid_h - ratio * input2;
+            if (amplitude1 < 0 || amplitude2 < 0) {
                 cout << "[SHOW WAVE WARNING] -- higher than the dataRange !" << endl;
+                return;
             }
-            if (amplitude > h) {
-                amplitude = h;
+            if (amplitude1 > h || amplitude2 > h) {
                 cout << "[SHOW WAVE WARNING] -- lower than the dataRange ! " << endl;
+                return;
             }
-            Point2f cur_p = Point2f(cnt, amplitude);
-            circle(copy, cur_p, 1, Scalar(0, 0, 255));
-            if (last_p != Point2f(0, 0))
-                line(copy, cur_p, last_p, Scalar(0, 255, 0));
+
+            Point2f cur_p1 = Point2f(cnt, amplitude1);
+            Point2f cur_p2 = Point2f (cnt,amplitude2);
+            circle(copy, cur_p1, 1, Scalar(0, 0, 255));
+            circle(copy, cur_p2, 1, Scalar(255, 0, 0));
+
+            if (last_p1 != Point2f(0, 0)){
+                line(copy, cur_p1, last_p1, Scalar(0, 255, 0));
+                line(copy,cur_p2,last_p2,Scalar(0,255,255));
+            }
+
             imshow("WaveForm", copy);
             cnt += 2;
-            last_p = cur_p;
-            //cout << count << endl;
+            last_p1 = cur_p1;
+            last_p2 = cur_p2;
+
             if (cnt > w) {
                 cnt = 0;
-                last_p = Point2f(0, 0);
+                last_p1 = Point2f(0, 0);
+                last_p2 = Point2f(0,0);
                 copy = background.clone();
                 line(copy, Point2f(0, h / 2), Point2f(w, h / 2), Scalar::all(255));
             }
@@ -242,10 +253,6 @@ namespace RMTools
             A(i,N) = 1;
             B(i,0) = y[i]; //用于存放 y 的结果
         }
-        //cout << A << endl;
-//        for(unsigned int i = 0; i < y.size(); ++i){
-//            B(i,0) = y[i];
-//        }
         W = (A.transpose() * A).inverse() * A.transpose() * B;
         return W;
     }

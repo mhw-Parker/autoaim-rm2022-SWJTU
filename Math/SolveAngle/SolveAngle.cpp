@@ -119,6 +119,7 @@ void SolveAngle::GetPoseSH(const Point2f p)
 void SolveAngle::camXYZ2YPD(Mat tvecs)
 {
     cv2eigen(tvecs,p_cam_xyz);
+    //cout << " z: " << p_cam_xyz[2] << endl;
     yaw = atan2(p_cam_xyz[0],p_cam_xyz[2]) / (2*CV_PI) * 360 ; //arctan(x/z)
     pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360; //arctan(y/sqrt(x^2 + z^2))
     dist = sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[1]*p_cam_xyz[1] + p_cam_xyz[2]*p_cam_xyz[2]); //sqrt(x^2 + y^2 + z^2)

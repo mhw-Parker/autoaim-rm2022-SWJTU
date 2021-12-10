@@ -94,11 +94,12 @@ void EnergyDetector::initEnergy() {
     delta_theta.resize(vec_length);
     angle.resize(vec_length);
 
-    omega.resize(10);
-    x_list.resize(10);
+    omega.resize(6);
+    x_list.resize(6);
+    av_omega.resize(6);
     for (int i = 0; i < omega.size(); ++i) {
         x_list[i] = i * 0.1;
-        omega[i] = 0;
+        av_omega[i] = 0;
     }
 }
 
@@ -671,10 +672,10 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
     for(int i = 0; i < angle.size()-1; i++) {
         angle[i] = angle[i + 1];
         delta_theta[i] = delta_theta[i + 1];
-
     }
     for(int i = 0; i < omega.size(); i++){
         omega[i] = omega[i+1];
+        av_omega[i] = av_omega[i+1];
     }
     angle.back() = cur_theta;
     delta_theta.back() = cur_theta - angle.front(); //相隔3个数相减
@@ -682,61 +683,83 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
         delta_theta.back() = 360 - delta_theta.back();
     omega.back() = abs(delta_theta.back() ) / (deltaT * (angle.size() - 1)/1000) * (2*CV_PI/360); //转为弧度制
     cur_omega = omega.back();
-    //int flag = cur_omega - omega.front() > 0 ? 1 : 0; //判断是速度增区间还是减区间
-    Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,omega,1);
-    //cout << rate << endl;
-    int flag = rate(0,0) > 0 ? 1 : 0;
     cout << "current omega = " << cur_omega << endl;
-    if(cur_omega > 0.52 && cur_omega < 2.09){
-        cur_phi = spd_phi(cur_omega,flag);
+
+    float sum_omega = 0;
+    for(int i = 0; i < 5; i++){
+        sum_omega += omega[vec_length - 1 - i];
+    }
+    av_omega.back() = sum_omega / 5;
+    Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,av_omega,1);
+
+    // Five consecutive same judge can change the current state.
+    int cur_flag = rate(0,0) > 0 ? 1 : 0;
+    if (cur_flag != last_flag) {
+        predict_cnt = 0;
+    } else {
+        predict_cnt++;
+    }
+    if (predict_cnt == 5) {
+        flag = cur_flag;
+        predict_cnt = 0;
+    }
+    last_flag = cur_flag;
+
+    if(av_omega.back() > 0.52 && av_omega.back() < 2.09){
+        cur_phi = spd_phi(av_omega.back(), flag);
         //cout << "current phi = " << cur_phi << endl;
     }
-    else if(cur_omega > 2.09)
+    else if(av_omega.back() > 2.09)
         cur_phi = CV_PI / 2;
     else
         cur_phi = - CV_PI / 2;
+    double t = cur_phi / 1.884;
 
-    float t = cur_phi / 1.884 ;
-    predict_rad = spd_int(t + 0.45) - spd_int(t);
+    predict_rad = spd_int(t + 0.6) - spd_int(t);
 
-    waveClass.displayWave(predict_rad);
+    //waveClass.displayWave(av_omega.back(),0);
+    //waveClass.displayWave(flag, 0);
 
     float total_rad = 0;
-    for(int i=0;i<10;i++){
-        predict_arr[i] = predict_arr[i+1];
-        total_rad = total_rad + predict_arr[i];
-    }
-    if(predict_cnt < 20)
-        predict_cnt++;
-    else{
-        filter_rad = predict_rad;
-        predict_cnt = 0;
-    }
 
-    predict_arr[9] = predict_rad;
+//    for(int i=0;i<6;i++){
+//        predict_arr[i] = predict_arr[i+1];
+//        total_rad = total_rad + predict_arr[i];
+//    }
+//    if(predict_cnt < 20)
+//        predict_cnt++;
+//    else{
+//        filter_rad = predict_rad;
+//        predict_cnt = 0;
+//    }
 
-    float filter_rad = (total_rad + predict_rad)/10; //预测角度有一定抖动，可以考虑加个均值滤波
+    //predict_arr[9] = predict_rad;
+
+    //float filter_rad = (total_rad + predict_rad)/10; //预测角度有一定抖动，可以考虑加个均值滤波
 
     //cout << "predict theta = " << predict_rad*360/(2*CV_PI) << endl;
-
+    waveClass.displayWave(av_omega.back(), predict_rad);
     //filter_rad = predict_rad;
-    predict_point = calPredict(target_point,circle_center_point,-filter_rad);
+    predict_point = calPredict(target_point,circle_center_point,-predict_rad);
     circle(outline,predict_point,2,Scalar(0,0,255),3);
 
-    getPredictRect(-filter_rad);
+    getPredictRect(-predict_rad);
 
 }
+
 float EnergyDetector::spd_int(float t) {
     return 1.305*t - 0.4167*cos(1.884*t);
 }
+/**
+ *
+ * @param omega angle velocity
+ * @param flag 1增0减
+ * @return 当前的相位
+ */
 float EnergyDetector::spd_phi(float omega, int flag) {
     float a = (omega - 1.305) / 0.785;
-    float b;
-    if(omega > 1.305)
-        b = flag ? asin(a) : CV_PI - asin(a);
-    else
-        b = flag ? asin(a) : - CV_PI + asin(a);
-    return b;
+    float phi = asin(a);
+    return flag ? phi : CV_PI - phi;
 }
 
 /**

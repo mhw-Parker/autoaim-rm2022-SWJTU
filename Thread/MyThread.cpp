@@ -536,7 +536,7 @@ namespace rm
             }
             yaw_abs = receiveData.yawAngle - solverPtr->yaw; //绝对yaw角度
             pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
-
+            cout << "receieve : " << receiveData.yawAngle << endl;
             serialPtr->pack(yaw_abs,
                             pitch_abs,
                             solverPtr->dist,
@@ -560,7 +560,7 @@ namespace rm
         if(DEBUG || showOrigin || showEnergy)
         {
 
-            if(!pauseFlag && waitKey(10) == 32){pauseFlag = true;}
+            if(!pauseFlag && waitKey(1) == 32){pauseFlag = true;}
 
             if(pauseFlag)
             {

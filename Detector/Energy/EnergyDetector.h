@@ -146,11 +146,14 @@ private:
     vector<float> delta_theta;
     vector<float> angle;
     vector<float> omega;
+    vector<float> av_omega;
     vector<float> x_list;
     float filter_rad;
-    float predict_arr[10];
+    float predict_arr[6];
     int predict_cnt = 0;
     int vec_length = 4;
+    int flag = 0;
+    int last_flag = 0;
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src,float deltaT);
     void getPredictRect(float theta);
