@@ -501,6 +501,7 @@ namespace rm
         else
         {
             solverPtr->GetPoseV(energyPtr->predict_pts,false);
+            //solverPtr->GetPoseV(energyPtr->pts,false);
             //cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
             //solverPtr->GetPoseSH(energyPtr->target_point);
             //cout << "by small hole : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
@@ -513,10 +514,10 @@ namespace rm
                 putText(energyFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->yaw + 1.6), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->pitch + 0.5), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 if (energyPtr->detect_flag){
@@ -524,6 +525,8 @@ namespace rm
                     for (int i = 0; i < 4; i++) {
                         line(energyFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
                              Scalar(255, 255, 255), 2, LINE_8);
+                        line(energyFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                             Scalar(0, 255, 255), 2, LINE_8);
                     }
                     circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
                     circle(energyFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
@@ -534,9 +537,9 @@ namespace rm
                 imshow("energy", energyFrame);
                 waitKey(1);
             }
-            yaw_abs = receiveData.yawAngle - solverPtr->yaw; //绝对yaw角度
-            pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
-            cout << "receieve : " << receiveData.yawAngle << endl;
+            yaw_abs = receiveData.yawAngle - (solverPtr->yaw + 1.6); //绝对yaw角度
+            pitch_abs = receiveData.pitchAngle + (solverPtr->pitch + 0.5 - 1.2); //绝对pitch角度
+            //cout << "receieve : " << receiveData.yawAngle << endl;
             serialPtr->pack(yaw_abs,
                             pitch_abs,
                             solverPtr->dist,

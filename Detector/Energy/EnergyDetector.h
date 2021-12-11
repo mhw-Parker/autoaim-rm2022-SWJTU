@@ -148,6 +148,7 @@ private:
     vector<float> omega;
     vector<float> av_omega;
     vector<float> x_list;
+    vector<float> time_list;
     float filter_rad;
     float predict_arr[6];
     int predict_cnt = 0;
@@ -156,6 +157,7 @@ private:
     int last_flag = 0;
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src,float deltaT);
+    //void testPredict(const Mat& src, float deltaT); // 2021/12/11
     void getPredictRect(float theta);
     RMTools::DisPlayWaveCLASS waveClass;
 /*** *** *** *** *** ***/

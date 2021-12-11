@@ -93,7 +93,6 @@ void EnergyDetector::initEnergy() {
     //predict_arr.resize(10); //预测角度数组初始化
     delta_theta.resize(vec_length);
     angle.resize(vec_length);
-
     omega.resize(6);
     x_list.resize(6);
     av_omega.resize(6);
@@ -208,7 +207,7 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
     binary = preprocess(img);
     roi = binary;
     //findROI(binary,roi);
-    imshow("roi",roi);
+    //imshow("roi",roi);
 
     if (detectArmor(roi) && detectFlowStripFan(roi) && getTargetPoint(roi)) {
         getPts(target_armor);
@@ -232,7 +231,7 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
     }
 
     circle(outline, Point(IMGWIDTH/2, IMGHEIGHT/2), 2, Scalar(255, 255, 255), 3); //画出图像中心
-    imshow("outline", outline);
+    //imshow("outline", outline);
     //rectangle(binary,Rect(roi_sp.x,roi_sp.y,600,600),Scalar::all(255));
     //imshow("binary",binary);
     waitKey(1);
@@ -659,6 +658,8 @@ void EnergyDetector::getPredictPointSmall(const Mat& src) {
     updateLastValues();
 }
 
+
+
 /**
  * @brief 大能量机关运动预测
  * @param src
@@ -715,7 +716,7 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
         cur_phi = - CV_PI / 2;
     double t = cur_phi / 1.884;
 
-    predict_rad = spd_int(t + 0.6) - spd_int(t);
+    predict_rad = spd_int(t + 0.5) - spd_int(t);
 
     //waveClass.displayWave(av_omega.back(),0);
     //waveClass.displayWave(flag, 0);
@@ -746,6 +747,7 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
     getPredictRect(-predict_rad);
 
 }
+
 
 float EnergyDetector::spd_int(float t) {
     return 1.305*t - 0.4167*cos(1.884*t);

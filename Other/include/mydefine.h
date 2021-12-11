@@ -78,7 +78,7 @@
 #endif
 
 #ifndef SHOWTIME
-#define SHOWTIME 0
+#define SHOWTIME 1
 #endif
 
 #ifndef DEBUG_MSG
@@ -86,7 +86,7 @@
 #endif
 
 #ifndef SAVE_VIDEO
-#define  SAVE_VIDEO 1
+#define  SAVE_VIDEO 0
 #endif
 
 #ifndef SAVE_LOG
