@@ -48,7 +48,7 @@ namespace rm
 
     //int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
     int8_t curControlState = BIG_ENERGY_STATE;
-    uint8_t curDetectMode = MODEL_MODE; //tracking or searching
+    uint8_t curDetectMode = TRADITION_MODE; //tracking or searching
 
     int direction = 0;
     bool directionChangeFlag = false;
@@ -189,7 +189,10 @@ namespace rm
                 driver = &videoCapture;
                 break;
         }
-
+        if(saveVideo){
+            path = ( string(root_path + now_time).append(".avi"));
+            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30.0, cv::Size(1280, 1024));
+        }
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
         {
@@ -228,7 +231,7 @@ namespace rm
     void ImgProdCons::Produce()
     {
         taskTime = (double)getTickCount();
-        /*******/
+        /** 计算上一次执行耗时 **/
         if(tmp_t!=0)
             mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
         tmp_t = taskTime;
@@ -239,8 +242,8 @@ namespace rm
         }
         whole_time_arr.back() = mission_time;
         deltat = (total_time + mission_time) / whole_time_arr.size();
-        cout << "deltat = " << deltat <<endl;
-        /*****/
+        cout << "3帧平均耗时 = " << deltat << endl;
+        /** ** **/
 
         if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH)
         {
@@ -253,10 +256,10 @@ namespace rm
                  raise(SIGINT);
             }
         }
-#if SAVE_VIDEO == 1
-        if(carName!=VIDEO)
+
+        if(carName!=VIDEO && saveVideo)
             videowriter.write(frame);
-#endif
+
         //get current gimbal degree while capture
         serialPtr->ReadData(receiveData);
         detectFrame = frame.clone();
@@ -284,23 +287,28 @@ namespace rm
             case MODEL_MODE:
             {
                 if (armorDetectorPtr->ModelDetectTask(detectFrame)){
-                    curDetectMode = MODEL_MODE;
+                    curDetectMode = TRADITION_MODE;
                 }
                 else{
                     curDetectMode = MODEL_MODE;
                 }
+                break;
             }
             case TRADITION_MODE:
             {
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)){
-                    curDetectMode = MODEL_MODE;
+                    curDetectMode = TRADITION_MODE;
                 }
                 else{
-                    if(++armorDetectorPtr->lossCnt >= 2)
-                        curDetectMode = TRADITION_MODE;
+                    if(++armorDetectorPtr->lossCnt >= 2) {
+                        //curDetectMode = MODEL_MODE;
+                    }
                 }
+                break;
             }
         }
+        if(debug)
+            imshow("armor",detectFrame);
         cout << "Armor Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
     }
 
@@ -502,10 +510,6 @@ namespace rm
         {
             solverPtr->GetPoseV(energyPtr->predict_pts,false);
             //solverPtr->GetPoseV(energyPtr->pts,false);
-            //cout << "by pnp : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
-            //solverPtr->GetPoseSH(energyPtr->target_point);
-            //cout << "by small hole : " << solverPtr->yaw << "\t" << solverPtr->pitch << endl;
-            /* do energy things */
             if (showEnergy)
             {
                 circle(energyFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
@@ -537,8 +541,8 @@ namespace rm
                 imshow("energy", energyFrame);
                 waitKey(1);
             }
-            yaw_abs = receiveData.yawAngle - (solverPtr->yaw + 1.6); //绝对yaw角度
-            pitch_abs = receiveData.pitchAngle + (solverPtr->pitch + 0.5 - 1.2); //绝对pitch角度
+            yaw_abs = receiveData.yawAngle - solverPtr->yaw ; //绝对yaw角度
+            pitch_abs = receiveData.pitchAngle + solverPtr->pitch ; //绝对pitch角度
             //cout << "receieve : " << receiveData.yawAngle << endl;
             serialPtr->pack(yaw_abs,
                             pitch_abs,
@@ -560,10 +564,10 @@ namespace rm
         }
 
         /**press key 'space' to pause or continue task**/
-        if(DEBUG || showOrigin || showEnergy)
+        if(debug)
         {
 
-            if(!pauseFlag && waitKey(1) == 32){pauseFlag = true;}
+            if(!pauseFlag && waitKey(30) == 32){pauseFlag = true;}
 
             if(pauseFlag)
             {

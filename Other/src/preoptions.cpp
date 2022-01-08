@@ -40,6 +40,18 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
             LOGM("Enable show lamps");
             }
     }},
+    {"-save", {
+        "save video", []() {
+                saveVideo = true;
+                LOGM("Enable save video");
+            }
+    }},
+    {"-debug", {
+                      "debug mode", []() {
+                debug = true;
+                LOGM("Enable save video");
+            }
+              }},
 	{"-box", {
 		"show the armor box.", []() {
                 showArmorBox = true;

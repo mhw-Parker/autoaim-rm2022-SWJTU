@@ -201,11 +201,11 @@ namespace rm
 
         vector<Lamp> lights;
 
-        if (showBianryImg)
-        {
+        if (showBianryImg){
             imshow("binary_brightness_img", thresholdMap);
         }
 
+        lights = LampDetection(thresholdMap);
         lights = LightDetection(thresholdMap);
 
         if (showLamps)
@@ -321,7 +321,7 @@ namespace rm
         {
             for (unsigned int j = i + 1; j < lights.size(); j++)
             {
-                /*the difference between to angles*/
+                /*the difference between two angles*/
                 dAngle = fabs(lights[i].lightAngle - lights[j].lightAngle);
                 if(dAngle > param.maxAngleError)continue;
 
@@ -489,14 +489,13 @@ namespace rm
 #pragma omp parallel for
         for (auto & i : contoursLight)
         {
-            if (i.size() < 5)
+            if (i.size() < 20)
                 continue;
 
             double length = arcLength(i, true);
-
-            if (length > 10 && length < 4000)
+            cout << length << endl;
+            if (length > 10 && length < 400)
             {
-
                 possibleLamp = fitEllipse(i);
                 lampArea = possibleLamp.size.width * possibleLamp.size.height;
                 //LOGM("lampArea : %f\n",lampArea);
@@ -534,6 +533,49 @@ namespace rm
 
         return lampVector;
     }
+
+    /**
+     * @brief 新的灯条识别，田翊扬 2022/1/7
+     * */
+     vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
+         /** 预处理 **/
+        /*Mat blue_binary, red_binary, binary;
+        Mat single, blue_c, red_c;
+        vector<Mat> channels;
+        split(img, channels);
+        blue_c = channels.at(0);
+        red_c = channels.at(2);
+        threshold(blue_c,blue_binary,90,255,THRESH_BINARY);
+        threshold(red_c,red_binary,90,255,THRESH_BINARY);
+        binary = blueTarget ? blue_binary - red_binary : red_binary - blue_binary; //滤掉白光
+        imshow("sub channel",binary);*/
+        /**  **/
+        float angle_ = 0;
+        Scalar_<double> avg,avgBrightness;
+        float lampArea;
+
+        RotatedRect possibleLamp;
+        Rect rectLamp;
+        vector<Lamp> lampVector;
+
+        vector<vector<Point>> contoursLight;
+        findContours(img,contoursLight,RETR_EXTERNAL,CHAIN_APPROX_NONE);
+        Mat background = Mat(img.size(), CV_8UC3, Scalar(0, 0, 0));
+        for(auto &lamp_contour:contoursLight){
+            if(lamp_contour.size() < 10)
+                continue;
+            possibleLamp = minAreaRect(lamp_contour);
+            Point2f pts[4];
+            possibleLamp.points(pts);
+            for (int i = 0; i < 4; i++) {
+                line(background, pts[i], pts[(i + 1) % (4)],
+                     Scalar(0, 255, 0), 1, LINE_8);
+            }
+            possibleLamp = fitEllipse(lamp_contour);
+            ellipse(background,possibleLamp,Scalar(240,10,10));
+        }
+        imshow("test",background);
+     }
 
     /**
     * @brief get he region of interest

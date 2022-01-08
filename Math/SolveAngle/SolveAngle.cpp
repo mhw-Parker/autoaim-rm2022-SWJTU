@@ -25,6 +25,8 @@ SolveAngle::SolveAngle()
         case INFANTRY_MELEE:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            yaw_static = 1.6;
+            pitch_static = 0.5;
             break;
         case INFANTRY_TRACK:
             break;
@@ -81,6 +83,8 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode)
     tvecs.convertTo(Tvec, CV_32F);   //平移向量
 
     camXYZ2YPD(tvecs);
+    yaw = yaw + yaw_static;
+    pitch = pitch + pitch_static - 1.2 ;
 //    yaw = atan(tvecs.at<double>(0, 0) / tvecs.at<double>(2, 0)) / 2 / CV_PI * 360;
 //    pitch = -1.0*atan(tvecs.at<double>(1, 0) / tvecs.at<double>(2, 0)) / 2 / CV_PI * 360;
 //    dist = sqrt(tvecs.at<double>(0, 0)*tvecs.at<double>(0, 0) + tvecs.at<double>(1, 0)*tvecs.at<double>(1, 0) + tvecs.at<double>(2, 0)* tvecs.at<double>(2, 0));
@@ -123,6 +127,11 @@ void SolveAngle::camXYZ2YPD(Mat tvecs)
     yaw = atan2(p_cam_xyz[0],p_cam_xyz[2]) / (2*CV_PI) * 360 ; //arctan(x/z)
     pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360; //arctan(y/sqrt(x^2 + z^2))
     dist = sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[1]*p_cam_xyz[1] + p_cam_xyz[2]*p_cam_xyz[2]); //sqrt(x^2 + y^2 + z^2)
+}
+
+void SolveAngle::compensator()
+{
+
 }
 
 /**

@@ -38,6 +38,7 @@ public:
 
 
 private:
+    void compensator();
 	Mat_<double> cameraMatrix;
 	Mat_<double> distortionCoefficients;
 	Mat rvecs;
@@ -49,6 +50,8 @@ private:
 	int shootPriority = 0;
 	float averageX;
 	float averageY;
+
+    float yaw_static, pitch_static;
 
 	int value;
     Mat waveBG = Mat(480,640,CV_8UC3,Scalar(0,0,0));

@@ -129,6 +129,10 @@ namespace rm
         float deltat;
         /***/
 
+        /**/
+        string path;
+        VideoWriter videowriter;
+        /**/
         int cnt1 = 0;
         float tt;
 

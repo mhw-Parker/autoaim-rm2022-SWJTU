@@ -117,6 +117,8 @@ extern bool showLamps;
 extern bool showBianryImg;
 extern bool showEnergy;
 extern bool blueTarget;
+extern bool saveVideo;
+extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
 extern CARNAME carName;

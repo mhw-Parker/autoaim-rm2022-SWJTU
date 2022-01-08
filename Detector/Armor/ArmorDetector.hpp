@@ -57,7 +57,9 @@ namespace rm
         float maxLightArea = 2500;
         float maxLightAngle = 60;
         float minLightW2H = 0.5;
-        float maxLightW2H = 40;
+        float maxLightW2H = 10;
+
+        float maxLightRatio = 5;
     };
 
     /**
@@ -178,6 +180,7 @@ namespace rm
         void MaxMatch(vector<Lamp> &lights);
 
         vector<Lamp> LightDetection(Mat& img);
+        vector<Lamp> LampDetection(Mat& img);
 
         void LoadSvmModel(const char *model_path, const Size& armorImgSize = Size(40, 40));
 

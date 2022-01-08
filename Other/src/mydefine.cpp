@@ -10,6 +10,8 @@ bool showLamps = true;
 bool showEnergy = false;
 bool showBianryImg = false;
 bool blueTarget = false;
+bool saveVideo = false;
+bool debug = false;
 
 int FRAMEWIDTH;
 int FRAMEHEIGHT;

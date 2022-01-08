@@ -166,6 +166,8 @@ namespace RMTools
             }
 
             imshow("WaveForm", copy);
+            waitKey(1);
+
             cnt += 2;
             last_p1 = cur_p1;
             last_p2 = cur_p2;
