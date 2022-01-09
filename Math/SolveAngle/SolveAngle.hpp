@@ -29,7 +29,8 @@ public:
 
 	void Generate2DPoints(Rect rect);
 	void GetPose(const Rect& rect, float ballet_speed, bool small);
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode);
+    void GetPoseV(const vector<Point2f>& pts, bool armor_mode); //Pnp模型
+    void GetPoseSH(const Point2f p); //小孔成像模型
 	void Generate3DPoints(bool mode);
 
     void camXYZ2YPD(Mat tvecs);
@@ -37,6 +38,7 @@ public:
 
 
 private:
+    void compensator(float dist, float pitch, float deltaY);
 	Mat_<double> cameraMatrix;
 	Mat_<double> distortionCoefficients;
 	Mat rvecs;
@@ -44,9 +46,12 @@ private:
 	float targetWidth3D{};
 	float targetHeight3D{};
 
+    Matrix3f camMat_E;
 	int shootPriority = 0;
 	float averageX;
 	float averageY;
+
+    float yaw_static, pitch_static;
 
 	int value;
     Mat waveBG = Mat(480,640,CV_8UC3,Scalar(0,0,0));

@@ -6,6 +6,8 @@
 #include <chrono>
 
 #include <opencv2/opencv.hpp>
+#include <Eigen/Dense>
+#include <opencv2/core/eigen.hpp>
 #include <utility.hpp>
 
 #include "mydefine.h"
@@ -55,10 +57,11 @@ class EnergyDetector {
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyTask(const Mat &src, bool mode);//接口
+    void EnergyTask(const Mat &src, bool mode, const float deltaT);//接口
     Point getPredict();
     Point getOffset();
     vector<Point2f> pts;
+    vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
     cv::Point2f last_target_point;//上一次目标装甲板坐标
     cv::Point2f predict_point;//预测的击打点坐标
@@ -66,15 +69,15 @@ public:
     cv::Point2f circle_center_point;//风车圆心坐标
     std::vector<cv::Point2f> target_armor_centers;//get R
 
-	bool detect_flag;
-    float deltaX;
-    float deltaY;
-    float yaw;
-	float pitch;
+	bool detect_flag = false;
+    float cur_phi = 0;
+    float cur_omega = 0;
+    float predict_rad = 0;
 
 private:
     const float R = 168;
     const float PI = 3.14;
+    const float K = 10; //半径倍数
 
     polarLocal polar_t;
     bool show_armors; //是否显示所有装甲
@@ -98,9 +101,14 @@ private:
     bool detectArmor(Mat &src);
     bool detectFlowStripFan(Mat &src);
     bool detectR(Mat &src, Mat &show);
-    void calR();
     bool getTargetPoint(Mat &src);
-	void detectCircleCenter(Mat &src);
+
+    Point2f calR();
+	bool detectCircleCenter(Mat &src);
+
+    void findROI(Mat &src, Mat &dst);
+    void roiPoint2src();
+    Point2f roi_sp; //roi的左上角起始点
 
     bool isValidArmorContour(const vector<cv::Point>& armor_contour) const;//装甲板矩形尺寸要求
     bool isValidCenterRContour(const vector<cv::Point>& center_R_contour);//风车中心选区尺寸要求
@@ -114,15 +122,13 @@ private:
     float calPreAngle(float start_time,float end_time);
     //void getPredictPoint(Mat src);
     void getPts(RotatedRect armor);
-	void getPredictRect();
 
-    Point2f calPredict(float theta) const;
-    void getPredictPointSmall(const Mat& src);
-    void getPredictPoint(const Mat& src);
 
-/*** new solve angle ***/
-    void getImageDeltaXY(Point2f p);
-	void OutputAngle(Point2f p);
+    //Point2f calPredict(float theta) const;
+    Point2f calPredict(Point2f p, Point2f center, float theta) const;
+
+    Mat roi;
+
 #ifdef DAHUA
     float dpx = 1811.5;
 	float dpy = 1682.2;
@@ -132,6 +138,30 @@ private:
     float dpy = 529.27;
 #endif
 
+/*** *** *** *** *** ***/
+
+/*** new predict ***/
+    float spd_int(float t);
+    float spd_phi(float omega, int flag);
+    vector<float> delta_theta;
+    vector<float> angle;
+    vector<float> omega;
+    vector<float> av_omega;
+    vector<float> x_list;
+    vector<float> predict_arr;
+    float sum_time;
+    float init_time;
+    //float predict_arr[6];
+    int predict_cnt = 0;
+    int angle_length = 4;
+    int omega_length = 6;
+
+    int flag = 0;
+    int last_flag = 0;
+    void getPredictPointSmall(const Mat& src);
+    void getPredictPoint(const Mat& src,float deltaT);
+    void getPredictRect(float theta, vector<Point2f> pts);
+    RMTools::DisPlayWaveCLASS waveClass;
 /*** *** *** *** *** ***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板
@@ -157,7 +187,7 @@ private:
     void initRotation();//对能量机关旋转方向进行初始化
     void updateLastValues();//更新上一次的各种值
 
-    float predict_rad;//预测提前角
+    //预测提前角
     float predict_rad_norm;//预测提前角的绝对值
 
     int misscount = 0;

@@ -61,11 +61,11 @@
 
 /*IMAGEHEIGHT AND IMAGEWIDTH just for initialize the camera, maybe not the real frame format*/
 #ifndef IMAGEWIDTH
-#define  IMAGEWIDTH 640
+#define  IMAGEWIDTH 1280
 #endif
 
 #ifndef IMAGEHEIGHT
-#define  IMAGEHEIGHT 480
+#define  IMAGEHEIGHT 1024
 #endif
 
 #ifndef CARNAME_
@@ -77,6 +77,10 @@
 #define  DEBUG 0
 #endif
 
+#ifndef SHOWTIME
+#define SHOWTIME 1
+#endif
+
 #ifndef DEBUG_MSG
 #define  DEBUG_MSG 0
 #endif
@@ -86,7 +90,11 @@
 #endif
 
 #ifndef SAVE_LOG
-#define  SAVE_LOG 1
+#define  SAVE_LOG 0
+#endif
+
+#ifndef SAVE_TEST_DATA
+#define SAVE_TEST_DATA 0
 #endif
 
 #ifndef GPUMODE
@@ -109,6 +117,8 @@ extern bool showLamps;
 extern bool showBianryImg;
 extern bool showEnergy;
 extern bool blueTarget;
+extern bool saveVideo;
+extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
 extern CARNAME carName;

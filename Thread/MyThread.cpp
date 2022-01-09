@@ -18,16 +18,23 @@ extern pthread_t detectPThreadHandler;
 extern pthread_t energyPThreadHandler;
 extern pthread_t feedbackPThreadHandler;
 
-#if SAVE_VIDEO == 1
 string root_path = "../Output/";
 string now_time = getSysTime();
+
+#if SAVE_VIDEO == 1
 string path = ( string(root_path + now_time).append(".avi"));
-VideoWriter videowriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
+VideoWriter videowriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 50.0, cv::Size(1280, 1024));
 #endif
 
 #if SAVE_LOG == 1
 std::ofstream logWrite("../Output/log.txt",ios::out);
 std::ofstream fileClean("../Output/log.txt",ios::trunc);
+#endif
+
+#if SAVE_TEST_DATA == 1
+string data_path = ( string(root_path + now_time + string("_data")).append(".txt") );
+ofstream fout(data_path);
+ofstream dataWrite(data_path,ios::out);
 #endif
 
 namespace rm
@@ -41,7 +48,7 @@ namespace rm
 
     //int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
     int8_t curControlState = BIG_ENERGY_STATE;
-    uint8_t curDetectMode = MODEL_MODE; //tracking or searching
+    uint8_t curDetectMode = TRADITION_MODE; //tracking or searching
 
     int direction = 0;
     bool directionChangeFlag = false;
@@ -84,12 +91,12 @@ namespace rm
         LOGE("Process Shut Down By SIGINT\n");
         ImgProdCons::quitFlag = true;
 
-#if SAVE_VIDEO == 1
-        videowriter.release();
-#endif
-
 #if SAVE_LOG == 1
         logWrite.close();
+#endif
+#if SAVE_TEST_DATA == 1
+        fout.close();
+        dataWrite.close();
 #endif
         if(pthread_kill(producePThreadHandler,0) == ESRCH)
         {
@@ -150,6 +157,7 @@ namespace rm
         /*initialize signal*/
         InitSignals();
         freq = getTickFrequency();
+        whole_time_arr.resize(3);
         /*initialize camera*/
 
         switch (carName) {
@@ -181,7 +189,10 @@ namespace rm
                 driver = &videoCapture;
                 break;
         }
-
+        if(saveVideo){
+            path = ( string(root_path + now_time).append(".avi"));
+            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30.0, cv::Size(1280, 1024));
+        }
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
         {
@@ -220,6 +231,20 @@ namespace rm
     void ImgProdCons::Produce()
     {
         taskTime = (double)getTickCount();
+        /** 计算上一次执行耗时 **/
+        if(tmp_t!=0)
+            mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
+        tmp_t = taskTime;
+        total_time = 0;
+        for(int i = 0; i<whole_time_arr.size()-1; i++){
+            whole_time_arr[i] = whole_time_arr[i+1];
+            total_time += whole_time_arr[i];
+        }
+        whole_time_arr.back() = mission_time;
+        deltat = (total_time + mission_time) / whole_time_arr.size();
+        cout << "3帧平均耗时 = " << deltat << endl;
+        /** ** **/
+
         if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH)
         {
             missCount++;
@@ -228,16 +253,20 @@ namespace rm
             {
                 driver->StopGrab();
                 GrabFlag = false;
-                raise(SIGINT);
+                 raise(SIGINT);
             }
         }
-#if SAVE_VIDEO == 1
-    videowriter.write(frame);
-#endif
-        //serialPtr->ReadData(receiveData); //get current gimbal degree while capture
+
+        if(carName!=VIDEO && saveVideo)
+            videowriter.write(frame);
+
+        //get current gimbal degree while capture
+        serialPtr->ReadData(receiveData);
         detectFrame = frame.clone();
         energyFrame = frame.clone();
+#if SHOWTIME == 1
         cout << "Frame Produce Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
+#endif
     }
     
     void ImgProdCons::Detect() 
@@ -257,28 +286,29 @@ namespace rm
         {
             case MODEL_MODE:
             {
-                if (armorDetectorPtr->ModelDetectTask(detectFrame))
-                {
+                if (armorDetectorPtr->ModelDetectTask(detectFrame)){
+                    curDetectMode = TRADITION_MODE;
+                }
+                else{
                     curDetectMode = MODEL_MODE;
                 }
-                else
-                {
-                    curDetectMode = MODEL_MODE;
-                }
+                break;
             }
             case TRADITION_MODE:
             {
-                if (armorDetectorPtr->ArmorDetectTask(detectFrame))
-                {
-                    curDetectMode = MODEL_MODE;
+                if (armorDetectorPtr->ArmorDetectTask(detectFrame)){
+                    curDetectMode = TRADITION_MODE;
                 }
-                else
-                {
-                    if(++armorDetectorPtr->lossCnt >= 2)
-                        curDetectMode = TRADITION_MODE;
+                else{
+                    if(++armorDetectorPtr->lossCnt >= 2) {
+                        //curDetectMode = MODEL_MODE;
+                    }
                 }
+                break;
             }
         }
+        if(debug)
+            imshow("armor",detectFrame);
         cout << "Armor Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
     }
 
@@ -288,9 +318,19 @@ namespace rm
         if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
         {
             /* do energy detection */
-            energyPtr->EnergyTask(energyFrame, curControlState);
+            energyPtr->EnergyTask(energyFrame, curControlState, deltat);
         }
+#if SAVE_TEST_DATA == 1
+        // **** 当前相角  当前角速度  预测弧度值 **** //
+        dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
+#endif
+#if SHOWTIME == 1
         cout << "Energy Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
+        tt += CalWasteTime(taskTime,freq);
+        cnt1++;
+
+        cout << "average time = " << tt / cnt1 << endl;
+#endif
     }
 
     void ImgProdCons::Feedback()
@@ -468,13 +508,11 @@ namespace rm
         }
         else
         {
-            solverPtr->GetPoseV(energyPtr->pts,
-                                false);
-            /* do energy things */
+            solverPtr->GetPoseV(energyPtr->predict_pts,false);
+            //solverPtr->GetPoseV(energyPtr->pts,false);
             if (showEnergy)
             {
                 circle(energyFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
-                circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
 
                 putText(energyFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 putText(energyFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
@@ -485,27 +523,35 @@ namespace rm
                 putText(energyFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 putText(energyFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(energyFrame, "deltaX: ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(energyPtr->deltaX), Point(120, 120), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-                putText(energyFrame, "deltaY: ", Point(0, 150), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(energyPtr->deltaY), Point(120, 150), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
                 putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                if (energyPtr->detect_flag)
-                    circle(energyFrame, Point(160, 180), 4, Scalar(255, 255, 255), 3);
+                if (energyPtr->detect_flag){
+                    circle(energyFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
+                    for (int i = 0; i < 4; i++) {
+                        line(energyFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
+                             Scalar(255, 255, 255), 2, LINE_8);
+                        line(energyFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                             Scalar(0, 255, 255), 2, LINE_8);
+                    }
+                    circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
+                    circle(energyFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                    circle(energyFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
+                }
+
 
                 imshow("energy", energyFrame);
                 waitKey(1);
             }
-
-            serialPtr->pack(-solverPtr->yaw,
-                            solverPtr->pitch,
+            yaw_abs = receiveData.yawAngle - solverPtr->yaw ; //绝对yaw角度
+            pitch_abs = receiveData.pitchAngle + solverPtr->pitch ; //绝对pitch角度
+            //cout << "receieve : " << receiveData.yawAngle << endl;
+            serialPtr->pack(yaw_abs,
+                            pitch_abs,
                             solverPtr->dist,
                             solverPtr->shoot,
                             energyPtr->detect_flag,
                             curControlState,
                             0);
+            //cout << yaw_abs << "\t" << pitch_abs << endl;
 #if SAVE_LOG == 1
 //            string s = getSysTime();
 //            logWrite <<"=========== produce mission ==========="<< endl;
@@ -517,10 +563,10 @@ namespace rm
 #endif
         }
 
-
-        /**press key 'p' to pause or continue task**/
-        if(DEBUG || showOrigin || showEnergy)
+        /**press key 'space' to pause or continue task**/
+        if(debug)
         {
+
             if(!pauseFlag && waitKey(30) == 32){pauseFlag = true;}
 
             if(pauseFlag)
@@ -577,7 +623,9 @@ namespace rm
 //            logWrite<<"[Receive Data from USB2TTL FAILED]"<<endl;
 //#endif
 //        }
+#if SHOWTIME == 1
         cout << "FeedBack Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
+#endif
     }
 
     void ImgProdCons::Receive()
