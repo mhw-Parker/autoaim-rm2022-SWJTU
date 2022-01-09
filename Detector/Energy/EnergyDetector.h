@@ -160,7 +160,6 @@ private:
     int last_flag = 0;
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src,float deltaT);
-    void testPredict(const Mat& src, float deltaT); // 2022/1/8
     void getPredictRect(float theta, vector<Point2f> pts);
     RMTools::DisPlayWaveCLASS waveClass;
 /*** *** *** *** *** ***/

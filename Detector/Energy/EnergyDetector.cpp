@@ -720,50 +720,6 @@ void EnergyDetector::getPredictRect(float theta, vector<Point2f> pts) {
             line(outline, predict_pts[i], predict_pts[(i + 1) % (4)], Scalar(238, 238, 0), 2, LINE_8);
 }
 
-void EnergyDetector::testPredict(const Mat &src, float deltaT) {
-    Point2f p = circle_center_point - target_point;
-    float cur_theta = atan2(p.y,p.x) / (2*CV_PI) * 360; //当前角度
-    //数组左移
-    for(int i = 0; i < angle.size()-1; i++) {
-        angle[i] = angle[i + 1];
-        delta_theta[i] = delta_theta[i + 1];
-    }
-    for(int i = 0; i < omega.size(); i++){
-        omega[i] = omega[i+1];
-        av_omega[i] = av_omega[i+1];
-    }
-    angle.back() = cur_theta;
-    delta_theta.back() = cur_theta - angle.front(); //相隔3个数相减
-    if(delta_theta.back() > 300) //解决 180 -180 跳变问题
-        delta_theta.back() = 360 - delta_theta.back();
-    cur_omega = abs(delta_theta.back() ) / (deltaT * (angle.size() - 1)/1000) * (2*CV_PI/360); //转为弧度制,算3帧的角速度
-    if(cur_omega > 2.09)
-        cur_omega = 2.09;
-    omega.back() = cur_omega;
-    cout << "current omega = " << cur_omega << endl;
-    float sum_omega = 0;
-    for(int i = 0; i < 5; i++){
-        sum_omega += omega[omega_length - 1 - i];
-    }
-    av_omega.back() = sum_omega / 5;
-    if(av_omega.back() > 2.05){
-        sum_time = 0;
-        init_time = CV_PI / 2 / 1.884;
-    }else if(av_omega.back() < 0.55){
-        sum_time = 0;
-        init_time = - CV_PI / 2 / 1.884;
-    }else{
-        sum_time = sum_time + deltaT;
-    }
-    predict_rad = spd_int(init_time + sum_time + 0.5) - spd_int(init_time + sum_time); //每次检测处极大值点后用函数算
-
-    predict_point = calPredict(target_point,circle_center_point,-predict_rad);
-    getPredictRect(-predict_rad, pts); //计算预测的装甲板位置
-
-    circle(outline,predict_point,2,Scalar(0,0,255),3);
-    waveClass.displayWave(av_omega.back(),predict_rad);
-}
-
 /**
  * @brief EnergyDetector::initRotation
  * @param null
