@@ -38,7 +38,7 @@ public:
 
 
 private:
-    void compensator();
+    void compensator(float dist, float pitch, float deltaY);
 	Mat_<double> cameraMatrix;
 	Mat_<double> distortionCoefficients;
 	Mat rvecs;

@@ -77,7 +77,7 @@ public:
 private:
     const float R = 168;
     const float PI = 3.14;
-    const float K = 9; //半径倍数
+    const float K = 10; //半径倍数
 
     polarLocal polar_t;
     bool show_armors; //是否显示所有装甲
@@ -148,11 +148,14 @@ private:
     vector<float> omega;
     vector<float> av_omega;
     vector<float> x_list;
+    vector<float> predict_arr;
     float sum_time;
     float init_time;
-    float predict_arr[6];
+    //float predict_arr[6];
     int predict_cnt = 0;
-    int vec_length = 4;
+    int angle_length = 4;
+    int omega_length = 6;
+
     int flag = 0;
     int last_flag = 0;
     void getPredictPointSmall(const Mat& src);

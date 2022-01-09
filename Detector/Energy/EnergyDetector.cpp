@@ -90,14 +90,15 @@ void EnergyDetector::initEnergy() {
     pts.resize(4);
     predict_pts.resize(4);
 
-    //predict_arr.resize(10); //预测角度数组初始化
-    delta_theta.resize(vec_length); //长度为4
-    angle.resize(vec_length);
-    omega.resize(6);
-    x_list.resize(6);
-    av_omega.resize(6);
+
+    delta_theta.resize(angle_length); //长度为4
+    angle.resize(angle_length);
+    predict_arr.resize(omega_length); //预测角度数组初始化
+    omega.resize(omega_length);
+    x_list.resize(omega_length);
+    av_omega.resize(omega_length);
     for (int i = 0; i < omega.size(); ++i) {
-        x_list[i] = i * 0.1;
+        x_list[i] = i * 0.02;
         av_omega[i] = 0;
     }
 }
@@ -113,7 +114,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
     // area change to 1/3
 ///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 1200;//1500
+    _flow.armor_contour_area_max = 1400;//1500
     _flow.armor_contour_area_min = 400;//400
     _flow.armor_contour_length_max = 55;//50
     _flow.armor_contour_length_min = 25;//25
@@ -154,7 +155,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.twin_point_max = 20;
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
-    _flow.Center_R_Control_area_max = 800;
+    _flow.Center_R_Control_area_max = 1000;
     _flow.Center_R_Control_area_min = 150;
     _flow.Center_R_Control_length_max = 35;
     _flow.Center_R_Control_length_min = 6;
@@ -204,22 +205,17 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
     Mat binary;
     BIG_MODE = mode;
 
-    binary = preprocess(img);
-    roi = binary;
+    roi = preprocess(img); //预处理
+    //binary = preprocess(img);
+    //roi = binary;
     //findROI(binary,roi); //设定roi
     //imshow("roi",roi);
 
     if (detectArmor(roi) && detectFlowStripFan(roi) && getTargetPoint(roi)) {
-        getPts(target_armor);
-        //calR();
-//        if(!detectCircleCenter(roi))
-//            circle_center_point = last_circle_center_point;
-        detectCircleCenter(roi);
-        //getPredictPointSmall(roi);
-        //updateLastValues();
-        getPredictPoint(roi,deltaT);
-        //testPredict(roi,deltaT);
-        roiPoint2src();
+        getPts(target_armor); //获得的装甲板4点
+        detectCircleCenter(roi); //识别旋转圆心
+        getPredictPoint(roi,deltaT); //预测
+        //roiPoint2src();
         detect_flag = true;
         misscount = 0;
     }else{
@@ -231,7 +227,7 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
         }
     }
     if(showEnergy){
-        //imshow("binary", binary);
+        imshow("binary", roi);
         circle(outline, Point(IMGWIDTH/2, IMGHEIGHT/2), 2, Scalar(255, 255, 255), 3); //画出图像中心
         imshow("outline", outline);
         waitKey(1);
@@ -452,17 +448,17 @@ bool EnergyDetector::detectCircleCenter(Mat &src){
         }
         Rect rect = boundingRect( circle_contours[t]);
         float ratio = float(rect.width) / float(rect.height);
-
         if (ratio < 1.2 && ratio > 0.80) { //近似正方形
-            //drawContours(img,  circle_contours, t, Scalar(0, 0, 255), -1, 8, Mat(), 0, Point());
             int x = rect.x + rect.width / 2;
             int y = rect.y + rect.height / 2;
             Point2f cal_center = calR(); //反解的圆心位置用于判断检测圆心的可信度
+            //circle(outline, cal_center, 3, Scalar(255, 255, 255), 2, 8, 0);
             if(pointDistance(cal_center,Point2f(x,y))< 50){
                 circle_center_point = Point(x, y);
                 circle(outline, circle_center_point, 3, Scalar(0, 255, 0), 2, 8, 0);
                 return true;
             }
+            cout << area << '\t' << ratio << endl;
         }//else cout << "ratio = " << ratio << endl;
 
     }
@@ -575,23 +571,6 @@ Point2f EnergyDetector::calR() {
     return center_point;
 }
 /**
- * @param theta 预测转过角度
- * @return 预测点坐标
- * @remark 计算预测点坐标
- */
-/*Point2f EnergyDetector::calPredict(float theta) const {
-    double a = cos(theta), b = sin(theta);
-    double rotate_matrix[2][2] = {{a, -b}, {b, a}};
-    double cur_vector[2] = {target_point.x - circle_center_point.x, target_point.y - circle_center_point.y};
-    double predict_vector[2] = {0};
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; ++j) {
-            predict_vector[i] += rotate_matrix[i][j] * cur_vector[j];
-        }
-    }
-    return Point(predict_vector[0] + circle_center_point.x, predict_vector[1] + circle_center_point.y);
-}*/
-/**
  * @param p 变换参考点
  * @param center 极坐标中心
  * @param theta 预测转过角度
@@ -651,26 +630,27 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
     for(int i = 0; i < omega.size(); i++){
         omega[i] = omega[i+1];
         av_omega[i] = av_omega[i+1];
+        predict_arr[i] = predict_arr[i+1];
     }
     angle.back() = cur_theta;
     delta_theta.back() = cur_theta - angle.front(); //相隔3个数相减
     if(delta_theta.back() > 300) //解决 180 -180 跳变问题
         delta_theta.back() = 360 - delta_theta.back();
     cur_omega = abs(delta_theta.back() ) / (deltaT * (angle.size() - 1)/1000) * (2*CV_PI/360); //转为弧度制,算3帧的角速度
-    if(cur_omega > 2.09)
-        cur_omega = 2.09;
+    if(cur_omega > 2.15)
+        cur_omega = 2.15;
     omega.back() = cur_omega;
     //cout << "current omega = " << cur_omega << endl;
 
     float sum_omega = 0;
-    for(int i = 0; i < 5; i++){
-        sum_omega += omega[vec_length - 1 - i];
+    for(int i = 0; i < 4; i++){
+        sum_omega += omega[6 - 1 - i];
     }
-    av_omega.back() = sum_omega / 5;
+    av_omega.back() = sum_omega / 4;
     Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,av_omega,1);
 
     // Five consecutive same judge can change the current state.
-    int cur_flag = rate(0,0) > 0 ? 1 : 0;
+    int cur_flag = rate(0,0) > 0 ? 1 : 0; //判断最小二乘法斜率
     if (cur_flag != last_flag) {
         predict_cnt = 0;
     } else {
@@ -692,31 +672,20 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
         cur_phi = - CV_PI / 2;
     double t = cur_phi / 1.884;
 
-    //predict_rad = spd_int(t + 0.5) - spd_int(t);
-    predict_rad = 0.6 * av_omega.back();
-    //waveClass.displayWave(av_omega.back(),0);
-    //waveClass.displayWave(flag, 0);
+    predict_rad = spd_int(t + 0.5) - spd_int(t);
+    predict_arr.back() = predict_rad;
+    if(predict_rad - predict_arr[4] < -0.05)
+        predict_arr.back() = predict_arr[4] - 0.02;
 
-    float total_rad = 0;
+    float sum_rad = 0;
+    for(int i = 0; i < 3; i++){
+        sum_rad += predict_arr[6 - 1 - i];
+    }
+    predict_rad = sum_rad / 3;
+    if(showEnergy)
+        waveClass.displayWave(av_omega.back(), predict_rad);
 
-//    for(int i=0;i<6;i++){
-//        predict_arr[i] = predict_arr[i+1];
-//        total_rad = total_rad + predict_arr[i];
-//    }
-//    if(predict_cnt < 20)
-//        predict_cnt++;
-//    else{
-//        filter_rad = predict_rad;
-//        predict_cnt = 0;
-//    }
 
-    //predict_arr[9] = predict_rad;
-
-    //float filter_rad = (total_rad + predict_rad)/10; //预测角度有一定抖动，可以考虑加个均值滤波
-
-    //cout << "predict theta = " << predict_rad*360/(2*CV_PI) << endl;
-    waveClass.displayWave(av_omega.back(), predict_rad);
-    //filter_rad = predict_rad;
     predict_point = calPredict(target_point,circle_center_point,-predict_rad);
     circle(outline,predict_point,2,Scalar(0,0,255),3);
 
@@ -774,7 +743,7 @@ void EnergyDetector::testPredict(const Mat &src, float deltaT) {
     cout << "current omega = " << cur_omega << endl;
     float sum_omega = 0;
     for(int i = 0; i < 5; i++){
-        sum_omega += omega[vec_length - 1 - i];
+        sum_omega += omega[omega_length - 1 - i];
     }
     av_omega.back() = sum_omega / 5;
     if(av_omega.back() > 2.05){
