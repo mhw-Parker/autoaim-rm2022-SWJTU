@@ -46,8 +46,8 @@ namespace rm
     bool energyMission = false;//when energy mission completed, energyMission is true, when produce mission completed, energyMission is false
     bool feedbackMission = false;//when feedback mission completed, feedbackMission is true, when produce mission completed, feedbackMission is false
 
-    //int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
-    int8_t curControlState = BIG_ENERGY_STATE;
+    int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
+    //int8_t curControlState = BIG_ENERGY_STATE;
     uint8_t curDetectMode = TRADITION_MODE; //tracking or searching
 
     int direction = 0;

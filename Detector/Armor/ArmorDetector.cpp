@@ -493,35 +493,33 @@ namespace rm
                 continue;
 
             double length = arcLength(i, true);
-            cout << length << endl;
-            if (length > 10 && length < 400)
+            //cout << length << endl;
+            if (length > 10 && length < 400) //条件1：灯条周长
             {
-                possibleLamp = fitEllipse(i);
+                possibleLamp = fitEllipse(i); //用椭圆近似形状
                 lampArea = possibleLamp.size.width * possibleLamp.size.height;
                 //LOGM("lampArea : %f\n",lampArea);
-                if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea))continue;
+                if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea))continue; //条件2：面积
                 float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
                 //LOGM("rate_height2width : %f\n",rate_height2width);
-                if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H))continue;
+                if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H))continue; //条件3：长宽比例
 
                 angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
-
                 //LOGM("angle_ : %f\n",angle_);
-                if(fabs(angle_) >= param.maxLightAngle)continue;
+                if(fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
 
-                rectLamp = possibleLamp.boundingRect();
-                MakeRectSafe(rectLamp,colorMap.size());
-                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1);
-
-                /*Add this to make sure numbers on armors will not be recognized as lamps*/
+                rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
+                MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
+                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的灰度图
+                /* Add this to make sure numbers on armors will not be recognized as lamps */
                 lampImage = colorMap(rectLamp);
-                avgBrightness = mean(lampImage, mask);
+                avgBrightness = mean(lampImage, mask); //求两者均值
 
                 avg = Scalar_<float>(avgBrightness);
 
                 //cout<<avg<<endl;
 
-                if((blueTarget && avg[0] < -30) || (!blueTarget && avg[0] > 30))
+                if((blueTarget && avg[0] < -40) || (!blueTarget && avg[0] > 30))
                 {
                     Lamp buildLampInfo(possibleLamp, angle_, avg[0]);
                     lampVector.emplace_back(buildLampInfo);
