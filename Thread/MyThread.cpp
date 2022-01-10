@@ -18,6 +18,7 @@ extern pthread_t detectPThreadHandler;
 extern pthread_t energyPThreadHandler;
 extern pthread_t feedbackPThreadHandler;
 
+string root_path = "../Output/";
 string now_time = getSysTime();
 
 #if SAVE_VIDEO == 1
@@ -31,7 +32,7 @@ std::ofstream fileClean("../Output/log.txt",ios::trunc);
 #endif
 
 #if SAVE_TEST_DATA == 1
-string data_path = ( string(OUTPUT_PATH + now_time + string("_data")).append(".txt") );
+string data_path = ( string(root_path + now_time + string("_data")).append(".txt") );
 ofstream fout(data_path);
 ofstream dataWrite(data_path,ios::out);
 #endif
@@ -47,7 +48,6 @@ namespace rm
 
     int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
     //int8_t curControlState = BIG_ENERGY_STATE;
-    int8_t lastControlState = BIG_ENERGY_STATE;
     uint8_t curDetectMode = TRADITION_MODE; //tracking or searching
 
     int direction = 0;
@@ -88,7 +88,7 @@ namespace rm
 
     void ImgProdCons::SignalHandler(int)
     {
-        //LOGE("Process Shut Down By SIGINT\n");
+        LOGE("Process Shut Down By SIGINT\n");
         ImgProdCons::quitFlag = true;
 
 #if SAVE_LOG == 1
@@ -100,22 +100,22 @@ namespace rm
 #endif
         if(pthread_kill(producePThreadHandler,0) == ESRCH)
         {
-            //LOGW("Child Thread Produce Thread Close Failed\n");
+            LOGW("Child Thread Produce Thread Close Failed\n");
         }
 
         if(pthread_kill(detectPThreadHandler,0) == ESRCH)
         {
-            //LOGW("Child Thread Detect Thread Close Failed\n");
+            LOGW("Child Thread Detect Thread Close Failed\n");
         }
 
         if(pthread_kill(energyPThreadHandler,0) == ESRCH)
         {
-            //LOGW("Child Thread EnergyDetector Thread Close Failed\n");
+            LOGW("Child Thread EnergyDetector Thread Close Failed\n");
         }
 
         if(pthread_kill(feedbackPThreadHandler,0) == ESRCH)
         {
-            //LOGW("Child Thread Feedback Thread Close Failed\n");
+            LOGW("Child Thread Feedback Thread Close Failed\n");
         }
 
         exit(-1);
@@ -142,7 +142,6 @@ namespace rm
             armorDetectorPtr(unique_ptr<ArmorDetector>(new ArmorDetector())),
             kalman(unique_ptr<Kalman>(new Kalman())),
             energyPtr(unique_ptr<EnergyDetector>(new EnergyDetector())),
-            predictPtr(unique_ptr<Predictor>(new Predictor())),
             armorType(BIG_ARMOR),
             driver(),
             missCount(0)
@@ -167,13 +166,7 @@ namespace rm
                 driver = &intelCapture;
 #endif
                 break;
-            case INFANTRY_MELEE0:
-                direct_y = -1;
-#ifdef MIND
-                driver = &mindCapture;
-#endif
-                break;
-            case INFANTRY_MELEE1:
+            case INFANTRY_MELEE:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -190,7 +183,6 @@ namespace rm
                 driver = &v4l2Capture;
                 break;
             case VIDEO:
-                direct_y = -1;
                 driver = &videoCapture;
                 break;
             case NOTDEFINED:
@@ -198,18 +190,20 @@ namespace rm
                 break;
         }
         if(saveVideo){
-            path = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(1280, 1024));
+            path = ( string(root_path + now_time).append(".avi"));
+            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30.0, cv::Size(1280, 1024));
         }
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
         {
-           /// log
+            LOGM("Camera Initialized\n");
+            LOGM("Camera Set Down\n");
+            LOGM("Camera Start to Grab Frames\n");
         }
         else
         {
             driver->StopGrab();
-
+            LOGW("Camera Resource Released\n");
             exit(-1);
         }
 
@@ -230,7 +224,7 @@ namespace rm
             }
         }while(true);
         missCount = 0;
-        //LOGM("Initialization Completed\n");
+        LOGM("Initialization Completed\n");
         return true;
     }
 
@@ -239,22 +233,22 @@ namespace rm
         taskTime = (double)getTickCount();
         /** 计算上一次执行耗时 **/
         if(tmp_t!=0)
-            last_mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
+            mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
         tmp_t = taskTime;
         total_time = 0;
         for(int i = 0; i<whole_time_arr.size()-1; i++){
             whole_time_arr[i] = whole_time_arr[i+1];
             total_time += whole_time_arr[i];
         }
-        whole_time_arr.back() = last_mission_time;
-        deltat = (total_time + last_mission_time) / whole_time_arr.size();
+        whole_time_arr.back() = mission_time;
+        deltat = (total_time + mission_time) / whole_time_arr.size();
         cout << "3帧平均耗时 = " << deltat << endl;
         /** ** **/
 
         if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH)
         {
             missCount++;
-            //LOGW("FRAME GRAB FAILED!\n");
+            LOGW("FRAME GRAB FAILED!\n");
             if(missCount > 5)
             {
                 driver->StopGrab();
@@ -267,11 +261,9 @@ namespace rm
             videowriter.write(frame);
 
         //get current gimbal degree while capture
-        if(serialPtr->ReadData(receiveData)){
-            curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
-        }
-
+        serialPtr->ReadData(receiveData);
         detectFrame = frame.clone();
+        energyFrame = frame.clone();
 #if SHOWTIME == 1
         cout << "Frame Produce Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
 #endif
@@ -279,22 +271,11 @@ namespace rm
     
     void ImgProdCons::Detect() 
     {
-        if(lastControlState == curControlState){
-            lastControlState = curControlState;
-        }else{
-            if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
-                energyPtr->init();
-            //else
-            /* 装甲板识别初始化，滤波器初始化啥的 */
-            if(curControlState == AUTO_SHOOT_STATE)
-                predictPtr->Refresh();
-        }
-        lastControlState = curControlState; //更新上一次的状态值
         switch (curControlState) {
             case AUTO_SHOOT_STATE: Armor(); break;
             case BIG_ENERGY_STATE: Energy(); break;
             case SMALL_ENERGY_STATE: Energy(); break;
-            default: Armor();
+            default: Armor(); break;
         }
     }
 
@@ -326,16 +307,19 @@ namespace rm
                 break;
             }
         }
-
+        if(debug)
+            imshow("armor",detectFrame);
         cout << "Armor Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
     }
 
     void ImgProdCons::Energy()
     {
         taskTime = (double)getTickCount();
-        /* do energy detection */
-        energyPtr->EnergyTask(detectFrame, curControlState, deltat);
-
+        if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
+        {
+            /* do energy detection */
+            energyPtr->EnergyTask(energyFrame, curControlState, deltat);
+        }
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
         dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
@@ -344,6 +328,7 @@ namespace rm
         cout << "Energy Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
         tt += CalWasteTime(taskTime,freq);
         cnt1++;
+
         cout << "average time = " << tt / cnt1 << endl;
 #endif
     }
@@ -352,50 +337,16 @@ namespace rm
     {
         taskTime = (double)getTickCount();
         if(curControlState == AUTO_SHOOT_STATE) {
-            if (armorDetectorPtr->findState && armorDetectorPtr->lossCnt == 0)
+            if (armorDetectorPtr->findState)
             {
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
-                                    armorDetectorPtr->IsSmall(),16);
+                                    armorDetectorPtr->IsSmall());
+                /**record distance for debug**/
+                dis_count++;
+                dis_sum += solverPtr->dist;
 
-                Vector3f gimbal_ypd;
-                if(carName == SENTRY){
-
-                }else if(carName == VIDEO){
-                    // 用于平时的视频测试时
-                    gimbal_ypd << 0, 0, solverPtr->dist;
-                    target_ypd << gimbal_ypd[0] + direct_y * solverPtr->yaw,
-                                gimbal_ypd[1] + direct_p * solverPtr->pitch,
-                                solverPtr->dist;
-
-                    predictPtr->armorPredictor(target_ypd,gimbal_ypd,direct_y);
-
-                }else{
-                    gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
-                    target_ypd <<  receiveData.yawAngle + direct_y * solverPtr->yaw,
-                                receiveData.pitchAngle + direct_p * solverPtr->pitch,
-                                solverPtr->dist;
-                    predictPtr->armorPredictor(target_ypd,gimbal_ypd,direct_y);
-                }
-
-                solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd,direct_y,direct_p);
-
-                pitch_abs = target_ypd[1];
-                yaw_abs = predictPtr->yaw + solverPtr->pitchCompensate(solverPtr->dist,16); //将yaw更新为预测值，pitch就不预测
-
-
-#if SAVE_TEST_DATA == 1
-                // **** 目标陀螺仪 x y z **** //
-                dataWrite << predictPtr->x_ << " " << predictPtr->y_ << " " << predictPtr->z_ << endl;
-#endif
-            }else if(armorDetectorPtr->findState && armorDetectorPtr->lossCnt > 0 && armorDetectorPtr->lossCnt < 3){
-                if(armorDetectorPtr->lossCnt == 1)
-                    last_xyz = predictPtr->target_xyz;
-                float dt = tt / cnt1 / 1000;
-                predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt + 0.5 * predictPtr->target_a_xyz * dt * dt;
-                yaw_abs = target_ypd[0] + GetDeltaTheta(predictPtr->target_xyz,last_xyz,direct_y)
-                        + predictPtr->kalmanPredict(predictPtr->target_xyz,direct_y);
-
+                // LOGM("DIS AVG : %f\n", dis_sum/dis_count);
             }
 #if DEBUG == 1
             frequency = getTickFrequency()/((double)getTickCount() - timeFlag);
@@ -455,15 +406,14 @@ namespace rm
 
             if(showOrigin)
             {
-                circle(frame,Point(FRAMEWIDTH/2, FRAMEHEIGHT/2),5,Scalar(255,255,255),-1);
+                circle(detectFrame,Point(FRAMEWIDTH/2, FRAMEHEIGHT/2),5,Scalar(255,255,255),-1);
 
                 if(FRAMEHEIGHT > 1000)
                 {
                     //pyrDown(detectFrame,detectFrame);
                     //pyrDown(detectFrame,detectFrame);
                 }
-                imshow("detect",frame);
-                waitKey(1);
+                imshow("detect",detectFrame);
             }
 
 
@@ -482,14 +432,15 @@ namespace rm
              YAW axis. If so, reduce the target Angle of the holder and indirectly slow down the rotation speed of the
              holder.
              *******************************************************************************************************/
+
             if(!armorDetectorPtr->findState)
             {
-                predictPtr->Refresh(); //clear
+                //LOGE("lost_target_count : %d\n", ++lost_target_count);
                 yawTran /= 1.2;
                 pitchTran /= 1.2;
 
                 /** reset kalman filter **/
-
+                //kalman->SetKF(Point(0,0),true);
 
                 if(fabs(yawTran) > 0.1 && fabs(pitchTran) > 0.1)
                     armorDetectorPtr->findState = true;
@@ -538,20 +489,9 @@ namespace rm
             //cout<<solverPtr->shoot<<endl;
             //cout<<armorDetectorPtr->findState<<" "<<yawTran<<" "<<pitchTran<<" "<<yawDeviation<<endl;
             /** package data and prepare for sending data to lower-machine **/
-            if(carName != HERO){
-                serialPtr->pack(yaw_abs,
-                                pitch_abs,
-                                solverPtr->dist,
-                                solverPtr->shoot,
-                                armorDetectorPtr->findState,
-                                AUTO_SHOOT_STATE,
-                                0);
-#if SAVE_TEST_DATA == 1
-                // **** 当前相角  当前角速度  预测弧度值 **** //
-                dataWrite << solverPtr->p_cam_xyz[0] << " " << solverPtr->p_cam_xyz[1] << " " << solverPtr->p_cam_xyz[2] << endl;
-#endif
-            }
-
+            if(carName != HERO)
+                serialPtr->pack(receiveData.yawAngle + yawTran + yawOffset,receiveData.pitchAngle + pitchTran, solverPtr->dist, solverPtr->shoot,
+                                armorDetectorPtr->findState, AUTO_SHOOT_STATE,0);
             else
             {
 #ifdef REALSENSE
@@ -560,6 +500,7 @@ namespace rm
                                 armorDetectorPtr->findState, AUTO_SHOOT_STATE,0);
 #endif
             }
+
             feedbackDelta = 1;
 #if DEBUG_MSG == 1
             LOGM("Write Data\n");
@@ -567,13 +508,42 @@ namespace rm
         }
         else
         {
-            solverPtr->GetPoseV(energyPtr->predict_pts,false,0);
-            //solverPtr->GetPoseV(energyPtr->pts,false,16);
+            solverPtr->GetPoseV(energyPtr->predict_pts,false);
+            //solverPtr->GetPoseV(energyPtr->pts,false);
+            if (showEnergy)
+            {
+                circle(energyFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
 
-            ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
+                putText(energyFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(energyFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(energyFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(energyFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                if (energyPtr->detect_flag){
+                    circle(energyFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
+                    for (int i = 0; i < 4; i++) {
+                        line(energyFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
+                             Scalar(255, 255, 255), 2, LINE_8);
+                        line(energyFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                             Scalar(0, 255, 255), 2, LINE_8);
+                    }
+                    circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
+                    circle(energyFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                    circle(energyFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
+                }
+
+
+                imshow("energy", energyFrame);
+                waitKey(1);
+            }
             yaw_abs = receiveData.yawAngle - solverPtr->yaw ; //绝对yaw角度
             pitch_abs = receiveData.pitchAngle + solverPtr->pitch ; //绝对pitch角度
-
+            //cout << "receieve : " << receiveData.yawAngle << endl;
             serialPtr->pack(yaw_abs,
                             pitch_abs,
                             solverPtr->dist,
@@ -581,7 +551,7 @@ namespace rm
                             energyPtr->detect_flag,
                             curControlState,
                             0);
-
+            //cout << yaw_abs << "\t" << pitch_abs << endl;
 #if SAVE_LOG == 1
 //            string s = getSysTime();
 //            logWrite <<"=========== produce mission ==========="<< endl;
@@ -593,42 +563,10 @@ namespace rm
 #endif
         }
 
-        if(showArmorBox || showEnergy){
-            circle(detectFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
-
-            putText(detectFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-            putText(detectFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-            putText(detectFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-            putText(detectFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-            putText(detectFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-            putText(detectFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-            putText(detectFrame, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-            if (showEnergy && energyPtr->detect_flag){
-                circle(detectFrame, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                for (int i = 0; i < 4; i++) {
-                    line(detectFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
-                         Scalar(255, 255, 255), 2, LINE_8);
-                    line(detectFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
-                         Scalar(0, 255, 255), 2, LINE_8);
-                }
-                circle(detectFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
-                circle(detectFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                circle(detectFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
-            }
-            if(showArmorBox && armorDetectorPtr->findState){
-                circle(detectFrame, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                if(!predictPtr->predict_point.empty())
-                    circle(detectFrame, predictPtr->predict_point.back(), 2, Scalar(100, 240, 15), 3);
-            }
-            imshow("Detect Frame", detectFrame);
-            waitKey(1);
-        }
-
         /**press key 'space' to pause or continue task**/
-        if(debug){
+        if(debug)
+        {
+
             if(!pauseFlag && waitKey(30) == 32){pauseFlag = true;}
 
             if(pauseFlag)
@@ -651,6 +589,40 @@ namespace rm
         }
 
         /** Receive data from low-end machine to update parameters(the color of robot, the task mode, etc) **/
+//        if(serialPtr->ReadData(receiveData))
+//        {
+//#if DEBUG_MSG == 1
+//            LOGM("Receive Data\n");
+//#endif
+//            /** Update task mode, if receiving data failed, the most reasonable decision may be just keep the status
+//             * as the last time **/
+//            curControlState = receiveData.targetMode;
+//
+//            /** because the logic in armor detection task need the color of enemy, so we need to negate to color variable
+//             * received, receiveData.targetColor means the color of OUR robot, but not the enemy's **/
+//            blueTarget = (receiveData.targetColor) == 0;
+//
+//            direction = +static_cast<int>(receiveData.direction);
+//
+//#if SAVE_LOG == 1
+//            logWrite<<"[Feedback Time Consume] : "<<((double)getTickCount() - taskTime)/getTickFrequency()<<endl;
+//                logWrite<<"[Total Time Consume] : "<<((double)getTickCount() - timeFlag)/getTickFrequency()<<endl;
+//                //logWrite<<"[Direction] :" <<receiveData.direction<<endl;
+//                //logWrite<<"[Target Color] : "<<blueTarget<<endl;
+//                logWrite<<"[Current Yaw Angle] : "<<receiveData.yawAngle<<endl;
+//                logWrite<<"[Current Pitch Angle] : "<<receiveData.pitchAngle<<endl;
+//#endif
+//
+//#if DEBUG_MSG == 1
+//            LOGM("BlueTarget: %d\n",(int)blueTarget);
+//#endif
+//        }
+//        else
+//        {
+//#if SAVE_LOG == 1
+//            logWrite<<"[Receive Data from USB2TTL FAILED]"<<endl;
+//#endif
+//        }
 #if SHOWTIME == 1
         cout << "FeedBack Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
 #endif
