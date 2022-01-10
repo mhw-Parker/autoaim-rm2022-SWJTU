@@ -130,10 +130,17 @@ void SolveAngle::camXYZ2YPD(Mat tvecs)
     pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360; //arctan(y/sqrt(x^2 + z^2))
     dist = sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[1]*p_cam_xyz[1] + p_cam_xyz[2]*p_cam_xyz[2]); //sqrt(x^2 + y^2 + z^2)
 }
-
-void SolveAngle::compensator(float dist, float pitch, float deltaY)
+/**
+ * @brief 弹道补偿函数
+ * @param pitch 当前的 pitch 差角
+ * @param dist 目标点距离
+ * @param fitY 装配导致的枪口摄像头高度差 在枪口上为正 枪口下为负 单位为：mm
+ * */
+void SolveAngle::Compensator(float dist, float pitch, float fitY)
 {
-
+    float x = p_cam_xyz[0];
+    float y = p_cam_xyz[1] - fitY;
+    float z = p_cam_xyz[2];
 }
 
 /**
