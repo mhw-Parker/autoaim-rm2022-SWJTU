@@ -10,6 +10,7 @@ set(OpenCV_DIR "/home/tyy/opencv-4.5.4/build")
 FIND_PACKAGE(OpenCV 4.5.4 REQUIRED)
 FIND_PACKAGE(Threads)
 FIND_PACKAGE(realsense2 REQUIRED)
+FIND_PACKAGE(Ceres REQUIRED)
 
 # 加入一个配置头文件，用于处理 CMake 对源码的设置
 configure_file (
@@ -57,16 +58,19 @@ if (REALSENSE)
 endif (REALSENSE)
 
 include_directories(/usr/include/eigen3)
+include_directories(${CERES_INCLUDE_DIRS})
 
 MESSAGE(STATUS "Project:MASTER")
 MESSAGE(STATUS "Project Directory: ${PROJECT_SOURCE_DIR}")
 MESSAGE(STATUS "OpenCV Library Status:")
 MESSAGE(STATUS "OpenCV Version: ${OpenCV_VERSION}")
 MESSAGE(STATUS "OpenCV Libraries: ${OpenCVLIBS}")
-MESSAGE(STATUS "Include Path:  ${PROJECT_SOURCE_DIR} ${OpenCV_INCLUDE_DIRS}")
+#MESSAGE(STATUS "Include Path:  ${PROJECT_SOURCE_DIR} ${OpenCV_INCLUDE_DIRS}")
 MESSAGE(STATUS "MindVision CAMERA is : ${MIND}")
 MESSAGE(STATUS "DAHUA CAMERA is : ${DAHUA}")
 MESSAGE(STATUS "realsense CAMERA is : ${REALSENSE}")
+message(STATUS "Found Ceres: ${CERES_FOUND}")
+message(STATUS "Ceres PATH: ${CERES_LIBS_DIR}")
 
 FILE(GLOB_RECURSE sourcefiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detector/Armor/*.cpp" "Serials/*.cpp" "Thread/*.cpp"
         "Math/Filter/*.cpp" "Math/SolveAngle/*.cpp" "Math/Kalman/*.cpp" "Drivers/V4L2KAS/src/*.cpp" "Drivers/VideoDriver/src/*.cpp" )
@@ -75,9 +79,13 @@ FILE(GLOB_RECURSE sourcefiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detecto
 ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourcefiles} ${DRIVER_SRC})
 
 list(APPEND PSMOVEAPI_TRACKER_REQUIRED_LIBS v4l2)
-
+set(LIBS libceres.a umfpack cxsparse glog gflags gomp
+        ccolamd btf klu cholmod lapack blas camd amd pthread) #${Ceres_LIBS_DIR}/libceres.a
+target_link_libraries(${BIN_NAME} ${LIBS})
 TARGET_LINK_LIBRARIES(${BIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
 TARGET_LINK_LIBRARIES(${BIN_NAME} ${OpenCV_LIBS})
+
+#TARGET_LINK_LIBRARIES(${BIN_NAME} ${Ceres_LIBS})
 
 if(REALSENSE)
     TARGET_LINK_LIBRARIES(${BIN_NAME} ${realsense2_LIBRARY})

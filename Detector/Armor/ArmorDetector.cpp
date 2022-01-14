@@ -316,20 +316,20 @@ namespace rm
 
         if (lights.size() < 2)
             return;
-
+        //过滤器
         for (unsigned int i = 0; i < lights.size() - 1; i++)
         {
             for (unsigned int j = i + 1; j < lights.size(); j++)
             {
-                /*the difference between two angles*/
+                /* the difference between two angles 灯条角度 */
                 dAngle = fabs(lights[i].lightAngle - lights[j].lightAngle);
                 if(dAngle > param.maxAngleError)continue;
 
-                /*the difference ratio of the two lights' height*/
+                /*the difference ratio of the two lights' height 灯条长度 */
                 contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) / max(lights[i].rect.size.height, lights[j].rect.size.height);
                 if(contourLen1 > param.maxLengthError)continue;
 
-                /*the difference ratio of the two lights' width*/
+                /*the difference ratio of the two lights' width 灯条宽度比 */
                 contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) / max(lights[i].rect.size.width, lights[j].rect.size.width);
 
                 /*the average height of two lights(also the height of the armor defined by these two lights)*/
@@ -378,7 +378,7 @@ namespace rm
 
         findState = true;
 
-        sort(matchLights.begin(), matchLights.end(), compMatchFactor);
+        sort(matchLights.begin(), matchLights.end(), compMatchFactor); //元素从小到大排序
 
 #if NUM_RECOGNIZE == 1
         uint8_t mostPossibleLampsIndex1 = matchLights[0].matchIndex1, mostPossibleLampsIndex2 = matchLights[0].matchIndex2;
@@ -397,9 +397,11 @@ namespace rm
                 curArmor = Armor(lights[matchLights[i].matchIndex1], lights[matchLights[i].matchIndex2],matchLights[i].matchFactor);
                 MakeRectSafe(curArmor.rect,roiRect.size());
 
-                SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]);
+                SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]); //设置用于svm识别的4点区域
 
-                armorNumber = GetArmorNumber();
+                armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
+                cout << "SVM model detect : " << armorNumber << endl;
+
                 if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
                 {
                     targetMatchIndex = i;
@@ -459,10 +461,13 @@ namespace rm
 
         threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
 
-        GaussianBlur(bright,bright,Size(5,5),3);
+        GaussianBlur(bright,bright,Size(5,5),5);
         threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
-
+        Mat adaptive;
+        //adaptiveThreshold(bright,adaptive,255,)
+        //imshow("grey",bright);
         colorMap = Mat_<int>(rSubB) - Mat_<int>(bSubR);
+
     }
 
     /**
@@ -511,6 +516,7 @@ namespace rm
                 rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
                 MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
                 mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的灰度图
+
                 /* Add this to make sure numbers on armors will not be recognized as lamps */
                 lampImage = colorMap(rectLamp);
                 avgBrightness = mean(lampImage, mask); //求两者均值
@@ -519,7 +525,7 @@ namespace rm
 
                 //cout<<avg<<endl;
 
-                if((blueTarget && avg[0] < -40) || (!blueTarget && avg[0] > 30))
+                if((blueTarget && avg[0] < -40) || (!blueTarget && avg[0] > 40)) //灯条和数字的重叠面积有较大差别
                 {
                     Lamp buildLampInfo(possibleLamp, angle_, avg[0]);
                     lampVector.emplace_back(buildLampInfo);
@@ -536,18 +542,6 @@ namespace rm
      * @brief 新的灯条识别，田翊扬 2022/1/7
      * */
      vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
-         /** 预处理 **/
-        /*Mat blue_binary, red_binary, binary;
-        Mat single, blue_c, red_c;
-        vector<Mat> channels;
-        split(img, channels);
-        blue_c = channels.at(0);
-        red_c = channels.at(2);
-        threshold(blue_c,blue_binary,90,255,THRESH_BINARY);
-        threshold(red_c,red_binary,90,255,THRESH_BINARY);
-        binary = blueTarget ? blue_binary - red_binary : red_binary - blue_binary; //滤掉白光
-        imshow("sub channel",binary);*/
-        /**  **/
         float angle_ = 0;
         Scalar_<double> avg,avgBrightness;
         float lampArea;
@@ -687,6 +681,7 @@ namespace rm
             cout<<"Svm load error! Please check the path!"<<endl;
             exit(0);
         }
+
         svmArmorSize = armorImgSize;
 
         //set dstPoints (the same to armorImgSize, as it can avoid resize armorImg)
@@ -718,7 +713,7 @@ namespace rm
     int ArmorDetector::GetArmorNumber()
     {
 #if USEROI == 1
-        warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
+        warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints); //对 svm 矩形区域进行透视变换
         warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat, Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE), INTER_NEAREST, BORDER_CONSTANT, Scalar(0)); //warpPerspective to get armorImage
 
         warpPerspective_dst = warpPerspective_dst.colRange(6,34).clone();
@@ -727,7 +722,7 @@ namespace rm
         pyrDown(warpPerspective_dst,warpPerspective_dst);
        // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
-       // imshow("warpPerspective_dst",warpPerspective_dst);
+       // imshow("svm",warpPerspective_dst);
 
         svmParamMatrix = warpPerspective_dst.reshape(1, 1);
         svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
@@ -848,7 +843,7 @@ namespace rm
                     line(frame, targetArmor.pts[j], targetArmor.pts[(j + 1) % 4], Scalar(0, 255, 255), 2);
                 }
 
-                circle(frame,targetArmor.center,10,Scalar(0,255,255),-1);
+                circle(frame,targetArmor.center,5,Scalar(0,255,255),-1);
             }
 
             /**update roi rect, last armor, average of lamps' R channel subtract B channel value**/

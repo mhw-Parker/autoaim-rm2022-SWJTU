@@ -20,7 +20,6 @@
 #include "EnergyDetector.h"
 #include "V4L2KAS.h"
 #include "VideoDriver.hpp"
-
 #include "utility.hpp"
 
 #ifdef DAHUA
@@ -122,7 +121,7 @@ namespace rm
 
         /***/
         double tmp_t = 0;
-        double mission_time; //任务总体耗时
+        double last_mission_time; //上一次任务总体耗时
         vector<double> whole_time_arr;
         int time_cnt;
         float total_time;

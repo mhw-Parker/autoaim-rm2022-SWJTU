@@ -78,6 +78,23 @@ struct McuData {
 	int delta_y;         // 能量机关y轴补偿量
 };
 
+struct SinResidual{
+    SinResidual(double t, double omega): omega_(omega), t_(t) {}
+
+    template<class T>
+//    bool operator()(const T* const a, const T* const phi, T* residual) const{
+//        residual[0] = omega_ - (a[0] * sin(1.884 * t_ + phi[0]) + 2.09 - a[0]); // spd = a*sin(wt) + b
+//        return true;
+//    }
+    bool operator()(const T* const a,const T* const w, const T* const phi, T* residual) const{
+        residual[0] = omega_ - (a[0] * sin(w[0] * t_ + phi[0]) + 2.09 - a[0]); // spd = a*sin(w*t) + b
+        return true;
+    }
+private:
+    const double omega_;
+    const double t_;
+};
+
 
 
 

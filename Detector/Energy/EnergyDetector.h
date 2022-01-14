@@ -9,14 +9,22 @@
 #include <Eigen/Dense>
 #include <opencv2/core/eigen.hpp>
 #include <utility.hpp>
+#include <ceres/ceres.h>
 
 #include "mydefine.h"
 #include "log.h"
 
 #include"struct_define.h"
 
+
+
 using namespace std;
 using namespace cv;
+using ceres::AutoDiffCostFunction;
+using ceres::CostFunction;
+using ceres::Problem;
+using ceres::Solve;
+using ceres::Solver;
 
 #define SHOOT_TIME 1
 #define FPS 60
@@ -57,15 +65,12 @@ class EnergyDetector {
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyTask(const Mat &src, bool mode, const float deltaT);//接口
-    Point getPredict();
-    Point getOffset();
+    void EnergyTask(const Mat &src, int8_t mode, const float deltaT);//接口
+    void init();
     vector<Point2f> pts;
     vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
-    cv::Point2f last_target_point;//上一次目标装甲板坐标
     cv::Point2f predict_point;//预测的击打点坐标
-    cv::Point2f last_circle_center_point;//上一次风车圆心坐标
     cv::Point2f circle_center_point;//风车圆心坐标
     std::vector<cv::Point2f> target_armor_centers;//get R
 
@@ -89,6 +94,8 @@ private:
     bool BIG_MODE = true;//是否为大符模式
     bool inter_flag = false;//是否contour有交集
     bool start_flag = false;//是否开始预测
+    cv::Point2f last_circle_center_point;//上一次风车圆心坐标
+    cv::Point2f last_target_point;//上一次目标装甲板坐标
 
     WindmillParamFlow _flow;
     McuData mcu_data;
@@ -129,26 +136,22 @@ private:
 
     Mat roi;
 
-#ifdef DAHUA
-    float dpx = 1811.5;
-	float dpy = 1682.2;
-#endif
-#ifdef MIND
-    float dpx = 726.52;
-    float dpy = 529.27;
-#endif
-
 /*** *** *** *** *** ***/
 
 /*** new predict ***/
     float spd_int(float t);
+    float spdInt(float t);
     float spd_phi(float omega, int flag);
+    float spdPhi(float omega, int flag);
+    void calOmega(float deltaT);
+    float startT = 0;
     vector<float> delta_theta;
     vector<float> angle;
     vector<float> omega;
     vector<float> av_omega;
     vector<float> x_list;
     vector<float> predict_arr;
+    vector<float> filter_omega;
     float sum_time;
     float init_time;
     //float predict_arr[6];
@@ -161,8 +164,23 @@ private:
     void getPredictPointSmall(const Mat& src);
     void getPredictPoint(const Mat& src,float deltaT);
     void getPredictRect(float theta, vector<Point2f> pts);
+    void testModule();
     RMTools::DisPlayWaveCLASS waveClass;
+
+    void em();
+    float min_omega = 5 , max_omega = 0;
+    float min_t, max_t;
 /*** *** *** *** *** ***/
+
+    /***/
+    bool judgeRotation(const Mat &src, const float deltaT);
+    void estimateParam(vector<float>omega_, vector<float>t_, int times);
+    vector<float> time_series; //记录每次的时间
+    vector<float> omega_series; //记录omega的值
+    Problem problem;
+    int cnt_t = 0, cnt_i = 0;
+    double a_ = 0.780, w_ = 1.884, phi_ = 2.09 - 0.78; //参数初值
+    /***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板
     std::vector<cv::RotatedRect> armors;//图像中所有可能装甲板
@@ -180,7 +198,7 @@ private:
     cv::RotatedRect target_armor;//目标装甲板
     cv::RotatedRect last_target_armor;//上一次目标装甲板
 
-    int energy_rotation_direction;//风车旋转方向
+    int energy_rotation_direction = 1;//风车旋转方向
     int clockwise_rotation_init_cnt;//装甲板顺时针旋转次数
     int anticlockwise_rotation_init_cnt;//装甲板逆时针旋转次数
     bool energy_rotation_init;//若仍在判断风车旋转方向，则为true

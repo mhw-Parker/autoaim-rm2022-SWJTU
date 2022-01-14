@@ -15,10 +15,8 @@
 #include "EnergyDetector.h"
 
 using namespace std;
-extern McuData mcu_data;
 
 Mat outline;
-int debug_cur_count = 0;
 
 static Mat polyfit(list<float> &in_point, int n) {
     int size = in_point.size();
@@ -89,7 +87,6 @@ void EnergyDetector::initEnergy() {
     predict_point = Point(0, 0);//预测打击点初始化
     pts.resize(4);
     predict_pts.resize(4);
-
 
     delta_theta.resize(angle_length); //长度为4
     angle.resize(angle_length);
@@ -190,16 +187,16 @@ void EnergyDetector::clearAll() {
     target_blades.clear();
     centerRs.clear();
     armor_centers.clear();
-
 }
 
 /**
  * @brief EnergyDetector::EnergyTask
- * @param Mat& src
- * @return null
+ * @param src 摄像头读入的图片
+ * @param mode 大小幅模式选择
+ * @param deltaT 目前用的三阶差分求 omega 所以 deltaT 为三帧平均时间
  * @remark 能量机关任务执行接口
  */
-void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
+void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT) {
     clearAll();
     Mat img = src.clone();
     Mat binary;
@@ -214,14 +211,22 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
     if (detectArmor(roi) && detectFlowStripFan(roi) && getTargetPoint(roi)) {
         getPts(target_armor); //获得的装甲板4点
         detectCircleCenter(roi); //识别旋转圆心
-        getPredictPoint(roi,deltaT); //预测
-        //roiPoint2src();
-        detect_flag = true;
-        misscount = 0;
+        calOmega(deltaT); //计算当前的角速度 cur_omega 为当前三阶差分计算的角速度 av_omega.back() 为 4 次角速度平滑均值
+        waveClass.displayWave(av_omega.back(), 1.305);
+        if(judgeRotation(src,deltaT)){
+            if(mode == BIG_ENERGY_STATE){
+                getPredictPoint(roi,deltaT); //变速预测
+            }else if(mode == SMALL_ENERGY_STATE){
+                getPredictPointSmall(roi);
+            }
+            //roiPoint2src();
+            detect_flag = true;
+            misscount = 0;
+        }
     }else{
         misscount++;
         predict_point = Point2f (0,0);
-        if(misscount>5){
+        if(misscount>5){ //连续5帧丢目标
             misscount = 0;
             detect_flag = false;
         }
@@ -233,7 +238,88 @@ void EnergyDetector::EnergyTask(const Mat &src, bool mode, const float deltaT) {
         waitKey(1);
     }
 }
+/**
+ * @brief 每次切换状态清空
+ * */
+void EnergyDetector::init() {
+    clearAll(); //清除容器
+    cnt_t = 0;
+    cnt_i = 0;
 
+    omega.clear();
+    delta_theta.clear();
+    angle.clear();
+    predict_arr.clear();
+    av_omega.clear();
+
+    delta_theta.resize(angle_length); //长度为4
+    angle.resize(angle_length);
+    predict_arr.resize(omega_length); //预测角度数组初始化
+    omega.resize(omega_length);
+    av_omega.resize(omega_length);
+    for (int i = 0; i < omega.size(); ++i)
+        av_omega[i] = 0;
+
+}
+
+/**
+ * @brief 初始化判断大幅旋转旋方向，迭代计算大幅速度正弦变化函数参数 a w phi
+ * @param src 摄像头读入图像
+ * @param startT 任务起始时间
+ * */
+bool EnergyDetector::judgeRotation(const Mat &src, const float deltaT) {
+    int times = 150;
+    if (!cnt_t) {
+        startT = getTickCount();//第一帧识别到后记录下当前时间
+        cnt_t++;
+        return false;
+    } else if (cnt_t < times) {
+        if (delta_theta.back() < 0) cnt_i++; //记录下差角逆时针变化的次数
+        cnt_t++;
+        //cout << "次数 ：" << cnt_t++ << endl;
+        return false;
+    } else if (cnt_t == times) {
+        //cout << cnt_t++ << endl;
+        cnt_t++;
+        if (cnt_i > times / 2 + 10)
+            energy_rotation_direction = 1;
+        else
+            energy_rotation_direction = -1;
+        estimateParam(omega, time_series, times); //分别是时间戳对应的 omega 和用于拟合计算的点的数量
+        return true;
+    } else
+        return true;
+}
+void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int times) {
+    if(omega_.size() >= times - 1){
+        int st = omega_.size() - times + 1;
+        for(int i = st; i < omega_.size(); i++){
+            ceres::CostFunction* cost_func =
+                    new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
+                            new SinResidual(t_[i]-t_[st],omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
+            problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
+            //problem.AddResidualBlock(cost_func, NULL, &a_, &phi_ );
+            //cout << t_[i]-t_[st] << " " << omega_[i] << endl;
+        }
+        Solver::Options options;
+        options.max_num_iterations = 25;
+        options.linear_solver_type = ceres::DENSE_QR;
+        options.minimizer_progress_to_stdout = true;
+
+        Solver::Summary summary;
+        Solve(options, &problem, &summary);
+        std::cout << summary.BriefReport() << "\n";
+        std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
+        std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
+        if(a_ < 0.780) a_ = 0.785;
+        else if(a_ > 1.045 ) a_ = 1.045;
+        if(w_ < 0) w_ = abs(w_);
+        else if(w_ < 1.884) w_ = 1.884;
+        else if(w_ > 2) w_ = 2;
+
+        waitKey(0);
+    }
+}
 /**
  * @brief EnergyDetector::preprocess
  * @param Mat& src
@@ -367,7 +453,6 @@ bool EnergyDetector::detectArmor(Mat &src) {
 
 }
 
-
 /**
  * @brief EnergyDetector::detectFlowStripFan
  * @param Mat& src
@@ -386,7 +471,6 @@ bool EnergyDetector::detectFlowStripFan(Mat &src) {
     findContours(flow_fan_dilate, flow_strip_fan_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE); //只检测外围轮廓
     vector<cv::RotatedRect> candidate_flow_strip_fans;
 
-    debug_cur_count = 0;
     for (auto &flow_strip_fan_contour : flow_strip_fan_contours) {
 
         if (!isValidFlowStripFanContour(flow_fan_dilate, flow_strip_fan_contour)) {
@@ -458,7 +542,7 @@ bool EnergyDetector::detectCircleCenter(Mat &src){
                 circle(outline, circle_center_point, 3, Scalar(0, 255, 0), 2, 8, 0);
                 return true;
             }
-            cout << area << '\t' << ratio << endl;
+            //cout << area << '\t' << ratio << endl;
         }//else cout << "ratio = " << ratio << endl;
 
     }
@@ -478,7 +562,7 @@ bool EnergyDetector::getTargetPoint(Mat &src) {
         //为target_armors打分
         for (int j = 0; j < armors.size(); j++) {
             std::vector<cv::Point2f> intersection;
-            if (rotatedRectangleIntersection(armors[j], valid_fan_strip[i], intersection) == 0)
+            if (rotatedRectangleIntersection(armors[j], valid_fan_strip[i], intersection) == 0) //计算两个旋转矩形的交集面积
                 continue;
             double cur_contour_area = contourArea(intersection);
             if (cur_contour_area > _flow.target_intersection_contour_area_min) {
@@ -620,37 +704,15 @@ void EnergyDetector::getPredictPointSmall(const Mat& src) {
  * */
 void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
 {
-    Point2f p = circle_center_point - target_point;
-    float cur_theta = atan2(p.y,p.x) / (2*CV_PI) * 360; //当前角度
-    //数组左移
-    for(int i = 0; i < angle.size()-1; i++) {
-        angle[i] = angle[i + 1];
-        delta_theta[i] = delta_theta[i + 1];
-    }
-    for(int i = 0; i < omega.size(); i++){
-        omega[i] = omega[i+1];
-        av_omega[i] = av_omega[i+1];
-        predict_arr[i] = predict_arr[i+1];
-    }
-    angle.back() = cur_theta;
-    delta_theta.back() = cur_theta - angle.front(); //相隔3个数相减
-    if(delta_theta.back() > 300) //解决 180 -180 跳变问题
-        delta_theta.back() = 360 - delta_theta.back();
-    cur_omega = abs(delta_theta.back() ) / (deltaT * (angle.size() - 1)/1000) * (2*CV_PI/360); //转为弧度制,算3帧的角速度
-    if(cur_omega > 2.15)
-        cur_omega = 2.15;
-    omega.back() = cur_omega;
-    //cout << "current omega = " << cur_omega << endl;
+    /// new 2022/1/13
+    //cout << "---- " << omega_series.size() << endl;
+    //pem(); //用于计算 w
 
-    float sum_omega = 0;
-    for(int i = 0; i < 4; i++){
-        sum_omega += omega[6 - 1 - i];
-    }
-    av_omega.back() = sum_omega / 4;
-    Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,av_omega,1);
+    vector<float> cut_av_omega(av_omega.end()-6,av_omega.end()); //取 av_omega 的后 6 个数
+    Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,cut_av_omega,1); //对上面数据用最小二乘
 
     // Five consecutive same judge can change the current state.
-    int cur_flag = rate(0,0) > 0 ? 1 : 0; //判断最小二乘法斜率
+    int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘法判断斜率
     if (cur_flag != last_flag) {
         predict_cnt = 0;
     } else {
@@ -662,9 +724,10 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
     }
     last_flag = cur_flag;
 
+
     if(av_omega.back() > 0.52 && av_omega.back() < 2.09){
-        cur_phi = spd_phi(av_omega.back(), flag);
-        //cout << "current phi = " << cur_phi << endl;
+        cur_phi = spdPhi(av_omega.back(), flag);
+        //cur_phi = spd_phi(av_omega.back(), flag);
     }
     else if(av_omega.back() > 2.09)
         cur_phi = CV_PI / 2;
@@ -672,33 +735,61 @@ void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
         cur_phi = - CV_PI / 2;
     double t = cur_phi / 1.884;
 
-    predict_rad = spd_int(t + 0.5) - spd_int(t);
-    predict_arr.back() = predict_rad;
-    if(predict_rad - predict_arr[4] < -0.05)
-        predict_arr.back() = predict_arr[4] - 0.02;
+    //predict_rad = spd_int(t + 0.5) - spd_int(t);
+    predict_rad = spdInt(t + 0.5) - spd_int(t);
+
+    predict_arr.push_back(predict_rad);
 
     float sum_rad = 0;
     for(int i = 0; i < 3; i++){
-        sum_rad += predict_arr[6 - 1 - i];
+        sum_rad += predict_arr[predict_arr.size() - 1 - i];
     }
     predict_rad = sum_rad / 3;
-    if(showEnergy)
-        waveClass.displayWave(av_omega.back(), predict_rad);
+//    if(showEnergy)
+//        waveClass.displayWave(av_omega.back(), 1.305);
 
-
-    predict_point = calPredict(target_point,circle_center_point,-predict_rad);
+    predict_point = calPredict(target_point,circle_center_point,-energy_rotation_direction*predict_rad); //逆时针为负的预测弧度，顺时针为正的预测弧度
     circle(outline,predict_point,2,Scalar(0,0,255),3);
 
-    getPredictRect(-predict_rad, pts); //计算预测的装甲板位置
+    getPredictRect(-energy_rotation_direction*predict_rad, pts); //计算预测的装甲板位置
 
 }
 
+/**
+ * @brief 计算当前差角及角速度
+ * */
+void EnergyDetector::calOmega(float deltaT) {
+    if(cnt_t!=0) //确认启动大幅预测
+        time_series.push_back(RMTools::CalWasteTime(startT,getTickFrequency())/1000); //记录下当前的时间戳
+
+    Point2f p = circle_center_point - target_point;             //指向圆心的向量
+    float cur_theta = atan2(p.y,p.x) / (2*CV_PI) * 360;     //当前角度
+    angle.push_back(cur_theta);
+    delta_theta.push_back(cur_theta - angle[angle.size()-4]);  //相隔3个数相减  size()-1-3
+    if(delta_theta.back() > 300) //解决 180 -180 跳变问题
+        delta_theta.back() = 360 - delta_theta.back();
+    cur_omega = abs(delta_theta.back() ) / (deltaT * 3/1000) * (2*CV_PI/360); //转为弧度制,算3帧的角速度
+    //cout << "--- current spd : " << cur_omega << endl;
+    if(cur_omega > 2.15)
+        cur_omega = 2.15;
+    omega.push_back(cur_omega); //将当前的 cur_omega 存放在 omega 数组中
+
+    //cout << "current omega = " << cur_omega << endl;
+    float sum_omega = 0;
+    for(int i = 0; i < 4; i++){
+        sum_omega += omega[omega.size() - 1 - i];
+    }
+    av_omega.push_back(sum_omega / 4); //4次角速度平滑均值
+}
 
 float EnergyDetector::spd_int(float t) {
     return 1.305*t - 0.4167*cos(1.884*t);
 }
+float EnergyDetector::spdInt(float t) {
+    return -(a_ * cos(w_ * t) / w_) - (a_ - 2.09) * t;
+}
 /**
- *
+ * @brief 计算当前 omega 对应的相位
  * @param omega angle velocity
  * @param flag 1增0减
  * @return 当前的相位
@@ -706,6 +797,11 @@ float EnergyDetector::spd_int(float t) {
 float EnergyDetector::spd_phi(float omega, int flag) {
     float a = (omega - 1.305) / 0.785;
     float phi = asin(a);
+    return flag ? phi : CV_PI - phi;
+}
+float EnergyDetector::spdPhi(float omega, int flag) {
+    float a = (omega - (2.09-a_))/a_;
+    float  phi = asin(a);
     return flag ? phi : CV_PI - phi;
 }
 
@@ -719,32 +815,26 @@ void EnergyDetector::getPredictRect(float theta, vector<Point2f> pts) {
         for (int i = 0; i < 4; i++)
             line(outline, predict_pts[i], predict_pts[(i + 1) % (4)], Scalar(238, 238, 0), 2, LINE_8);
 }
-
-/**
- * @brief EnergyDetector::initRotation
- * @param null
- * @return null
- * @remark 用于判断能量机关旋转方向
- */
-void EnergyDetector::initRotation() {
-    if (target_polar_angle >= -180 && last_target_polar_angle_judge_rotation >= -180
-        && fabs(target_polar_angle - last_target_polar_angle_judge_rotation) < 30) {
-        //target_polar_angle和last_target_polar_angle_judge_rotation的初值均为1000，大于-180表示刚开始几帧不要
-        //若两者比较接近，则说明没有切换目标，因此可以用于顺逆时针的判断
-        if (target_polar_angle < last_target_polar_angle_judge_rotation) clockwise_rotation_init_cnt++;
-        else if (target_polar_angle > last_target_polar_angle_judge_rotation) anticlockwise_rotation_init_cnt++;
+void EnergyDetector::em() {
+    filter_omega.push_back(av_omega.back());
+    if(filter_omega.size() > 150){
+        for(int i = 0; i < 149; i++){
+            if(filter_omega[filter_omega.size() - i] > max_omega){
+                max_omega = filter_omega[filter_omega.size() - i];
+                max_t = time_series[filter_omega.size() - i];
+            }
+            if(filter_omega[filter_omega.size() - i] < min_omega){
+                min_omega = filter_omega[filter_omega.size() - i];
+                min_t = time_series[filter_omega.size() - i];
+            }
+            //waveClass.displayWave(filter_omega[filter_omega.size() - i],1.305);
+        }
+        float cal_w = 2 * CV_PI / (2 * (abs(min_t - max_t)));
+        max_omega = 0;
+        min_omega = 5;
+        cout << min_t<<" " << max_t << "用半周期计算得到的 w 值 ：" << cal_w << endl;
+        //waitKey(0);
     }
-    //由于刚开始圆心判断不准，角度变化可能计算有误，因此需要在角度正向或逆向变化足够大时才可确定是否为顺逆时针
-    if (clockwise_rotation_init_cnt == 15) {
-        energy_rotation_direction = 1;//顺时针变化30次，确定为顺时针
-        //cout << "rotation: " << energy_rotation_direction << endl;
-        energy_rotation_init = false;
-    } else if (anticlockwise_rotation_init_cnt == 15) {
-        energy_rotation_direction = -1;//逆时针变化30次，确定为顺时针
-        //cout << "rotation: " << energy_rotation_direction << endl;
-        energy_rotation_init = false;
-    }
-    last_target_polar_angle_judge_rotation = target_polar_angle;
 }
 
 /**
@@ -755,42 +845,6 @@ void EnergyDetector::updateLastValues() {
     last_target_point = target_point;
     last_circle_center_point = circle_center_point;
     last_frame_time = frame_time;
-}
-
-
-/**
- * @brief EnergyDetector::calPreAngle
- * @param float start_time, float end_time
- * @return float delta_angle
- * @remark 根据正弦速度曲线以及总射击时间给出射击提前角
- */
-float EnergyDetector::calPreAngle(float start_time, float end_time) {
-    float delta_angle;
-    delta_angle = 0.785 / OMEGA * (cos(OMEGA * start_time) - cos(OMEGA * end_time) + 1.305 * (end_time - start_time));
-    return delta_angle;
-}
-
-/**
- * @brief EnergyDetector::rotate
- * @param Point target_point
- * @return Point trans_point
- * @remark 计算预测的击打点坐标 todo 后续用toCartesian 替代
- */
-Point EnergyDetector::rotate(cv::Point target_point) const {
-    int x1, x2, y1, y2;
-    Point trans_point;
-    //    为了减小强制转换的误差
-    x1 = circle_center_point.x * 100;
-    x2 = target_point.x * 100;
-    y1 = circle_center_point.y * 100;
-    y2 = target_point.y * 100;
-
-    trans_point.x = static_cast<int>(
-            (x1 + (x2 - x1) * cos(-predict_rad * 3.14 / 180.0) - (y1 - y2) * sin(-predict_rad * 3.14 / 180.0)) / 100);
-    trans_point.y = static_cast<int>(
-            (y1 - (x2 - x1) * sin(-predict_rad * 3.14 / 180.0) - (y1 - y2) * cos(-predict_rad * 3.14 / 180.0)) / 100);
-
-    return trans_point;
 }
 
 
@@ -907,49 +961,6 @@ double EnergyDetector::pointDistance(const cv::Point& point_1, const cv::Point& 
     return distance;
 }
 
-/**
- * @param p
- * @remark: 求向量模长
- */
-double EnergyDetector::magnitude(const cv::Point& p) {
-    return sqrt(pow(p.x, 2) + pow(p.y, 2));
-}
-
-/**
- * @brief EnergyDetector::toPolar
- * @param Point cart
- * @return polar trans
- * @remark 输入世界坐标系坐标，输出极坐标系坐标
- */
-polarLocal EnergyDetector::toPolar(Point cart, double time_stamp) {
-    polarLocal trans;
-    trans.angle = atan2((-1 * (cart.y - circle_center_point.y)), (cart.x - circle_center_point.x));
-
-    if (trans.angle < 0)
-        trans.angle += 2 * 3.1416;
-
-    trans.radius = pointDistance(cart, circle_center_point);
-    trans.time_stamp = time_stamp;
-    return trans;
-}
-
-/**
- * @brief EnergyDetector::toCartesian
- * @param polarLocal pol
- * @return Point trans
- * @remark 输入极坐标系坐标，输出世界坐标系坐标
- */
-Point2f EnergyDetector::toCartesian(polarLocal pol) {
-    LOGE("pol Angle : %lf, pol radius : %d", pol.angle, pol.radius);
-    double delta_x = cos(pol.angle) * pol.radius;    //R*cos = x2-x1
-    double delta_y;
-    delta_y = -1.0 * sin(pol.angle) * pol.radius;   //(y2-y1)^2 = sqrt(radius^2-(x2-x1)^2)
-    LOGE("Delta X %lf\tDelta Y %lf", delta_x, delta_y);
-    Point2f trans;
-    trans.x = circle_center_point.x + delta_x;
-    trans.y = circle_center_point.y + delta_y;
-    return trans;
-}
 
 void EnergyDetector::getPts(RotatedRect armor) {
     Point2f rectPoints[4];//定义矩形的4个顶点
@@ -970,98 +981,6 @@ void EnergyDetector::getPts(RotatedRect armor) {
         pts[2] = rectPoints[3];
         pts[3] = rectPoints[0];
     }
-}
-
-Point EnergyDetector::getPredict() {
-    return predict_point;
-}
-
-Point EnergyDetector::getOffset() {
-    return predict_point - target_point;
-}
-
-/**
- * @brief EnergyDetector::detectR
- * @param Mat& src
- * @return null
- * @remark 检测所有可能的中心R，并筛选出唯一中心点centerR，确定circle_center_point
- */
-bool EnergyDetector::detectR(Mat &src, Mat &show) {
-    //R dilate
-    Mat R_dilate = src.clone();
-    Mat gray_element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(10, 10));
-    Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-    Mat hsv;
-    Mat mask;
-    cvtColor(show, hsv, COLOR_RGB2HSV);
-    inRange(hsv, Scalar(0, 10, 46), Scalar(180, 60, 255), mask);
-    dilate(mask, mask, gray_element);
-
-    //imshow("R_dilate1",R_dilate);
-    //imshow("mask",mask);
-    R_dilate = R_dilate - mask;
-    dilate(R_dilate, R_dilate, gray_element);
-    erode(R_dilate, R_dilate, element);
-
-    //imshow("R_dilate2",R_dilate);
-    //todo find R center
-    vector<vector<Point> > center_R_contours;
-    findContours(R_dilate, center_R_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-    for (auto &center_R_contour : center_R_contours) {
-        if (!isValidCenterRContour(center_R_contour)) {
-            continue;
-        }
-
-        RotatedRect tmp_R = cv::minAreaRect(center_R_contour);
-
-        for (auto &flow_strip_fan : valid_fan_strip) {
-            std::vector<cv::Point2f> intersection;
-            if (rotatedRectangleIntersection(flow_strip_fan, tmp_R, intersection) != 0) {
-                inter_flag = true;
-                break;
-            }
-        }
-
-        if (!inter_flag) {
-            centerRs.emplace_back(cv::minAreaRect(center_R_contour));
-        }
-    }
-    //给出唯一centerR
-    if (!centerRs.empty()) {
-        if (centerRs.size() == 1) {
-            centerR = centerRs[0];
-            pre_centerR = centerR;
-        } else {
-            //计算前后两帧中心点距离
-            int *dis = (int *) malloc(centerRs.size() * sizeof(int));
-
-            memset(dis, 0, centerRs.size() * sizeof(int));
-
-            for (int i = 0; i < centerRs.size(); i++) {
-                *(dis + i) += abs(pre_centerR.center.x - centerRs[i].center.x);
-                *(dis + i) += abs(pre_centerR.center.y - centerRs[i].center.y);
-            }
-
-            int min_dis = *dis;
-            int min_index = 0;
-
-            for (int t = 1; t < centerRs.size(); t++) {
-                if (*(dis + t) < min_dis) {
-                    min_dis = *(dis + t);
-                    min_index = t;
-                }
-            }
-            centerR = centerRs[min_index];
-            float center_ratio = centerRs[min_index].size.height / centerRs[min_index].size.width;
-            if ((center_ratio > 1.2) || (center_ratio < 0.75))
-                centerR = pre_centerR;
-            free(dis);
-            pre_centerR = centerR;//update pre
-        }
-    } else
-        centerR = pre_centerR;
-
-    circle_center_point = centerR.center;
 }
 
 /**
