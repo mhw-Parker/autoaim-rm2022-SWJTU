@@ -53,11 +53,11 @@ namespace rm
         float maxRatio = 10;
         float minRatio = 0.6;
 
-        float minLightArea = 10;
-        float maxLightArea = 8000;
-        float maxLightAngle = 30;
+        float minLightArea = 40;
+        float maxLightArea = 3000;
+        float maxLightAngle = 35;
         float minLightW2H = 0.5;
-        float maxLightW2H = 10;
+        float maxLightW2H = 5;
 
         float maxLightRatio = 5;
     };
@@ -236,7 +236,6 @@ namespace rm
 
         /*a mask image used to calculate the sum of the values in a region*/
         Mat mask;
-        Mat sub;
 
         /*ROI image*/
         Mat imgRoi;

@@ -17,16 +17,19 @@
 #include"struct_define.h"
 
 
+
 using namespace std;
 using namespace cv;
-
 using ceres::AutoDiffCostFunction;
 using ceres::CostFunction;
 using ceres::Problem;
 using ceres::Solve;
 using ceres::Solver;
 
-
+#define SHOOT_TIME 1
+#define FPS 60
+#define OMEGA 1.884
+#define MAX_ANGLE 75
 #ifdef DAHUA
 #define IMGWIDTH 1024
 #define IMGHEIGHT 820
@@ -36,14 +39,34 @@ using ceres::Solver;
 #define IMGHEIGHT 1024
 #endif
 
+typedef struct {
+    int radius;
+    float angle;
+    double time_stamp;
+} polarLocal;
 
-class EnergyDetector{
+typedef struct Blade_{
+    int armor_index;
+    int flow_strip_fan_index;
+    Blade_(int i_, int j_)
+    {
+        flow_strip_fan_index = i_;
+        armor_index = j_;
+    }
+
+    Blade_()
+    {
+        armor_index = 0;
+        flow_strip_fan_index = 0;
+    }
+}Blade;
+
+class EnergyDetector {
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
     void EnergyTask(const Mat &src, int8_t mode, const float deltaT);//接口
     void init();
-    //void getPredictPoint();
     vector<Point2f> pts;
     vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
@@ -138,8 +161,8 @@ private:
 
     int flag = 0;
     int last_flag = 0;
-    void getPredictPointSmall();
-    void getPredictPoint();
+    void getPredictPointSmall(const Mat& src);
+    void getPredictPoint(const Mat& src,float deltaT);
     void getPredictRect(float theta, vector<Point2f> pts);
     void testModule();
     RMTools::DisPlayWaveCLASS waveClass;
@@ -150,14 +173,13 @@ private:
 /*** *** *** *** *** ***/
 
     /***/
-    bool judgeRotation();
+    bool judgeRotation(const Mat &src, const float deltaT);
     void estimateParam(vector<float>omega_, vector<float>t_, int times);
     vector<float> time_series; //记录每次的时间
     vector<float> omega_series; //记录omega的值
-    ceres::Problem problem;
-    float t_flog;
+    Problem problem;
     int cnt_t = 0, cnt_i = 0;
-    double a_ = 0.780, w_ = 1.884, phi_ = 0; //参数初值
+    double a_ = 0.780, w_ = 1.884, phi_ = 2.09 - 0.78; //参数初值
     /***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板

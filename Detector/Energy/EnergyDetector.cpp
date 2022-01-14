@@ -14,18 +14,11 @@
 #include <fstream>
 #include "EnergyDetector.h"
 
-#if SAVE_LOG == 1
-string now_time = getSysTime();
-string energyData = string(OUTPUT_PATH + now_time + string("_energyData")).append(".txt") );
-ofstream fout(energyData);
-ofstream write_energy_data(energyData,ios::out);
-#endif
-
 using namespace std;
 
 Mat outline;
 
-/*static Mat polyfit(list<float> &in_point, int n) {
+static Mat polyfit(list<float> &in_point, int n) {
     int size = in_point.size();
     //所求未知数个数
     int x_num = n + 1;
@@ -50,7 +43,7 @@ Mat outline;
     Mat mat_k(x_num, 1, CV_64F);
     mat_k = (mat_u.t() * mat_u).inv() * mat_u.t() * mat_y;
     return mat_k;
-}*/
+}
 
 /**
  * @brief EnergyDetector::EnergyDetector
@@ -194,9 +187,6 @@ void EnergyDetector::clearAll() {
     target_blades.clear();
     centerRs.clear();
     armor_centers.clear();
-    /*if(omega.size() > 1000){
-        omega(omega.end()-6,omega.end());
-    }*/
 }
 
 /**
@@ -222,16 +212,17 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
         getPts(target_armor); //获得的装甲板4点
         detectCircleCenter(roi); //识别旋转圆心
         calOmega(deltaT); //计算当前的角速度 cur_omega 为当前三阶差分计算的角速度 av_omega.back() 为 4 次角速度平滑均值
-        if(judgeRotation()) {
-            if (mode == SMALL_ENERGY_STATE) getPredictPointSmall();
-            else if (mode == BIG_ENERGY_STATE) {
-                getPredictPoint();
-                waveClass.displayWave(av_omega.back(), predict_rad);
+        waveClass.displayWave(av_omega.back(), 1.305);
+        if(judgeRotation(src,deltaT)){
+            if(mode == BIG_ENERGY_STATE){
+                getPredictPoint(roi,deltaT); //变速预测
+            }else if(mode == SMALL_ENERGY_STATE){
+                getPredictPointSmall(roi);
             }
+            //roiPoint2src();
+            detect_flag = true;
+            misscount = 0;
         }
-        //waveClass.displayWave(omega.back(), av_omega.back());
-        detect_flag = true;
-        misscount = 0;
     }else{
         misscount++;
         predict_point = Point2f (0,0);
@@ -256,7 +247,6 @@ void EnergyDetector::init() {
     cnt_i = 0;
 
     omega.clear();
-    time_series.clear();
     delta_theta.clear();
     angle.clear();
     predict_arr.clear();
@@ -277,8 +267,8 @@ void EnergyDetector::init() {
  * @param src 摄像头读入图像
  * @param startT 任务起始时间
  * */
-bool EnergyDetector::judgeRotation() {
-    int times = 300;
+bool EnergyDetector::judgeRotation(const Mat &src, const float deltaT) {
+    int times = 150;
     if (!cnt_t) {
         startT = getTickCount();//第一帧识别到后记录下当前时间
         cnt_t++;
@@ -292,60 +282,24 @@ bool EnergyDetector::judgeRotation() {
         //cout << cnt_t++ << endl;
         cnt_t++;
         if (cnt_i > times / 2 + 10)
-            energy_rotation_direction = 1; //顺时针
+            energy_rotation_direction = 1;
         else
-            energy_rotation_direction = -1; //逆时针
+            energy_rotation_direction = -1;
         estimateParam(omega, time_series, times); //分别是时间戳对应的 omega 和用于拟合计算的点的数量
         return true;
     } else
         return true;
-
 }
-/**
- * @brief 利用 ceres-solver 对目标 sin 函数进行参数估计
- * @param omega_ 用于参数估计的 omega 数组
- * @param t_ 与 omega 相对应的时间戳
- * @param times 用于曲线拟合的数据点
- * */
 void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int times) {
     if(omega_.size() >= times - 1){
         int st = omega_.size() - times + 1;
-        float min_w = 5;
-        for(int i = 8; i < omega.size(); i++)
-            min_w = (av_omega[i] < min_w) ? av_omega[i] : min_w; //找出最小值，进而确定中值
-
-        for (int i = 8; i < omega.size(); ++i) {
-            if(abs(omega_[i] - (2.09-min_w)/2) < 0.05 ){
-                vector<float> cut_t, cut_o;
-                for(int j=0; j<20; j++){
-                    cut_t.push_back(t_[i+j] - t_[i]);
-                    cut_o.push_back(av_omega[i+j]);
-                }
-                Eigen::MatrixXd min_sq = RMTools::LeastSquare(cut_t,cut_o,1);
-                cout << "--- " << min_sq << endl;
-                if(min_sq(0,0)>0){
-                    st = i; //从接近 sin 中值的地方开始拟合
-                    break;
-                }else{
-                    a_ = - a_;
-                    st = i;
-                    break;
-                    //continue;
-                }
-
-            }
-        }
         for(int i = st; i < omega_.size(); i++){
             ceres::CostFunction* cost_func =
                     new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
                             new SinResidual(t_[i]-t_[st],omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
             problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
-#if SAVE_LOG == 1
-            write_energy_data << t_[i]-t_[st] << " " << omega_[i] << " " << endl;
-#endif
             //problem.AddResidualBlock(cost_func, NULL, &a_, &phi_ );
-            cout << t_[i]-t_[st] << " " << omega_[i] << endl;
-            waveClass.displayWave(omega_[i], 1);
+            //cout << t_[i]-t_[st] << " " << omega_[i] << endl;
         }
         Solver::Options options;
         options.max_num_iterations = 25;
@@ -353,18 +307,14 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int t
         options.minimizer_progress_to_stdout = true;
 
         Solver::Summary summary;
-        ceres::Solve(options, &problem, &summary);
+        Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << "\n";
         std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
         std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
-        cout << "拟合数据下标起点：" << st << " " << av_omega[st] << " 拟合数据点数 ： " << omega.size() - st << " 函数中值：" << (2.09-min_w)/2 << endl;
-#if SAVE_LOG == 1
-        write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
-#endif
         if(a_ < 0.780) a_ = 0.785;
         else if(a_ > 1.045 ) a_ = 1.045;
         if(w_ < 0) w_ = abs(w_);
-        if(w_ < 1.884) w_ = 1.884;
+        else if(w_ < 1.884) w_ = 1.884;
         else if(w_ > 2) w_ = 2;
 
         waitKey(0);
@@ -392,8 +342,8 @@ Mat EnergyDetector::preprocess(Mat &src) {
 //    }
 
     //threshold(single, binary, 90, 255, THRESH_BINARY);
-    threshold(blue_c,blue_binary,150,255,THRESH_BINARY);
-    threshold(red_c,red_binary,150,255,THRESH_BINARY);
+    threshold(blue_c,blue_binary,90,255,THRESH_BINARY);
+    threshold(red_c,red_binary,90,255,THRESH_BINARY);
 
     binary = blueTarget ? blue_binary - red_binary : red_binary - blue_binary; //滤掉白光
 
@@ -574,6 +524,7 @@ bool EnergyDetector::detectCircleCenter(Mat &src){
 	findContours(CannyEdge, circle_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
     for (size_t t = 0; t <  circle_contours.size(); t++) {
+
         double area = contourArea( circle_contours[t]);
         if (area < _flow.Center_R_Control_area_min | area > _flow.Center_R_Control_area_max) {
             //cout << "circle area : " << area << endl;
@@ -585,10 +536,10 @@ bool EnergyDetector::detectCircleCenter(Mat &src){
             int x = rect.x + rect.width / 2;
             int y = rect.y + rect.height / 2;
             Point2f cal_center = calR(); //反解的圆心位置用于判断检测圆心的可信度
-            circle(outline, cal_center, 3, Scalar(238, 238, 0), 2, 8, 0);
+            //circle(outline, cal_center, 3, Scalar(255, 255, 255), 2, 8, 0);
             if(pointDistance(cal_center,Point2f(x,y))< 50){
                 circle_center_point = Point(x, y);
-                circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
+                circle(outline, circle_center_point, 3, Scalar(0, 255, 0), 2, 8, 0);
                 return true;
             }
             //cout << area << '\t' << ratio << endl;
@@ -727,7 +678,7 @@ Point2f EnergyDetector::calPredict(Point2f p, Point2f center, float theta) const
  * @brief 通过相邻帧的圆心指向目标的向量叉乘来达到既能判断方向，又可以通过叉乘求角度相邻帧转过的角度（因为已知R在图像中为168）
  * @remark 给出预测射击点位置predict_point
  */
-void EnergyDetector::getPredictPointSmall() {
+void EnergyDetector::getPredictPointSmall(const Mat& src) {
     cv::Point3i last_target_vector = Point3i(last_target_point - last_circle_center_point);
     cv::Point3i target_vector = Point3i(target_point - circle_center_point);
     cv::Point3i last_cross_cur = last_target_vector.cross(target_vector);
@@ -740,7 +691,6 @@ void EnergyDetector::getPredictPointSmall() {
     LOGM("Omega: %.3lf", omega);
     predict_rad = -1.4 * 0.3;
     predict_point = calPredict(target_point,circle_center_point,predict_rad);
-    getPredictRect(predict_rad,predict_pts);
     circle(outline, predict_point, 4, Scalar(0, 0, 255), -1);
     updateLastValues();
 }
@@ -752,9 +702,12 @@ void EnergyDetector::getPredictPointSmall() {
  * @param src
  * @param deltaT 两帧的间隔时间，可用平均耗时，单位：ms
  * */
-void EnergyDetector::getPredictPoint()
+void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
 {
     /// new 2022/1/13
+    //cout << "---- " << omega_series.size() << endl;
+    //pem(); //用于计算 w
+
     vector<float> cut_av_omega(av_omega.end()-6,av_omega.end()); //取 av_omega 的后 6 个数
     Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,cut_av_omega,1); //对上面数据用最小二乘
 
@@ -780,10 +733,10 @@ void EnergyDetector::getPredictPoint()
         cur_phi = CV_PI / 2;
     else
         cur_phi = - CV_PI / 2;
-    double t = cur_phi / w_;
+    double t = cur_phi / 1.884;
 
     //predict_rad = spd_int(t + 0.5) - spd_int(t);
-    predict_rad = spdInt(t + 0.5) - spdInt(t);
+    predict_rad = spdInt(t + 0.5) - spd_int(t);
 
     predict_arr.push_back(predict_rad);
 
@@ -808,6 +761,7 @@ void EnergyDetector::getPredictPoint()
 void EnergyDetector::calOmega(float deltaT) {
     if(cnt_t!=0) //确认启动大幅预测
         time_series.push_back(RMTools::CalWasteTime(startT,getTickFrequency())/1000); //记录下当前的时间戳
+
     Point2f p = circle_center_point - target_point;             //指向圆心的向量
     float cur_theta = atan2(p.y,p.x) / (2*CV_PI) * 360;     //当前角度
     angle.push_back(cur_theta);
@@ -845,12 +799,9 @@ float EnergyDetector::spd_phi(float omega, int flag) {
     float phi = asin(a);
     return flag ? phi : CV_PI - phi;
 }
-/**
- * @brief 变参数大幅反解相位
- * */
 float EnergyDetector::spdPhi(float omega, int flag) {
-    float sin_phi = (omega - (2.09-a_))/a_;
-    float  phi = asin(sin_phi);
+    float a = (omega - (2.09-a_))/a_;
+    float  phi = asin(a);
     return flag ? phi : CV_PI - phi;
 }
 

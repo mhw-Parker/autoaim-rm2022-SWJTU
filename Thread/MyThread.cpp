@@ -46,8 +46,9 @@ namespace rm
     bool energyMission = false;//when energy mission completed, energyMission is true, when produce mission completed, energyMission is false
     bool feedbackMission = false;//when feedback mission completed, feedbackMission is true, when produce mission completed, feedbackMission is false
 
-    int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
-    //int8_t curControlState = BIG_ENERGY_STATE;
+    //int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
+    int8_t curControlState = BIG_ENERGY_STATE;
+    int8_t lastControlState = BIG_ENERGY_STATE;
     uint8_t curDetectMode = TRADITION_MODE; //tracking or searching
 
     int direction = 0;
@@ -88,7 +89,7 @@ namespace rm
 
     void ImgProdCons::SignalHandler(int)
     {
-        LOGE("Process Shut Down By SIGINT\n");
+        //LOGE("Process Shut Down By SIGINT\n");
         ImgProdCons::quitFlag = true;
 
 #if SAVE_LOG == 1
@@ -100,22 +101,22 @@ namespace rm
 #endif
         if(pthread_kill(producePThreadHandler,0) == ESRCH)
         {
-            LOGW("Child Thread Produce Thread Close Failed\n");
+            //LOGW("Child Thread Produce Thread Close Failed\n");
         }
 
         if(pthread_kill(detectPThreadHandler,0) == ESRCH)
         {
-            LOGW("Child Thread Detect Thread Close Failed\n");
+            //LOGW("Child Thread Detect Thread Close Failed\n");
         }
 
         if(pthread_kill(energyPThreadHandler,0) == ESRCH)
         {
-            LOGW("Child Thread EnergyDetector Thread Close Failed\n");
+            //LOGW("Child Thread EnergyDetector Thread Close Failed\n");
         }
 
         if(pthread_kill(feedbackPThreadHandler,0) == ESRCH)
         {
-            LOGW("Child Thread Feedback Thread Close Failed\n");
+            //LOGW("Child Thread Feedback Thread Close Failed\n");
         }
 
         exit(-1);
@@ -196,14 +197,14 @@ namespace rm
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
         {
-            LOGM("Camera Initialized\n");
-            LOGM("Camera Set Down\n");
-            LOGM("Camera Start to Grab Frames\n");
+            //LOGM("Camera Initialized\n");
+            //LOGM("Camera Set Down\n");
+            //LOGM("Camera Start to Grab Frames\n");
         }
         else
         {
             driver->StopGrab();
-            LOGW("Camera Resource Released\n");
+            //LOGW("Camera Resource Released\n");
             exit(-1);
         }
 
@@ -224,7 +225,7 @@ namespace rm
             }
         }while(true);
         missCount = 0;
-        LOGM("Initialization Completed\n");
+        //LOGM("Initialization Completed\n");
         return true;
     }
 
@@ -233,22 +234,22 @@ namespace rm
         taskTime = (double)getTickCount();
         /** 计算上一次执行耗时 **/
         if(tmp_t!=0)
-            mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
+            last_mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
         tmp_t = taskTime;
         total_time = 0;
         for(int i = 0; i<whole_time_arr.size()-1; i++){
             whole_time_arr[i] = whole_time_arr[i+1];
             total_time += whole_time_arr[i];
         }
-        whole_time_arr.back() = mission_time;
-        deltat = (total_time + mission_time) / whole_time_arr.size();
+        whole_time_arr.back() = last_mission_time;
+        deltat = (total_time + last_mission_time) / whole_time_arr.size();
         cout << "3帧平均耗时 = " << deltat << endl;
         /** ** **/
 
         if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH)
         {
             missCount++;
-            LOGW("FRAME GRAB FAILED!\n");
+            //LOGW("FRAME GRAB FAILED!\n");
             if(missCount > 5)
             {
                 driver->StopGrab();
@@ -261,9 +262,11 @@ namespace rm
             videowriter.write(frame);
 
         //get current gimbal degree while capture
-        serialPtr->ReadData(receiveData);
+        if(serialPtr->ReadData(receiveData)){
+            curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+        }
+
         detectFrame = frame.clone();
-        energyFrame = frame.clone();
 #if SHOWTIME == 1
         cout << "Frame Produce Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
 #endif
@@ -271,6 +274,15 @@ namespace rm
     
     void ImgProdCons::Detect() 
     {
+        if(lastControlState == curControlState){ //如果状态未发生改变
+            lastControlState = curControlState; //更新上一次的状态值
+        }else{ //如果状态值改变为大幅模式
+            if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
+                energyPtr->init(); //初始化大幅识别
+            //else
+            /* 装甲板识别初始化，滤波器初始化啥的 */
+        }
+        lastControlState = curControlState; //更新上一次的状态值
         switch (curControlState) {
             case AUTO_SHOOT_STATE: Armor(); break;
             case BIG_ENERGY_STATE: Energy(); break;
@@ -315,11 +327,9 @@ namespace rm
     void ImgProdCons::Energy()
     {
         taskTime = (double)getTickCount();
-        if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
-        {
-            /* do energy detection */
-            energyPtr->EnergyTask(energyFrame, curControlState, deltat);
-        }
+        /* do energy detection */
+        energyPtr->EnergyTask(detectFrame, curControlState, deltat);
+
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
         dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
@@ -510,40 +520,41 @@ namespace rm
         {
             solverPtr->GetPoseV(energyPtr->predict_pts,false);
             //solverPtr->GetPoseV(energyPtr->pts,false);
-            if (showEnergy)
-            {
-                circle(energyFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
+            if (showEnergy){
+                circle(detectFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
 
-                putText(energyFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(energyFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(energyFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(energyFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(energyFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+                putText(detectFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
                 if (energyPtr->detect_flag){
-                    circle(energyFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
+                    circle(detectFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
                     for (int i = 0; i < 4; i++) {
-                        line(energyFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
+                        line(detectFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
                              Scalar(255, 255, 255), 2, LINE_8);
-                        line(energyFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                        line(detectFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
                              Scalar(0, 255, 255), 2, LINE_8);
                     }
-                    circle(energyFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
-                    circle(energyFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                    circle(energyFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
+                    circle(detectFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
+                    circle(detectFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                    circle(detectFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
                 }
 
 
-                imshow("energy", energyFrame);
+                imshow("energy", detectFrame);
                 waitKey(1);
             }
+
+            ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
             yaw_abs = receiveData.yawAngle - solverPtr->yaw ; //绝对yaw角度
             pitch_abs = receiveData.pitchAngle + solverPtr->pitch ; //绝对pitch角度
-            //cout << "receieve : " << receiveData.yawAngle << endl;
+
             serialPtr->pack(yaw_abs,
                             pitch_abs,
                             solverPtr->dist,
@@ -551,7 +562,7 @@ namespace rm
                             energyPtr->detect_flag,
                             curControlState,
                             0);
-            //cout << yaw_abs << "\t" << pitch_abs << endl;
+
 #if SAVE_LOG == 1
 //            string s = getSysTime();
 //            logWrite <<"=========== produce mission ==========="<< endl;
@@ -564,9 +575,7 @@ namespace rm
         }
 
         /**press key 'space' to pause or continue task**/
-        if(debug)
-        {
-
+        if(debug){
             if(!pauseFlag && waitKey(30) == 32){pauseFlag = true;}
 
             if(pauseFlag)
