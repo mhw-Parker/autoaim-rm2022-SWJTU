@@ -47,17 +47,17 @@ namespace rm
     {
         float maxArmorAngle = 45;
         float maxAngleError = 6;
-        float maxLengthError = 0.70;
-        float maxDeviationAngle = 50;
+        float maxLengthError = 0.50;
+        float maxDeviationAngle = 45;
         float maxYDiff = 2;
-        float maxRatio = 20;
+        float maxRatio = 10;
         float minRatio = 0.6;
 
-        float minLightArea = 45;
-        float maxLightArea = 2500;
-        float maxLightAngle = 60;
+        float minLightArea = 40;
+        float maxLightArea = 3000;
+        float maxLightAngle = 35;
         float minLightW2H = 0.5;
-        float maxLightW2H = 10;
+        float maxLightW2H = 5;
 
         float maxLightRatio = 5;
     };
@@ -71,10 +71,10 @@ namespace rm
         unsigned int matchIndex2 = -1;
         float matchFactor = 10000;
 
-        explicit MatchLight(unsigned int match1 = 0, unsigned int match2 = 0, float fractor = 1000, float lampHeight_ = 0) {
+        explicit MatchLight(unsigned int match1 = 0, unsigned int match2 = 0, float factor = 1000, float lampHeight_ = 0) {
             matchIndex1 = match1;
             matchIndex2 = match2;
-            matchFactor = fractor;
+            matchFactor = factor;
             lampHeight = lampHeight_;
         }
     }MatchLight;

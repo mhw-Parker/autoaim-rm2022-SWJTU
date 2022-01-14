@@ -11,16 +11,16 @@
 #define  AUTO_SHOOT_STATE 0
 #endif
 
-#ifndef FAR_DISTANCE_SHOOT
-#define  FAR_DISTANCE_SHOOT 1
-#endif
-
 #ifndef SMALL_ENERGY_STATE
-#define  SMALL_ENERGY_STATE 12
+#define  SMALL_ENERGY_STATE 1
 #endif
 
 #ifndef BIG_ENERGY_STATE
-#define  BIG_ENERGY_STATE 13
+#define  BIG_ENERGY_STATE 2
+#endif
+
+#ifndef FAR_DISTANCE_SHOOT
+#define  FAR_DISTANCE_SHOOT 1
 #endif
 
 #ifndef MODEL_MODE
