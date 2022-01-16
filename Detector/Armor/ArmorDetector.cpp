@@ -456,14 +456,13 @@ namespace rm
 
         //Attention!!!if the calculate result is small than 0, because the mat format is CV_UC3, it will be set as 0.
         cv::subtract(channels[0],channels[2],bSubR);
-        cv::subtract(channels[2],channels[1],rSubB);
-
-
+        cv::subtract(channels[2],channels[0],rSubB);
+        //imshow ("b - r",rSubB-bSubR);
+        //imshow ("r - b",rSubB);
         threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
-
         GaussianBlur(bright,bright,Size(5,5),5);
         threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
-        Mat adaptive;
+        //Mat adaptive;
         //adaptiveThreshold(bright,adaptive,255,)
         //imshow("grey",bright);
         colorMap = Mat_<int>(rSubB) - Mat_<int>(bSubR);
@@ -498,24 +497,26 @@ namespace rm
                 continue;
 
             double length = arcLength(i, true);
+
             //cout << length << endl;
-            if (length > 10 && length < 400) //条件1：灯条周长
+            if (length > 20 && length < 800) //条件1：灯条周长
             {
+                //cout << "周长：" << length << endl;
                 possibleLamp = fitEllipse(i); //用椭圆近似形状
+                //possibleLamp = minAreaRect(i);
                 lampArea = possibleLamp.size.width * possibleLamp.size.height;
                 //LOGM("lampArea : %f\n",lampArea);
                 if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea))continue; //条件2：面积
                 float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
                 //LOGM("rate_height2width : %f\n",rate_height2width);
                 if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H))continue; //条件3：长宽比例
-
                 angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
                 //LOGM("angle_ : %f\n",angle_);
                 if(fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
 
                 rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
                 MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
-                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的灰度图
+                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的全1灰度图
 
                 /* Add this to make sure numbers on armors will not be recognized as lamps */
                 lampImage = colorMap(rectLamp);
@@ -525,7 +526,7 @@ namespace rm
 
                 //cout<<avg<<endl;
 
-                if((blueTarget && avg[0] < -40) || (!blueTarget && avg[0] > 40)) //灯条和数字的重叠面积有较大差别
+                if((blueTarget && avg[0] < -20) || (!blueTarget && avg[0] > 20)) //灯条和数字的重叠面积有较大差别
                 {
                     Lamp buildLampInfo(possibleLamp, angle_, avg[0]);
                     lampVector.emplace_back(buildLampInfo);
@@ -556,15 +557,28 @@ namespace rm
         for(auto &lamp_contour:contoursLight){
             if(lamp_contour.size() < 10)
                 continue;
-            possibleLamp = minAreaRect(lamp_contour);
+            RotatedRect min_rect, ellipse_rect;
+            std::vector<cv::Point2f> intersection;
+            min_rect = minAreaRect(lamp_contour);
+            ellipse_rect = fitEllipse(lamp_contour);
+            if(contourArea(lamp_contour) < 50){
+                continue;
+                //LOGM("angle_ : %f\n",ellipse_rect.angle);
+            }
+            float angle_ = (ellipse_rect.angle > 90) ? (ellipse_rect.angle - 180) : ellipse_rect.angle;
+            if(fabs(angle_)>param.maxLightAngle) continue;
+            rectLamp = ellipse_rect.boundingRect();
+            if(blueTarget){
+            }
             Point2f pts[4];
-            possibleLamp.points(pts);
+            min_rect.points(pts);
             for (int i = 0; i < 4; i++) {
                 line(background, pts[i], pts[(i + 1) % (4)],
                      Scalar(0, 255, 0), 1, LINE_8);
             }
-            possibleLamp = fitEllipse(lamp_contour);
-            ellipse(background,possibleLamp,Scalar(240,10,10));
+            //possibleLamp = fitEllipse(lamp_contour);
+            ellipse(background,ellipse_rect,Scalar(240,10,10));
+
         }
         imshow("test",background);
      }
