@@ -18,7 +18,6 @@ extern pthread_t detectPThreadHandler;
 extern pthread_t energyPThreadHandler;
 extern pthread_t feedbackPThreadHandler;
 
-string root_path = "../Output/";
 string now_time = getSysTime();
 
 #if SAVE_VIDEO == 1
@@ -32,7 +31,7 @@ std::ofstream fileClean("../Output/log.txt",ios::trunc);
 #endif
 
 #if SAVE_TEST_DATA == 1
-string data_path = ( string(root_path + now_time + string("_data")).append(".txt") );
+string data_path = ( string(OUTPUT_PATH + now_time + string("_data")).append(".txt") );
 ofstream fout(data_path);
 ofstream dataWrite(data_path,ios::out);
 #endif
@@ -191,7 +190,7 @@ namespace rm
                 break;
         }
         if(saveVideo){
-            path = ( string(root_path + now_time).append(".avi"));
+            path = ( string(OUTPUT_PATH + now_time).append(".avi"));
             videowriter = VideoWriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30.0, cv::Size(1280, 1024));
         }
         Mat curImage;
