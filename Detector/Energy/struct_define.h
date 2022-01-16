@@ -67,6 +67,28 @@ struct WindmillParamFlow {
 	float flow_area_ratio_min;
 };
 
+typedef struct {
+    int radius;
+    float angle;
+    double time_stamp;
+} polarLocal;
+
+typedef struct Blade_{
+    int armor_index;
+    int flow_strip_fan_index;
+    Blade_(int i_, int j_)
+    {
+        flow_strip_fan_index = i_;
+        armor_index = j_;
+    }
+
+    Blade_()
+    {
+        armor_index = 0;
+        flow_strip_fan_index = 0;
+    }
+}Blade;
+
 struct McuData {
 	float curr_yaw;      // 当前云台yaw角度
 	float curr_pitch;    // 当前云台pitch角

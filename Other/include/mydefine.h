@@ -111,6 +111,10 @@
 
 #include "config.h"
 
+#ifndef OUTPUT_PATH
+#define OUTPUT_PATH  "../Output/"
+#endif
+
 extern bool showArmorBox;
 extern bool showOrigin;
 extern bool showLamps;

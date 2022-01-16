@@ -25,8 +25,8 @@ SolveAngle::SolveAngle()
         case INFANTRY_MELEE:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
-            yaw_static = 1.6;
-            pitch_static = 0.5 - 1.2;//-1.2
+            yaw_static = 1.6 - 0.3;
+            pitch_static = 0.5 + 1.6;//-1.2
             break;
         case INFANTRY_TRACK:
             break;
