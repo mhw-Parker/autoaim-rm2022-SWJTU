@@ -36,7 +36,7 @@ include_directories(${PROJECT_SOURCE_DIR}/Drivers/V4L2KAS/include)
 include_directories(${PROJECT_SOURCE_DIR}/Drivers/VideoDriver/include)
 include_directories(${PROJECT_SOURCE_DIR}/Drivers)
 include_directories(${PROJECT_SOURCE_DIR}/)
-
+#Predictor/Predictor.h Predictor/Predictor.cpp
 if (DAHUA)
     include_directories(${PROJECT_SOURCE_DIR}/Drivers/DAHUA/include)
     link_directories(${PROJECT_SOURCE_DIR}/Drivers/DAHUA/lib)

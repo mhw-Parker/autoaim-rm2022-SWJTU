@@ -39,27 +39,6 @@ using ceres::Solver;
 #define IMGHEIGHT 1024
 #endif
 
-typedef struct {
-    int radius;
-    float angle;
-    double time_stamp;
-} polarLocal;
-
-typedef struct Blade_{
-    int armor_index;
-    int flow_strip_fan_index;
-    Blade_(int i_, int j_)
-    {
-        flow_strip_fan_index = i_;
-        armor_index = j_;
-    }
-
-    Blade_()
-    {
-        armor_index = 0;
-        flow_strip_fan_index = 0;
-    }
-}Blade;
 
 class EnergyDetector {
 public:
@@ -177,9 +156,10 @@ private:
     void estimateParam(vector<float>omega_, vector<float>t_, int times);
     vector<float> time_series; //记录每次的时间
     vector<float> omega_series; //记录omega的值
-    Problem problem;
+    ceres::Problem problem;
+    float t_flog;
     int cnt_t = 0, cnt_i = 0;
-    double a_ = 0.780, w_ = 1.884, phi_ = 2.09 - 0.78; //参数初值
+    double a_ = 0.780, w_ = 1.884, phi_ = 0; //参数初值
     /***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板
