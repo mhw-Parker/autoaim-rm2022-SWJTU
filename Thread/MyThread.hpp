@@ -21,6 +21,7 @@
 #include "V4L2KAS.h"
 #include "VideoDriver.hpp"
 #include "utility.hpp"
+#include "Predictor/Predictor.h"
 
 #ifdef DAHUA
 #include "Media/RMDriver.h"
@@ -158,6 +159,9 @@ namespace rm
         std::unique_ptr<EnergyDetector> energyPtr;
 
         std::unique_ptr<Kalman> kalman;
+
+        //std::unique_ptr<Predictor> predictPtr;
+        Predictor predictPtr;
 
         Mat frame;
         Mat detectFrame;

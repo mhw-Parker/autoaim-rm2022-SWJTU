@@ -23,25 +23,29 @@ public:
 
     float yaw,pitch,dist;
 	vector<Point2f> rectPoint2D;
+    Vector3f p_cam_xyz; //相机坐标系下的x,y,z
 
 	bool shoot;
     Mat tvecs;
+    Mat rvecs;
 
 	void Generate2DPoints(Rect rect);
 	void GetPose(const Rect& rect, float ballet_speed, bool small);
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode); //Pnp模型
+    void GetPoseV(const vector<Point2f>& pts, bool armor_mode, const float v_); //Pnp模型
     void GetPoseSH(const Point2f p); //小孔成像模型
 	void Generate3DPoints(bool mode);
 
-    void camXYZ2YPD(Mat tvecs);
+
+    void Compensator(Vector3f cam_xyz, Vector3f fitXYZ, float v);
     void backProjection(Mat tvecs, Mat rvecs, Vector3d obj_p_ypd, vector<Point2f> &img_p);
+    void backProject(Point3f obj_p_xyz, Point2f &p);
 
 
 private:
-    void Compensator(float dist, float pitch, float fitY);
+    void camXYZ2YPD(Mat tvecs);
+
 	Mat_<double> cameraMatrix;
 	Mat_<double> distortionCoefficients;
-	Mat rvecs;
 	vector<Point3f> targetPoints3D;
 	float targetWidth3D{};
 	float targetHeight3D{};
@@ -55,6 +59,6 @@ private:
 
 	int value;
     Mat waveBG = Mat(480,640,CV_8UC3,Scalar(0,0,0));
-    Vector3d p_cam_xyz; //相机坐标系下的x,y,z
-    Vector3d p_wld; //世界坐标系下的x,y,z
+    Vector3f fit_xyz;
+    Vector3f gun_xyz; //枪口坐标系下的x,y,z
 };
