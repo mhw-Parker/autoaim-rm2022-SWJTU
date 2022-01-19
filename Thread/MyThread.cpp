@@ -353,13 +353,29 @@ namespace rm
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
                                     armorDetectorPtr->IsSmall(),16);
-                //predictPtr->armorPredictor(solverPtr->p_cam_xyz, deltat);
-                //solverPtr->Compensator(predictPtr->predict_xyz, 16);
-                //solverPtr->backProjection(solverPtr->ypd, predictPtr.predict_point);
-                //solverPtr->backProject(solverPtr->p_cam_xyz,predictPtr.predict_point);
+                Vector3f abs_ypd;
+                if(carName == SENTRY){
+
+                }else{
+                    abs_ypd <<  receiveData.yawAngle - solverPtr->yaw,
+                                receiveData.pitchAngle + solverPtr->pitch,
+                                solverPtr->dist;
+                }
+
+
+                /*** 1-20 测试版预测 ***/
+                predictPtr->test1Predict(abs_ypd,deltat);
+                yaw_abs = predictPtr->predict_ypd[0];
+                pitch_abs = predictPtr->predict_ypd[1];
+                /*** ***/
+
+//                yaw_abs = abs_ypd[0];
+//                pitch_abs = abs_ypd[1];
+
+
                 /**record distance for debug**/
-                dis_count++;
-                dis_sum += solverPtr->dist;
+                //dis_count++;
+                //dis_sum += solverPtr->dist;
 
                 // LOGM("DIS AVG : %f\n", dis_sum/dis_count);
             }
@@ -505,8 +521,8 @@ namespace rm
             //cout<<armorDetectorPtr->findState<<" "<<yawTran<<" "<<pitchTran<<" "<<yawDeviation<<endl;
             /** package data and prepare for sending data to lower-machine **/
             if(carName != HERO){
-                serialPtr->pack(receiveData.yawAngle - solverPtr->yaw,
-                                receiveData.pitchAngle + solverPtr->pitch,
+                serialPtr->pack(yaw_abs,
+                                pitch_abs,
                                 solverPtr->dist,
                                 solverPtr->shoot,
                                 armorDetectorPtr->findState,
