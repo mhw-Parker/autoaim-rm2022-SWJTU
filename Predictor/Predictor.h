@@ -20,17 +20,23 @@ using namespace Eigen;
 
 class Predictor{
 public:
+    Predictor();
+    ~Predictor();
+
     void armorPredictor(Vector3f p_cam_xyz, const float deltaT);
     void test1Predict(Vector3f pyd, const float deltaT);
+    void refresh();
 
     Vector3f predict_xyz;
-    Vector2f predict_py;
+    Vector3f predict_ypd;
     vector<Point2f>predict_point;
 
     float yaw, pitch;
 
 private:
     vector<Point3_<float>> target_xyz;
+    vector<Vector3f> abs_pyd;
+
 };
 
 //#endif //MASTER_PREDICTOR_H

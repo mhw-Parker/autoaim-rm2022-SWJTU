@@ -98,7 +98,6 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const flo
     cv2eigen(tvecs,p_cam_xyz);
     //p_cam_xyz[0] = p_cam_xyz[0] + 17.2056;
     //p_cam_xyz[1] = p_cam_xyz[1] - 7.6826;
-    cout << p_cam_xyz << endl;
 
     Compensator(p_cam_xyz,v_);
     //camXYZ2YPD(tvecs); //直接输出目标点 yaw pitch dist
