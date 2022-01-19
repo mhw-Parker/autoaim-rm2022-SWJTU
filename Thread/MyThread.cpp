@@ -142,6 +142,7 @@ namespace rm
             armorDetectorPtr(unique_ptr<ArmorDetector>(new ArmorDetector())),
             kalman(unique_ptr<Kalman>(new Kalman())),
             energyPtr(unique_ptr<EnergyDetector>(new EnergyDetector())),
+            predictPtr(unique_ptr<Predictor>(new Predictor())),
             armorType(BIG_ARMOR),
             driver(),
             missCount(0)
@@ -352,8 +353,9 @@ namespace rm
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
                                     armorDetectorPtr->IsSmall(),16);
-                predictPtr.armorPredictor(solverPtr->p_cam_xyz, deltat);
-                solverPtr->backProject(predictPtr.predict_xyz,predictPtr.predict_point);
+                //predictPtr->armorPredictor(solverPtr->p_cam_xyz, deltat);
+                //solverPtr->Compensator(predictPtr->predict_xyz, 16);
+                //solverPtr->backProjection(solverPtr->ypd, predictPtr.predict_point);
                 //solverPtr->backProject(solverPtr->p_cam_xyz,predictPtr.predict_point);
                 /**record distance for debug**/
                 dis_count++;
@@ -584,7 +586,8 @@ namespace rm
             }
             if(showArmorBox && armorDetectorPtr->findState){
                 circle(detectFrame, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                circle(detectFrame, predictPtr.predict_point + Point2f (0,-500), 2, Scalar(100, 240, 15), 3);
+                if(!predictPtr->predict_point.empty())
+                    circle(detectFrame, predictPtr->predict_point.back(), 2, Scalar(100, 240, 15), 3);
             }
             imshow("Detect Frame", detectFrame);
             waitKey(1);

@@ -21,10 +21,14 @@ using namespace Eigen;
 class Predictor{
 public:
     void armorPredictor(Vector3f p_cam_xyz, const float deltaT);
-    Point3f predict_xyz;
-    Point2f predict_point = Point2f(0,0);
+    void test1Predict(Vector3f pyd, const float deltaT);
+
+    Vector3f predict_xyz;
+    Vector2f predict_py;
+    vector<Point2f>predict_point;
 
     float yaw, pitch;
+
 private:
     vector<Point3_<float>> target_xyz;
 };
