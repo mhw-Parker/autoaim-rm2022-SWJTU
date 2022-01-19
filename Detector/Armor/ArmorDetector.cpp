@@ -612,6 +612,7 @@ namespace rm
         if (lostCnt>3 || rectTemp.width == 0 || rectTemp.height == 0)
         {
             roiRect = Rect(0, 0,FRAMEWIDTH, FRAMEHEIGHT);
+            findState = false;
         }
         else if(detectCnt>0)
         {
