@@ -24,10 +24,8 @@ public:
     float yaw,pitch,dist;
 	vector<Point2f> rectPoint2D;
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
-
+    Vector3f ypd;
 	bool shoot;
-    Mat tvecs;
-    Mat rvecs;
 
 	void Generate2DPoints(Rect rect);
 	void GetPose(const Rect& rect, float ballet_speed, bool small);
@@ -35,14 +33,17 @@ public:
     void GetPoseSH(const Point2f p); //小孔成像模型
 	void Generate3DPoints(bool mode);
 
+    void Compensator(Vector3f cam_xyz, float v);
 
-    void Compensator(Vector3f cam_xyz, Vector3f fitXYZ, float v);
-    void backProjection(Mat tvecs, Mat rvecs, Vector3d obj_p_ypd, vector<Point2f> &img_p);
+    void backProjection(Vector3f obj_p_ypd, vector<Point2f> &img_p);
     void backProject(Point3f obj_p_xyz, Point2f &p);
 
 
 private:
     void camXYZ2YPD(Mat tvecs);
+
+    Mat tvecs;
+    Mat rvecs;
 
 	Mat_<double> cameraMatrix;
 	Mat_<double> distortionCoefficients;
@@ -56,6 +57,7 @@ private:
 	float averageY;
 
     float yaw_static, pitch_static;
+    float x_static, y_static;
 
 	int value;
     Mat waveBG = Mat(480,640,CV_8UC3,Scalar(0,0,0));
