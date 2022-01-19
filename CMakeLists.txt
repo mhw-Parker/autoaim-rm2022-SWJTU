@@ -9,7 +9,6 @@ set(OpenCV_DIR "/home/tyy/opencv-4.5.4/build")
 
 FIND_PACKAGE(OpenCV 4.5.4 REQUIRED)
 FIND_PACKAGE(Threads)
-FIND_PACKAGE(realsense2 REQUIRED)
 FIND_PACKAGE(Ceres REQUIRED)
 
 # 加入一个配置头文件，用于处理 CMake 对源码的设置
@@ -30,7 +29,7 @@ include_directories(${PROJECT_SOURCE_DIR}/Other/include)
 include_directories(${PROJECT_SOURCE_DIR}/Math/Kalman)
 include_directories(${PROJECT_SOURCE_DIR}/Math/SolveAngle)
 include_directories(${PROJECT_SOURCE_DIR}/Math/Filter)
-include_directories(${PROJECT_SOURCE_DIR}/Predictor/include)
+#include_directories(${PROJECT_SOURCE_DIR}/Predictor)
 include_directories(${PROJECT_SOURCE_DIR}/Detector/Energy)
 include_directories(${PROJECT_SOURCE_DIR}/Drivers/V4L2KAS/include)
 include_directories(${PROJECT_SOURCE_DIR}/Drivers/VideoDriver/include)
@@ -52,6 +51,7 @@ if (MIND)
 endif (MIND)
 
 if (REALSENSE)
+    FIND_PACKAGE(realsense2 REQUIRED)
     include_directories(${PROJECT_SOURCE_DIR}/Drivers/RealSense/include)
     include_directories(${realsense2_INCLUDE_DIR})
     file(GLOB_RECURSE DRIVER_SRC "Drivers/RealSense/src/*.cpp")
@@ -72,11 +72,12 @@ MESSAGE(STATUS "realsense CAMERA is : ${REALSENSE}")
 message(STATUS "Found Ceres: ${CERES_FOUND}")
 message(STATUS "Ceres PATH: ${CERES_LIBS_DIR}")
 
-FILE(GLOB_RECURSE sourcefiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detector/Armor/*.cpp" "Serials/*.cpp" "Thread/*.cpp"
-        "Math/Filter/*.cpp" "Math/SolveAngle/*.cpp" "Math/Kalman/*.cpp" "Drivers/V4L2KAS/src/*.cpp" "Drivers/VideoDriver/src/*.cpp" )
+FILE(GLOB_RECURSE sourceFiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detector/Armor/*.cpp" "Serials/*.cpp" "Thread/*.cpp"
+        "Math/Filter/*.cpp" "Math/SolveAngle/*.cpp" "Math/Kalman/*.cpp" "Drivers/V4L2KAS/src/*.cpp" "Drivers/VideoDriver/src/*.cpp"
+        )
 
 #when "Drivers/DAHUA/src/*.cpp" is added to the sourcefiles at last line, these .cpp files looks like not been complied
-ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourcefiles} ${DRIVER_SRC})
+ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourceFiles} ${DRIVER_SRC} Predictor/Predictor.h Predictor/Predictor.cpp)
 
 list(APPEND PSMOVEAPI_TRACKER_REQUIRED_LIBS v4l2)
 set(LIBS libceres.a umfpack cxsparse glog gflags gomp
