@@ -17,19 +17,16 @@
 #include"struct_define.h"
 
 
-
 using namespace std;
 using namespace cv;
+
 using ceres::AutoDiffCostFunction;
 using ceres::CostFunction;
 using ceres::Problem;
 using ceres::Solve;
 using ceres::Solver;
 
-#define SHOOT_TIME 1
-#define FPS 60
-#define OMEGA 1.884
-#define MAX_ANGLE 75
+
 #ifdef DAHUA
 #define IMGWIDTH 1024
 #define IMGHEIGHT 820
@@ -40,12 +37,13 @@ using ceres::Solver;
 #endif
 
 
-class EnergyDetector {
+class EnergyDetector{
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
     void EnergyTask(const Mat &src, int8_t mode, const float deltaT);//接口
     void init();
+    //void getPredictPoint();
     vector<Point2f> pts;
     vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
@@ -140,8 +138,8 @@ private:
 
     int flag = 0;
     int last_flag = 0;
-    void getPredictPointSmall(const Mat& src);
-    void getPredictPoint(const Mat& src,float deltaT);
+    void getPredictPointSmall();
+    void getPredictPoint();
     void getPredictRect(float theta, vector<Point2f> pts);
     void testModule();
     RMTools::DisPlayWaveCLASS waveClass;
@@ -152,7 +150,7 @@ private:
 /*** *** *** *** *** ***/
 
     /***/
-    bool judgeRotation(const Mat &src, const float deltaT);
+    bool judgeRotation();
     void estimateParam(vector<float>omega_, vector<float>t_, int times);
     vector<float> time_series; //记录每次的时间
     vector<float> omega_series; //记录omega的值
