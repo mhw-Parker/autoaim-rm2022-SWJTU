@@ -25,7 +25,7 @@ using namespace std;
 
 Mat outline;
 
-static Mat polyfit(list<float> &in_point, int n) {
+/*static Mat polyfit(list<float> &in_point, int n) {
     int size = in_point.size();
     //所求未知数个数
     int x_num = n + 1;
@@ -50,7 +50,7 @@ static Mat polyfit(list<float> &in_point, int n) {
     Mat mat_k(x_num, 1, CV_64F);
     mat_k = (mat_u.t() * mat_u).inv() * mat_u.t() * mat_y;
     return mat_k;
-}
+}*/
 
 /**
  * @brief EnergyDetector::EnergyDetector
@@ -194,6 +194,9 @@ void EnergyDetector::clearAll() {
     target_blades.clear();
     centerRs.clear();
     armor_centers.clear();
+    /*if(omega.size() > 1000){
+        omega(omega.end()-6,omega.end());
+    }*/
 }
 
 /**
@@ -219,19 +222,16 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
         getPts(target_armor); //获得的装甲板4点
         detectCircleCenter(roi); //识别旋转圆心
         calOmega(deltaT); //计算当前的角速度 cur_omega 为当前三阶差分计算的角速度 av_omega.back() 为 4 次角速度平滑均值
-        //waveClass.displayWave(omega.back(), av_omega.back());
-        if(judgeRotation(src,deltaT)){
-            waveClass.displayWave(av_omega.back(), predict_rad);
-            if(mode == BIG_ENERGY_STATE){
-                getPredictPoint(roi,deltaT); //变速预测
-            }else if(mode == SMALL_ENERGY_STATE){
-                getPredictPointSmall(roi);
+        if(judgeRotation()) {
+            if (mode == SMALL_ENERGY_STATE) getPredictPointSmall();
+            else if (mode == BIG_ENERGY_STATE) {
+                getPredictPoint();
+                waveClass.displayWave(av_omega.back(), predict_rad);
             }
-            imshow("nmnm",outline);
-            //roiPoint2src();
-            detect_flag = true;
-            misscount = 0;
         }
+        //waveClass.displayWave(omega.back(), av_omega.back());
+        detect_flag = true;
+        misscount = 0;
     }else{
         misscount++;
         predict_point = Point2f (0,0);
@@ -277,7 +277,7 @@ void EnergyDetector::init() {
  * @param src 摄像头读入图像
  * @param startT 任务起始时间
  * */
-bool EnergyDetector::judgeRotation(const Mat &src, const float deltaT) {
+bool EnergyDetector::judgeRotation() {
     int times = 300;
     if (!cnt_t) {
         startT = getTickCount();//第一帧识别到后记录下当前时间
@@ -292,9 +292,9 @@ bool EnergyDetector::judgeRotation(const Mat &src, const float deltaT) {
         //cout << cnt_t++ << endl;
         cnt_t++;
         if (cnt_i > times / 2 + 10)
-            energy_rotation_direction = 1;
+            energy_rotation_direction = 1; //顺时针
         else
-            energy_rotation_direction = -1;
+            energy_rotation_direction = -1; //逆时针
         estimateParam(omega, time_series, times); //分别是时间戳对应的 omega 和用于拟合计算的点的数量
         return true;
     } else
@@ -311,9 +311,9 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int t
     if(omega_.size() >= times - 1){
         int st = omega_.size() - times + 1;
         float min_w = 5;
-        for(int i = 8; i < omega.size(); i++){
-            min_w = (av_omega[i] < min_w) ? av_omega[i] : min_w;
-        }
+        for(int i = 8; i < omega.size(); i++)
+            min_w = (av_omega[i] < min_w) ? av_omega[i] : min_w; //找出最小值，进而确定中值
+
         for (int i = 8; i < omega.size(); ++i) {
             if(abs(omega_[i] - (2.09-min_w)/2) < 0.05 ){
                 vector<float> cut_t, cut_o;
@@ -327,9 +327,10 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int t
                     st = i; //从接近 sin 中值的地方开始拟合
                     break;
                 }else{
-                    w_ = - w_;
+                    a_ = - a_;
                     st = i;
                     break;
+                    //continue;
                 }
 
             }
@@ -352,7 +353,7 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int t
         options.minimizer_progress_to_stdout = true;
 
         Solver::Summary summary;
-        Solve(options, &problem, &summary);
+        ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << "\n";
         std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
         std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
@@ -726,7 +727,7 @@ Point2f EnergyDetector::calPredict(Point2f p, Point2f center, float theta) const
  * @brief 通过相邻帧的圆心指向目标的向量叉乘来达到既能判断方向，又可以通过叉乘求角度相邻帧转过的角度（因为已知R在图像中为168）
  * @remark 给出预测射击点位置predict_point
  */
-void EnergyDetector::getPredictPointSmall(const Mat& src) {
+void EnergyDetector::getPredictPointSmall() {
     cv::Point3i last_target_vector = Point3i(last_target_point - last_circle_center_point);
     cv::Point3i target_vector = Point3i(target_point - circle_center_point);
     cv::Point3i last_cross_cur = last_target_vector.cross(target_vector);
@@ -739,6 +740,7 @@ void EnergyDetector::getPredictPointSmall(const Mat& src) {
     LOGM("Omega: %.3lf", omega);
     predict_rad = -1.4 * 0.3;
     predict_point = calPredict(target_point,circle_center_point,predict_rad);
+    getPredictRect(predict_rad,predict_pts);
     circle(outline, predict_point, 4, Scalar(0, 0, 255), -1);
     updateLastValues();
 }
@@ -750,12 +752,9 @@ void EnergyDetector::getPredictPointSmall(const Mat& src) {
  * @param src
  * @param deltaT 两帧的间隔时间，可用平均耗时，单位：ms
  * */
-void EnergyDetector::getPredictPoint(const Mat &src, float deltaT)
+void EnergyDetector::getPredictPoint()
 {
     /// new 2022/1/13
-    //cout << "---- " << omega_series.size() << endl;
-    //pem(); //用于计算 w
-
     vector<float> cut_av_omega(av_omega.end()-6,av_omega.end()); //取 av_omega 的后 6 个数
     Eigen::MatrixXd rate = RMTools::LeastSquare(x_list,cut_av_omega,1); //对上面数据用最小二乘
 
@@ -815,8 +814,6 @@ void EnergyDetector::calOmega(float deltaT) {
     delta_theta.push_back(cur_theta - angle[angle.size()-4]);  //相隔3个数相减  size()-1-3
     if(delta_theta.back() > 300) //解决 180 -180 跳变问题
         delta_theta.back() = 360 - delta_theta.back();
-    if(abs(delta_theta.back()-delta_theta[delta_theta.size()-2])>8) /// 待测试：用于判断差角的合理性
-        delta_theta.back() = delta_theta[delta_theta.size()-2] + (delta_theta[delta_theta.size()-2] - delta_theta[delta_theta.size()-3]);
     cur_omega = abs(delta_theta.back() ) / (deltaT * 3/1000) * (2*CV_PI/360); //转为弧度制,算3帧的角速度
     //cout << "--- current spd : " << cur_omega << endl;
     if(cur_omega > 2.15)

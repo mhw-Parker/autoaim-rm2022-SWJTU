@@ -23,7 +23,6 @@
 #include "utility.hpp"
 #include "Predictor/Predictor.h"
 
-
 #ifdef DAHUA
 #include "Media/RMDriver.h"
 #endif
@@ -118,9 +117,6 @@ namespace rm
         static void InitSignals(void);
         //double calFPS(double BeginTime, double freq);
 
-        int direct_y = 1; //不同兵种的 yaw 参考不
-        int direct_p = 1;
-
         double taskTime;
         double freq;
 
@@ -164,8 +160,8 @@ namespace rm
 
         std::unique_ptr<Kalman> kalman;
 
-        std::unique_ptr<Predictor> predictPtr;
-        //Predictor predictPtr;
+        //std::unique_ptr<Predictor> predictPtr;
+        Predictor predictPtr;
 
         Mat frame;
         Mat detectFrame;
@@ -173,8 +169,6 @@ namespace rm
 
         float yaw_abs;
         float pitch_abs;
-        Vector3f target_ypd;
-        Vector3f last_xyz; //用于存储丢目标前最后一帧的目标位置
 
         struct ReceiveData receiveData;
         int armorType;

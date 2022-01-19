@@ -45,8 +45,8 @@ namespace rm
     bool energyMission = false;//when energy mission completed, energyMission is true, when produce mission completed, energyMission is false
     bool feedbackMission = false;//when feedback mission completed, feedbackMission is true, when produce mission completed, feedbackMission is false
 
-    //int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
-    int8_t curControlState = BIG_ENERGY_STATE;
+    int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
+    //int8_t curControlState = BIG_ENERGY_STATE;
     int8_t lastControlState = BIG_ENERGY_STATE;
     uint8_t curDetectMode = TRADITION_MODE; //tracking or searching
 
@@ -280,6 +280,8 @@ namespace rm
                 energyPtr->init(); //初始化大幅识别
             //else
             /* 装甲板识别初始化，滤波器初始化啥的 */
+//            if(curControlState == AUTO_SHOOT_STATE)
+//                predictPtr->Refresh();
         }
         lastControlState = curControlState; //更新上一次的状态值
         switch (curControlState) {
@@ -318,8 +320,7 @@ namespace rm
                 break;
             }
         }
-        if(debug)
-            imshow("armor",detectFrame);
+
         cout << "Armor Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
     }
 
@@ -350,7 +351,10 @@ namespace rm
             {
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
-                                    armorDetectorPtr->IsSmall());
+                                    armorDetectorPtr->IsSmall(),16);
+                predictPtr.armorPredictor(solverPtr->p_cam_xyz, deltat);
+                solverPtr->backProject(predictPtr.predict_xyz,predictPtr.predict_point);
+                //solverPtr->backProject(solverPtr->p_cam_xyz,predictPtr.predict_point);
                 /**record distance for debug**/
                 dis_count++;
                 dis_sum += solverPtr->dist;
@@ -498,9 +502,20 @@ namespace rm
             //cout<<solverPtr->shoot<<endl;
             //cout<<armorDetectorPtr->findState<<" "<<yawTran<<" "<<pitchTran<<" "<<yawDeviation<<endl;
             /** package data and prepare for sending data to lower-machine **/
-            if(carName != HERO)
-                serialPtr->pack(receiveData.yawAngle + yawTran + yawOffset,receiveData.pitchAngle + pitchTran, solverPtr->dist, solverPtr->shoot,
-                                armorDetectorPtr->findState, AUTO_SHOOT_STATE,0);
+            if(carName != HERO){
+                serialPtr->pack(receiveData.yawAngle - solverPtr->yaw,
+                                receiveData.pitchAngle + solverPtr->pitch,
+                                solverPtr->dist,
+                                solverPtr->shoot,
+                                armorDetectorPtr->findState,
+                                AUTO_SHOOT_STATE,
+                                0);
+#if SAVE_TEST_DATA == 1
+                // **** 当前相角  当前角速度  预测弧度值 **** //
+                dataWrite << solverPtr->p_cam_xyz[0] << " " << solverPtr->p_cam_xyz[1] << " " << solverPtr->p_cam_xyz[2] << endl;
+#endif
+            }
+
             else
             {
 #ifdef REALSENSE
@@ -509,7 +524,6 @@ namespace rm
                                 armorDetectorPtr->findState, AUTO_SHOOT_STATE,0);
 #endif
             }
-
             feedbackDelta = 1;
 #if DEBUG_MSG == 1
             LOGM("Write Data\n");
@@ -517,38 +531,8 @@ namespace rm
         }
         else
         {
-            solverPtr->GetPoseV(energyPtr->predict_pts,false);
-            //solverPtr->GetPoseV(energyPtr->pts,false);
-            if (showEnergy){
-                circle(detectFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
-
-                putText(detectFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(detectFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-                putText(detectFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(detectFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-                putText(detectFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                putText(detectFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-
-                putText(detectFrame, "detecting:  ", Point(0, 180), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-                if (energyPtr->detect_flag){
-                    circle(detectFrame, Point(165, 175), 4, Scalar(255, 255, 255), 3);
-                    for (int i = 0; i < 4; i++) {
-                        line(detectFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
-                             Scalar(255, 255, 255), 2, LINE_8);
-                        line(detectFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
-                             Scalar(0, 255, 255), 2, LINE_8);
-                    }
-                    circle(detectFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
-                    circle(detectFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                    circle(detectFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
-                }
-
-
-                imshow("energy", detectFrame);
-                waitKey(1);
-            }
+            solverPtr->GetPoseV(energyPtr->predict_pts,false,0);
+            //solverPtr->GetPoseV(energyPtr->pts,false,16);
 
             ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
             yaw_abs = receiveData.yawAngle - solverPtr->yaw ; //绝对yaw角度
@@ -571,6 +555,39 @@ namespace rm
 //            logWrite << "detect or not : " << energyPtr->detect_flag << endl;
             logWrite << solverPtr->tvecs << endl;
 #endif
+        }
+
+        if(showArmorBox || showEnergy){
+            circle(detectFrame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
+
+            putText(detectFrame, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+            putText(detectFrame, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+
+            putText(detectFrame, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+            putText(detectFrame, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+
+            putText(detectFrame, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+            putText(detectFrame, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+
+            putText(detectFrame, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+            if (showEnergy && energyPtr->detect_flag){
+                circle(detectFrame, Point(165, 115), 4, Scalar(255, 255, 255), 3);
+                for (int i = 0; i < 4; i++) {
+                    line(detectFrame, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
+                         Scalar(255, 255, 255), 2, LINE_8);
+                    line(detectFrame, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                         Scalar(0, 255, 255), 2, LINE_8);
+                }
+                circle(detectFrame, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
+                circle(detectFrame, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                circle(detectFrame, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
+            }
+            if(showArmorBox && armorDetectorPtr->findState){
+                circle(detectFrame, Point(165, 115), 4, Scalar(255, 255, 255), 3);
+                circle(detectFrame, predictPtr.predict_point + Point2f (0,-500), 2, Scalar(100, 240, 15), 3);
+            }
+            imshow("Detect Frame", detectFrame);
+            waitKey(1);
         }
 
         /**press key 'space' to pause or continue task**/

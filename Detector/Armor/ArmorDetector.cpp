@@ -205,7 +205,7 @@ namespace rm
             imshow("binary_brightness_img", thresholdMap);
         }
 
-        lights = LampDetection(thresholdMap);
+        //lights = LampDetection(thresholdMap);
         lights = LightDetection(thresholdMap);
 
         if (showLamps)
@@ -232,8 +232,7 @@ namespace rm
             targetArmor.rect  = targetArmor.rect + Point(roiRect.x, roiRect.y);
             targetArmor.center +=  Point(roiRect.x, roiRect.y);
 
-            for(int i = 0; i< 4;i++)
-            {
+            for(int i = 0; i< 4;i++){
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
 
@@ -436,8 +435,8 @@ namespace rm
 
     /**
     * @brief pre-procession of an image captured
-    * @param [img] the ROI image that clipped by the GetRIO function
-    * @param [type] choose to Preprocess the current image or the lastest two images, when the type is true, parameter
+    * @param img the ROI image that clipped by the GetRIO function
+    * @param type choose to Preprocess the current image or the lastest two images, when the type is true, parameter
     * img must be the origin image but not the roi image
     * @return none
     * @details if average value in a region of the colorMap is larger than 0, then we can inference that in this region
@@ -457,7 +456,8 @@ namespace rm
         //Attention!!!if the calculate result is small than 0, because the mat format is CV_UC3, it will be set as 0.
         cv::subtract(channels[0],channels[2],bSubR);
         cv::subtract(channels[2],channels[0],rSubB);
-        //imshow ("b - r",rSubB-bSubR);
+        sub = rSubB - bSubR;
+        imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",rSubB);
         threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
         GaussianBlur(bright,bright,Size(5,5),5);
@@ -526,7 +526,7 @@ namespace rm
 
                 //cout<<avg<<endl;
 
-                if((blueTarget && avg[0] < -20) || (!blueTarget && avg[0] > 20)) //灯条和数字的重叠面积有较大差别
+                if((blueTarget && avg[0] < -10) || (!blueTarget && avg[0] > 10)) //灯条和数字的重叠面积有较大差别
                 {
                     Lamp buildLampInfo(possibleLamp, angle_, avg[0]);
                     lampVector.emplace_back(buildLampInfo);
@@ -545,7 +545,8 @@ namespace rm
      vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
         float angle_ = 0;
         Scalar_<double> avg,avgBrightness;
-        float lampArea;
+        Mat_<int> lampImage;
+        float lamp_area;
 
         RotatedRect possibleLamp;
         Rect rectLamp;
@@ -554,22 +555,37 @@ namespace rm
         vector<vector<Point>> contoursLight;
         findContours(img,contoursLight,RETR_EXTERNAL,CHAIN_APPROX_NONE);
         Mat background = Mat(img.size(), CV_8UC3, Scalar(0, 0, 0));
-        for(auto &lamp_contour:contoursLight){
+        for(auto &lamp_contour:contoursLight){ //遍历所有点集
             if(lamp_contour.size() < 10)
                 continue;
             RotatedRect min_rect, ellipse_rect;
             std::vector<cv::Point2f> intersection;
             min_rect = minAreaRect(lamp_contour);
             ellipse_rect = fitEllipse(lamp_contour);
-            if(contourArea(lamp_contour) < 50){
-                continue;
-                //LOGM("angle_ : %f\n",ellipse_rect.angle);
-            }
+
+            ///灯条角度筛选
             float angle_ = (ellipse_rect.angle > 90) ? (ellipse_rect.angle - 180) : ellipse_rect.angle;
-            if(fabs(angle_)>param.maxLightAngle) continue;
-            rectLamp = ellipse_rect.boundingRect();
-            if(blueTarget){
-            }
+            if(fabs(angle_) > param.maxLightAngle) continue;
+            ///灯条颜色筛选
+            rectLamp = ellipse_rect.boundingRect(); //最小正矩形
+            MakeRectSafe(rectLamp,sub.size());
+            lampImage = blueTarget ? bSubR(rectLamp) - rSubB(rectLamp) : rSubB(rectLamp) - bSubR(rectLamp);
+            double percent = lampImage.dot(Mat_<int>::ones(rectLamp.height,rectLamp.width)) / (255 * rectLamp.width * rectLamp.height / 2);
+            cout << "count : " << percent << endl;
+            if(percent < 0.12) continue;
+            ///灯条长宽比
+            float lamp_ratio = min_rect.size.height / min_rect.size.width;
+            //cout << "----lamp ratio : " << lamp_ratio << endl;
+            //if(lamp_ratio < param.minLightW2H || lamp_ratio > param.maxLightW2H) continue; //灯条长宽比
+
+            lamp_area = min_rect.size.height * min_rect.size.width; //椭圆拟合的灯条矩形面积
+            //if((lamp_area > param.maxLightArea) || (lamp_area < param.minLightArea)) continue; //灯条面积筛选
+            possibleLamp = min_rect;
+
+
+            Lamp buildLampInfo(possibleLamp, angle_, 0);
+            lampVector.emplace_back(buildLampInfo);
+
             Point2f pts[4];
             min_rect.points(pts);
             for (int i = 0; i < 4; i++) {
@@ -581,6 +597,7 @@ namespace rm
 
         }
         imshow("test",background);
+        return lampVector;
      }
 
     /**
@@ -736,7 +753,7 @@ namespace rm
         pyrDown(warpPerspective_dst,warpPerspective_dst);
        // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
-       // imshow("svm",warpPerspective_dst);
+        imshow("svm",warpPerspective_dst);
 
         svmParamMatrix = warpPerspective_dst.reshape(1, 1);
         svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
