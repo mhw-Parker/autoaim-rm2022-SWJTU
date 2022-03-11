@@ -457,7 +457,7 @@ namespace rm
         cv::subtract(channels[0],channels[2],bSubR);
         cv::subtract(channels[2],channels[0],rSubB);
         sub = rSubB - bSubR;
-        imshow ("rSubB - bSubR",sub);
+        //imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",rSubB);
         threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
         GaussianBlur(bright,bright,Size(5,5),5);

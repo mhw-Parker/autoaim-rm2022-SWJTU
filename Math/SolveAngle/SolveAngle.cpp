@@ -22,13 +22,25 @@ SolveAngle::SolveAngle()
             fs["Distortion_Coefficients4_Realsense"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_Realsense"] >> cameraMatrix;
             break;
-        case INFANTRY_MELEE:
+        case INFANTRY_MELEE0:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            direct = 1;
             //静态校正值
-            yaw_static = 1.6;  // -0.3
-            pitch_static = 0.5;// +1.6
+            yaw_static = 1.6;
+            pitch_static = 0.5;
+            //枪口坐标系
             fit_xyz << 0, 50, 50; //x y z
+            break;
+        case INFANTRY_MELEE1:
+            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            direct = -1;
+            //静态校正值
+            yaw_static = 1.5;
+            pitch_static = -0.6;
+            //枪口坐标系
+            fit_xyz << 30, 50, 50;
             break;
         case INFANTRY_TRACK:
             break;
@@ -96,13 +108,11 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const flo
     tvecs.convertTo(Tvec, CV_32F);   //平移向量
 
     cv2eigen(tvecs,p_cam_xyz);
-    //p_cam_xyz[0] = p_cam_xyz[0] + 17.2056;
-    //p_cam_xyz[1] = p_cam_xyz[1] - 7.6826;
 
     Compensator(p_cam_xyz,v_);
     //camXYZ2YPD(tvecs); //直接输出目标点 yaw pitch dist
-
-
+    if(fabs(yaw)>1)
+        yaw = yaw + (-0.05626 * yaw + 0.204);
     //cout << "yaw = " << yaw << '\t' << "pitch = " << pitch <<endl;
 
     averageX = 0;
@@ -142,7 +152,7 @@ void SolveAngle::GetPoseSH(const Point2f p)
 void SolveAngle::camXYZ2YPD(Mat tvecs)
 {
     yaw = atan2(p_cam_xyz[0],p_cam_xyz[2]) / (2*CV_PI) * 360 ; //arctan(x/z)
-    pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360; //arctan(y/sqrt(x^2 + z^2))
+    pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360 * direct; //arctan(y/sqrt(x^2 + z^2))
     dist = sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[1]*p_cam_xyz[1] + p_cam_xyz[2]*p_cam_xyz[2]); //sqrt(x^2 + y^2 + z^2)
     ///静态补偿
     yaw = yaw + yaw_static;
@@ -161,7 +171,7 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
     gun_xyz[2] = gun_xyz[2] - dy;
     ///动态补偿
     yaw = atan2(gun_xyz[0],gun_xyz[2]) / (2*CV_PI) * 360;
-    pitch = - atan2(gun_xyz[1], sqrt(gun_xyz[0]*gun_xyz[0] + gun_xyz[2]*gun_xyz[2])) / (2*CV_PI) * 360;
+    pitch = - atan2(gun_xyz[1], sqrt(gun_xyz[0]*gun_xyz[0] + gun_xyz[2]*gun_xyz[2])) / (2*CV_PI) * 360 * direct;
     dist = sqrt(pow(gun_xyz[0],2) + pow(gun_xyz[1],2) + pow(gun_xyz[2],2));
     ///静态补偿
     yaw = yaw + yaw_static;
