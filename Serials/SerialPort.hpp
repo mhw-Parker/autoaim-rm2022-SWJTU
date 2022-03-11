@@ -39,7 +39,7 @@ BYTE   |   1  |    1    |   4   |    4    |     4     |    1    |    1   |     8
 
 /**---------------------------------------RECEIVE DATA PROTOCOL-----------------------------------------------------------------------------**/
 /**    -----------------------------------------------------------------------------------------------------------------------------------------
-FIELD  |  head  |  CmdID  |  yawAngle  |  pitchAngle  | yawSpeed  |  pitchSpeed  |  targetMode  |  direction | blank |  blank |  blank |   A6  |
+FIELD  |  head  |  CmdID  |  yawAngle  |  pitchAngle  | yawSpeed  |  pitchSpeed  |  targetMode  |  targetColor | blank |  blank |  blank |   A6  |
        ----------------------------------------------------------------------------------------------------
 BYTE   |   1    |    1    |     4      |      4      |     4     |      4       |       4       |      8     |   1   |    1   |   1    |   1   |
 ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ BYTE   |   1    |    1    |     4      |      4      |     4     |      4       
  * yawSpeed: current spin speed of yaw direction
  * pitchSpeed: current pitch angle of pan-tilt
  * targetMode: the mode of vision task(AUTOSHOOT/ENERGY)
- * direction: the moving direction of chassis, 0 is left(the direction to decrease yaw angle), 1 is right
+ * targetColor: blue or red enemy
  */
 
 using namespace std;
@@ -89,7 +89,6 @@ struct ReceiveData
 class Serial
 {
 private:
-
     int fd;
     int nSpeed;
     char nEvent;
@@ -101,8 +100,8 @@ private:
     int readCount;
     int maxReadTime;
     static int set_opt(int fd, int nSpeed, char nEvent, int nBits, int nStop);
-public:
 
+public:
     explicit Serial(int nSpeed = 115200, char nEvent = 'N', int nBits = 8, int nStop = 1);
     ~Serial();
     void pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t find, uint8_t CmdID, long long timeStamp);
