@@ -167,7 +167,12 @@ namespace rm
                 driver = &intelCapture;
 #endif
                 break;
-            case INFANTRY_MELEE:
+            case INFANTRY_MELEE0:
+#ifdef MIND
+                driver = &mindCapture;
+#endif
+                break;
+            case INFANTRY_MELEE1:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -281,8 +286,8 @@ namespace rm
                 energyPtr->init(); //初始化大幅识别
             //else
             /* 装甲板识别初始化，滤波器初始化啥的 */
-//            if(curControlState == AUTO_SHOOT_STATE)
-//                predictPtr->Refresh();
+            if(curControlState == AUTO_SHOOT_STATE)
+                predictPtr->Refresh();
         }
         lastControlState = curControlState; //更新上一次的状态值
         switch (curControlState) {
@@ -339,7 +344,6 @@ namespace rm
         cout << "Energy Detect Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
         tt += CalWasteTime(taskTime,freq);
         cnt1++;
-
         cout << "average time = " << tt / cnt1 << endl;
 #endif
     }
@@ -361,18 +365,25 @@ namespace rm
                                 receiveData.pitchAngle + solverPtr->pitch,
                                 solverPtr->dist;
                 }
-
-
-                /*** 1-20 测试版预测 ***/
-                predictPtr->test1Predict(abs_ypd,deltat);
-                yaw_abs = predictPtr->predict_ypd[0];
-                pitch_abs = predictPtr->predict_ypd[1];
-                /*** ***/
+                Vector3f gimbal_yp ;
+                gimbal_yp << receiveData.yawAngle, receiveData.pitchAngle, 0; //电控数据
+                pitch_abs = abs_ypd[1];
+                //predictPtr->armorPredictor(abs_ypd,gimbal_yp,deltat);
+                predictPtr->kalmanPredict(abs_ypd,gimbal_yp);
+                yaw_abs = predictPtr->yaw; //将yaw更新为预测值，pitch就不预测
+//                /*** 1-20 测试版预测 ***/
+//                predictPtr->test1Predict(abs_ypd,deltat);
+//                yaw_abs = predictPtr->predict_ypd[0];
+//                pitch_abs = predictPtr->predict_ypd[1];
+//                /*** ***/
 
 //                yaw_abs = abs_ypd[0];
 //                pitch_abs = abs_ypd[1];
 
-
+#if SAVE_TEST_DATA == 1
+                // **** 目标陀螺仪 x y z **** //
+                dataWrite << predictPtr->x_ << " " << predictPtr->y_ << " " << predictPtr->z_ << endl;
+#endif
                 /**record distance for debug**/
                 //dis_count++;
                 //dis_sum += solverPtr->dist;
@@ -466,6 +477,7 @@ namespace rm
 
             if(!armorDetectorPtr->findState)
             {
+                predictPtr->Refresh(); //clear
                 //LOGE("lost_target_count : %d\n", ++lost_target_count);
                 yawTran /= 1.2;
                 pitchTran /= 1.2;

@@ -41,6 +41,7 @@ public:
 
 private:
     void camXYZ2YPD(Mat tvecs);
+    int direct = 1;
 
     Mat tvecs;
     Mat rvecs;
