@@ -90,7 +90,7 @@ void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
     y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
     //算x,z符号
     int t = yaw / 90;
-    x_ *= quadrant[t].first;z_ *= quadrant[t].second;
+    x_ *= quadrant[t].first; z_ *= quadrant[t].second;
 
     if(tan_yaw > 0)
     target_x.push_back(x_);
@@ -104,6 +104,7 @@ void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
  * @brief 变更目标时更新预测器
  * */
 void Predictor::Refresh() {
+
     target_xyz.clear();
     abs_pyd.clear();
     abs_yaw.clear();
