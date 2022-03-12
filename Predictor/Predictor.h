@@ -40,7 +40,9 @@ public:
     float yaw, pitch;
 
     float x_,y_,z_;
+
 private:
+
     vector<Point3_<float>> target_xyz;
     vector<Vector3f> abs_pyd;
 
@@ -58,6 +60,8 @@ private:
     RMTools::DisPlayWaveCLASS waveClass;
 
     Kalman kf;
+
+    MatrixXd A,Q,R,H;
 };
 
 //#endif //MASTER_PREDICTOR_H
