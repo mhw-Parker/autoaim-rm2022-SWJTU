@@ -17,12 +17,15 @@ public:
     Kalman();
     ~Kalman() = default;
 
-
-    void Init(MatrixXd A_in,
-              MatrixXd Q_in,
-              MatrixXd R_in);
     /**
-     * @brief 利用存储的最优估计做预测
+     * @brief 滤波初始化函数
+     * @param z_dim 输入测量参数维度  e.g. x y z   ----- 3 dimension
+     * @param x_dim 状态变量维度     e.g. x y z vx vy vz  ----- 6 dimension
+     * @param step 预测步长 帧 or ms
+     * */
+    void Init(int z_dim, int x_dim, float step);
+    /**
+     * @brief 利用存储的最优估计做预测，迭代卡尔曼
      * @param l 预测步数
      * */
     void Predict(int l);
@@ -31,7 +34,6 @@ public:
      * @param z_k k时刻输入的观测值
      * */
     void Update(VectorXd z_k);
-
     /**
      * @brief 变更目标重置 P_k 与 K_
      * */
@@ -49,3 +51,6 @@ private:
 
 };
 
+struct KalmanParam{
+
+}KalmanParam;
