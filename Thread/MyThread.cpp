@@ -197,7 +197,7 @@ namespace rm
         }
         if(saveVideo){
             path = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30.0, cv::Size(1280, 1024));
+            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(1280, 1024));
         }
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
@@ -358,18 +358,23 @@ namespace rm
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
                                     armorDetectorPtr->IsSmall(),16);
                 Vector3f abs_ypd;
+                Vector3f pnp_ypd;
                 if(carName == SENTRY){
 
                 }else{
                     abs_ypd <<  receiveData.yawAngle - solverPtr->yaw,
                                 receiveData.pitchAngle + solverPtr->pitch,
                                 solverPtr->dist;
+
+                    pnp_ypd <<  solverPtr->yaw,
+                                solverPtr->pitch,
+                                solverPtr->dist;
                 }
                 Vector3f gimbal_yp ;
                 gimbal_yp << receiveData.yawAngle, receiveData.pitchAngle, 0; //电控数据
                 pitch_abs = abs_ypd[1];
                 //predictPtr->armorPredictor(abs_ypd,gimbal_yp,deltat);
-                predictPtr->kalmanPredict(abs_ypd,gimbal_yp);
+                predictPtr->kalmanPredict(pnp_ypd,gimbal_yp);
                 yaw_abs = predictPtr->yaw; //将yaw更新为预测值，pitch就不预测
 //                /*** 1-20 测试版预测 ***/
 //                predictPtr->test1Predict(abs_ypd,deltat);
@@ -448,14 +453,15 @@ namespace rm
 
             if(showOrigin)
             {
-                circle(detectFrame,Point(FRAMEWIDTH/2, FRAMEHEIGHT/2),5,Scalar(255,255,255),-1);
+                circle(frame,Point(FRAMEWIDTH/2, FRAMEHEIGHT/2),5,Scalar(255,255,255),-1);
 
                 if(FRAMEHEIGHT > 1000)
                 {
                     //pyrDown(detectFrame,detectFrame);
                     //pyrDown(detectFrame,detectFrame);
                 }
-                imshow("detect",detectFrame);
+                imshow("detect",frame);
+                waitKey(1);
             }
 
 

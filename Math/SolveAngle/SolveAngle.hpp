@@ -21,7 +21,7 @@ public:
     float scale = 0.99f;
 	float f_ = 1500;
 
-    float yaw,pitch,dist;
+    float yaw = 0,pitch = 0,dist = 0;
 	vector<Point2f> rectPoint2D;
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
     Vector3f ypd;
