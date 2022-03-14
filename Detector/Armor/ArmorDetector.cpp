@@ -201,7 +201,7 @@ namespace rm
 
         vector<Lamp> lights;
 
-        if (showBianryImg){
+        if (showBinaryImg){
             imshow("binary_brightness_img", thresholdMap);
         }
 

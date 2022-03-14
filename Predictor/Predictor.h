@@ -24,7 +24,6 @@ public:
     Predictor();
     ~Predictor();
 
-    void test0(Vector3f p_cam_xyz, const float deltaT);
     void test1Predict(Vector3f pyd, const float deltaT);
 
     void armorPredictor(Vector3f ypd, Vector3f gimbal_ypd, const float deltaT);
@@ -43,7 +42,16 @@ public:
 
 private:
 
-    vector<Point3_<float>> target_xyz;
+    void showData(vector<float> data, string *str);
+    /**
+     * @brief 从陀螺仪 yaw pitch dist 解算目标点的世界坐标
+     * @param target_ypd 目标的绝对 yaw pitch dist
+     * @param target_xyz 目标的世界坐标系 x y z
+     * */
+    void calWorldPoint(Vector3f target_ypd, Vector3d &target_xyz);
+
+    void backProject2D(Vector3f delta_ypd);
+
     vector<Vector3f> abs_pyd;
 
     vector<float> abs_yaw;
@@ -60,6 +68,8 @@ private:
     RMTools::DisPlayWaveCLASS waveClass;
 
     Kalman kf;
+    Vector3d z_k;
+    bool kf_flag = false;
 
     MatrixXd A,Q,R,H;
 };
