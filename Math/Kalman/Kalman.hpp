@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cmath>
 #include <opencv2/opencv.hpp>
-#include <opencv2/core/eigen.hpp>
+
 #include <Eigen/Dense>
 
 using namespace std;
@@ -40,17 +40,15 @@ public:
     void reset();
 
     VectorXd x_k; //k时刻的后验估计
-
-private:
     MatrixXd A_;  //状态转移矩阵
     MatrixXd P_;  //k时刻后验估计协方差
     MatrixXd Q_;  //过程激励噪声协方差
     MatrixXd R_;  //测量噪声协方差
     MatrixXd H_;  //状态变量到观测的转移矩阵
     MatrixXd K_;  //滤波增益系数，卡尔曼系数
+    MatrixXd I;
+
+private:
 
 };
 
-struct KalmanParam{
-
-}KalmanParam;

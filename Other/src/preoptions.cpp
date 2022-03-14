@@ -108,7 +108,7 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                   }},
     {"-binary", {
                         "Show Binary ROI Image",[]() {
-                showBianryImg = true;
+                showBinaryImg = true;
                 LOGM("Show Binary ROI Image!");
             }
                 }},
@@ -117,7 +117,7 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
 		        showOrigin = true;
                 showArmorBox = true;
 			LOGM("Enable show armor boxes");
-                showBianryImg = true;
+                showBinaryImg = true;
 			LOGM("Enable show binary image");
                 showEnergy = true;
 			LOGM("Enable show energy part");

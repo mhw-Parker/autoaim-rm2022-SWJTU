@@ -47,6 +47,8 @@ SolveAngle::SolveAngle()
         case VIDEO:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            yaw_static = 1.6;
+            pitch_static = 0.5;
         case SENTRY:
             fs["Distortion_Coefficients4_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
@@ -109,8 +111,9 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const flo
 
     cv2eigen(tvecs,p_cam_xyz);
 
-    Compensator(p_cam_xyz,v_);
-    //camXYZ2YPD(tvecs); //直接输出目标点 yaw pitch dist
+    //Compensator(p_cam_xyz,v_);
+    camXYZ2YPD(tvecs); //直接输出目标点 yaw pitch dist
+
     if(fabs(yaw)>1)
         yaw = yaw + (-0.05626 * yaw + 0.204);
     //cout << "yaw = " << yaw << '\t' << "pitch = " << pitch <<endl;

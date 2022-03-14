@@ -11,6 +11,9 @@ void Kalman::Init(int z_dim, int x_dim, float step) {
         }
     }
     P_ = MatrixXd::Identity(x_dim, x_dim);
+    I = MatrixXd::Identity(x_dim,x_dim);
+    Q_.resize(x_dim,x_dim);
+    R_.resize(z_dim,z_dim);
 }
 
 void Kalman::Update(VectorXd z_k) {
@@ -23,8 +26,13 @@ void Kalman::Update(VectorXd z_k) {
     //更新状态估计值
     x_k = x_k_bar + K_ * (z_k - H_ * x_k_bar);
     //更新估计协方差
-    MatrixXd I = MatrixXd::Identity(x_k.size(),x_k.size());
     P_ = (I - K_ * H_) * P_bar;
+
+    //cout << "--- A Matrix ---" << endl << A_ << endl;
+    //cout << "--- H Matrix ---" << endl << H_ << endl;
+    cout << "--- P Matrix ---" << endl << P_ << endl;
+    cout << "--- K Matrix ---" << endl << K_ << endl;
+    cout << "--- x estimate Vector ---" << endl << x_k << endl;
 }
 
 void Kalman::Predict(int l) {
@@ -37,7 +45,7 @@ void Kalman::Predict(int l) {
         MatrixXd P_pre_bar = A_ * P_pre * A_.transpose() + Q_;
         K_pre = P_pre_bar * H_.transpose() * (H_ * P_pre_bar * H_.transpose() + R_).inverse();
         x_pre = x_pre_bar + K_pre * (z_pre - H_ * x_pre_bar);
-        MatrixXd I = MatrixXd::Identity(x_k.size(),x_k.size());
+
         P_pre = (I - K_pre) * P_pre_bar;
     }
 }

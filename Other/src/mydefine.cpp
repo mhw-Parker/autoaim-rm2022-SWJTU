@@ -4,11 +4,11 @@
 
 #include "mydefine.h"
 
-bool showArmorBox = true;
+bool showArmorBox = false;
 bool showOrigin = false;
-bool showLamps = true;
+bool showLamps = false;
 bool showEnergy = false;
-bool showBianryImg = false;
+bool showBinaryImg = false;
 bool blueTarget = false;
 bool saveVideo = false;
 bool debug = false;

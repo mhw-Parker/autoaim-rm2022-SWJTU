@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(4,600,1000){
+Predictor::Predictor() : waveClass(20,600,1000){
     for (int i = 0; i < 7; i++) {
         frame_list.push_back(i);
     }
@@ -11,18 +11,6 @@ Predictor::Predictor() : waveClass(4,600,1000){
 
 Predictor::~Predictor() = default;
 
-void Predictor::test0(Vector3f p_cam_xyz, const float deltaT) {
-    predict_point.clear();
-    target_xyz.push_back(Point3_<float>(p_cam_xyz[0], p_cam_xyz[1], p_cam_xyz[2]));
-    if(target_xyz.size()>4){
-        Point3_<float> v_xyz = (target_xyz.back() - target_xyz[target_xyz.size()-4]) / (deltaT * 3);
-        Point3f out_xyz = target_xyz.back() + v_xyz * 200;
-        predict_xyz[0] = out_xyz.x;
-        predict_xyz[1] = out_xyz.y;
-        predict_xyz[2] = out_xyz.z;
-        //cout << p_cam_xyz << " " << predict_xyz << endl;
-    }
-}
 
 /**
  * @brief
@@ -80,23 +68,49 @@ void Predictor::testPredictLineSpeed(Vector3f target_ypd, Vector3f yp_speed, con
  * @brief
  * */
 void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
-    pair<float, float> quadrant[4] = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
-    float yaw_ = target_ypd[0] - (int)(target_ypd[0] / 360) * 360;
-    float tan_yaw = tan(yaw_ / 360 * 2 * CV_PI);
-    float tan_pitch = tan(target_ypd[1] / 360 * 2 * CV_PI);
-    float dist2 = target_ypd[2] * target_ypd[2]; //
-    z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
-    x_ = z_ * fabs(tan_yaw);
-    y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
-    //算x,z符号
-    int t = yaw / 90;
-    x_ *= quadrant[t].first; z_ *= quadrant[t].second;
+    Vector3d target_xyz;
+    calWorldPoint(target_ypd,target_xyz);
 
-    if(tan_yaw > 0)
+    float dx;
+    if(kf_flag)
+        dx = x_ - target_x.back();
     target_x.push_back(x_);
     target_z.push_back(z_);
-    if(target_x.size()){
+    if(target_x.size()>8){
+        vector<float> cut_x (target_x.end() - 7, target_x.end());
+        k = RMTools::LeastSquare(frame_list, cut_x, 1); //目前用最小二乘法做一次函数拟合，二次有无必要？
+    }
 
+    z_k = target_xyz;
+    vector<float> show_data;
+    for(int len = 0;len<z_k.size();len++)
+        show_data.push_back(z_k[len]);
+
+    if(kf_flag){
+        kf.Update(z_k);
+        for(int len = 0;len<kf.x_k.size();len++)
+            show_data.push_back(kf.x_k[len]);
+
+        //cout << "delta x between 2 frame: " << dx << endl;
+        string str[] = {"m_x","m_y","m_z","kf_x","kf_y","kf_z","kf_vx","kf_vy","kf_vz"};
+        showData(show_data, str);
+        if(target_x.size()>8)
+            waveClass.displayWave(0, kf.x_k[3]);
+
+    }else{
+        kf_flag = true;
+        kf.Init(3,6,1); //滤波器初始化
+        kf.x_k = kf.H_.transpose() * z_k;  //设置第一次状态估计
+        kf.Q_ << 150,0,0,0,0,0,
+                 0,35,0,0,0,0,
+                 0,0,35,0,0,0,
+                 0,0,0,1,0,0,
+                 0,0,0,0,1,0,
+                 0,0,0,0,0,1 ;
+
+        kf.R_ << 800,0,0,
+                 0,65,0,
+                 0,0,65 ;
     }
 }
 
@@ -104,8 +118,42 @@ void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
  * @brief 变更目标时更新预测器
  * */
 void Predictor::Refresh() {
-
-    target_xyz.clear();
+    kf_flag = false;
     abs_pyd.clear();
     abs_yaw.clear();
+}
+
+void Predictor::showData(vector<float> data, string *str){
+    int c = data.size() * 35;
+    Mat background = Mat(c,400,CV_8UC3,Scalar::all(0));
+    for(int i = 0;i<data.size();i++){
+        putText(background, str[i], Point(0, 30*(i+1)), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+        putText(background, to_string(data[i]), Point(150, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+    }
+    imshow("data window",background);
+}
+
+void Predictor::calWorldPoint(Vector3f target_ypd, Vector3d &target_xyz) {
+    pair<float, float> quadrant[4] = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
+    float yaw_;
+    if(target_ypd[0] > 0)
+        yaw_ = target_ypd[0] - (int)(target_ypd[0] / 360) * 360;
+    else
+        yaw_ = target_ypd[0] - (int)(target_ypd[0] / 360 - 1) * 360;
+
+    float tan_yaw = tan(yaw_ / 360 * 2 * CV_PI);
+    float tan_pitch = tan(target_ypd[1] / 360 * 2 * CV_PI);
+    float dist2 = target_ypd[2] * target_ypd[2]; //
+    z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
+    x_ = z_ * fabs(tan_yaw);
+    y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
+    //算x,z符号
+    int t = yaw_ / 90;
+    x_ *= quadrant[t].first; z_ *= quadrant[t].second;
+    target_xyz << x_, y_, z_;
+}
+
+void Predictor::backProject2D(Vector3f delta_ypd) {
+    Vector3d cam_xyz;
+    calWorldPoint( delta_ypd, cam_xyz);
 }
