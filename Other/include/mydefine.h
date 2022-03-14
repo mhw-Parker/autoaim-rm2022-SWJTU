@@ -94,7 +94,7 @@
 #endif
 
 #ifndef SAVE_TEST_DATA
-#define SAVE_TEST_DATA 1
+#define SAVE_TEST_DATA 0
 
 #endif
 
@@ -119,7 +119,7 @@
 extern bool showArmorBox;
 extern bool showOrigin;
 extern bool showLamps;
-extern bool showBianryImg;
+extern bool showBinaryImg;
 extern bool showEnergy;
 extern bool blueTarget;
 extern bool saveVideo;
