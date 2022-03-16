@@ -25,6 +25,7 @@ SolveAngle::SolveAngle()
         case INFANTRY_MELEE0:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
             direct = 1;
             //静态校正值
             yaw_static = 1.6;
@@ -35,6 +36,7 @@ SolveAngle::SolveAngle()
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
             direct = -1;
             //静态校正值
             yaw_static = 1.5;
@@ -47,11 +49,13 @@ SolveAngle::SolveAngle()
         case VIDEO:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
             yaw_static = 1.6;
             pitch_static = 0.5;
         case SENTRY:
             fs["Distortion_Coefficients4_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
             break;
         case UAV:
             break;
@@ -160,6 +164,7 @@ void SolveAngle::camXYZ2YPD(Mat tvecs)
     ///静态补偿
     yaw = yaw + yaw_static;
     pitch = pitch + pitch_static;
+
 }
 /**
  * @brief 弹道补偿函数
@@ -239,4 +244,34 @@ void SolveAngle::backProject(Point3f obj_p_xyz, Point2f &p) {
                   distortionCoefficients,
                   img_p);
     p = img_p.back();
+}
+
+void SolveAngle::backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd) {
+    Vector3f cam_xyz, pix_xyz;
+    Vector3f gim_d_ypd;
+    gim_d_ypd << RMTools::total2circle(gimbal_ypd[0]), gimbal_ypd[1], gimbal_ypd[2];
+
+    Matrix3f vec_degree2rad;
+    vec_degree2rad << degree2rad, 0, 0,
+                      0, degree2rad, 0,
+                      0,     0,      1;
+    gim_d_ypd = vec_degree2rad * gim_d_ypd;
+
+    float sin_y = sin(gim_d_ypd[0]);
+    float cos_y = cos(gim_d_ypd[0]);
+    float sin_p = sin(gim_d_ypd[1]);
+    float cos_p = cos(gim_d_ypd[1]);
+
+    Matrix3f Ry, Rp;
+    Ry << cos_y , 0     , sin_y ,
+            0     , 1     , 0     ,
+            -sin_y, 0     , cos_y ;
+
+    Rp << 1     , 0     , 0     ,
+            0     , cos_p , -sin_p,
+            0     , sin_p , cos_p ;
+
+    cam_xyz = Ry * Rp * target_xyz;
+    pix_xyz = cam_mat * cam_xyz;
+    circle(src, Point2f(pix_xyz[0],pix_xyz[1]), 2, Scalar(100, 240, 15), 3);
 }

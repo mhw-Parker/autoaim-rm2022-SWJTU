@@ -33,20 +33,20 @@ public:
      * @brief 观测更新方程
      * @param z_k k时刻输入的观测值
      * */
-    void Update(VectorXd z_k);
+    void Update(VectorXf z_k);
     /**
      * @brief 变更目标重置 P_k 与 K_
      * */
     void reset();
 
-    VectorXd x_k; //k时刻的后验估计
-    MatrixXd A_;  //状态转移矩阵
-    MatrixXd P_;  //k时刻后验估计协方差
-    MatrixXd Q_;  //过程激励噪声协方差
-    MatrixXd R_;  //测量噪声协方差
-    MatrixXd H_;  //状态变量到观测的转移矩阵
-    MatrixXd K_;  //滤波增益系数，卡尔曼系数
-    MatrixXd I;
+    VectorXf x_k; //k时刻的后验估计
+    MatrixXf A_;  //状态转移矩阵
+    MatrixXf P_;  //k时刻后验估计协方差
+    MatrixXf Q_;  //过程激励噪声协方差
+    MatrixXf R_;  //测量噪声协方差
+    MatrixXf H_;  //状态变量到观测的转移矩阵
+    MatrixXf K_;  //滤波增益系数，卡尔曼系数
+    MatrixXf I;
 
 private:
 
