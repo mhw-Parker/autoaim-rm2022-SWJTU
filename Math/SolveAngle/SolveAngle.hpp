@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 #include <opencv2/core/eigen.hpp>
 #include <iostream>
+#include "utility.hpp"
 
 
 using namespace std;
@@ -38,10 +39,14 @@ public:
     void backProjection(Vector3f obj_p_ypd, vector<Point2f> &img_p);
     void backProject(Point3f obj_p_xyz, Point2f &p);
 
+    void backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd);
+
 
 private:
     void camXYZ2YPD(Mat tvecs);
     int direct = 1;
+    float degree2rad = CV_PI / 180;
+    Matrix3f cam_mat;
 
     Mat tvecs;
     Mat rvecs;

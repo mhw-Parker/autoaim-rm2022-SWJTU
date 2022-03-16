@@ -32,13 +32,13 @@ public:
 
     void Refresh();
 
-    Vector3f predict_xyz;
     Vector3f predict_ypd;
     vector<Point2f>predict_point;
 
     float yaw, pitch;
 
     float x_,y_,z_;
+    Vector3f predict_xyz;
 
 private:
 
@@ -48,11 +48,11 @@ private:
      * @param target_ypd 目标的绝对 yaw pitch dist
      * @param target_xyz 目标的世界坐标系 x y z
      * */
-    void calWorldPoint(Vector3f target_ypd, Vector3d &target_xyz);
-
-    void backProject2D(Vector3f delta_ypd);
+    void calWorldPoint(Vector3f target_ypd, Vector3f &target_xyz);
 
     vector<Vector3f> abs_pyd;
+    Vector3f gim_d_ypd;
+    float degree2rad = CV_PI / 180;
 
     vector<float> abs_yaw;
     vector<float> frame_list;
@@ -68,7 +68,7 @@ private:
     RMTools::DisPlayWaveCLASS waveClass;
 
     Kalman kf;
-    Vector3d z_k;
+    Vector3f z_k; //观测量
     bool kf_flag = false;
 
     MatrixXd A,Q,R,H;
