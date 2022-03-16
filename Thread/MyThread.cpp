@@ -370,11 +370,12 @@ namespace rm
                                 solverPtr->pitch,
                                 solverPtr->dist;
                 }
-                Vector3f gimbal_yp ;
-                gimbal_yp << receiveData.yawAngle, receiveData.pitchAngle, 0; //电控数据
+                Vector3f gimbal_ypd ;
+                gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, pnp_ypd[2]; //电控数据
                 pitch_abs = abs_ypd[1];
                 //predictPtr->armorPredictor(abs_ypd,gimbal_yp,deltat);
-                predictPtr->kalmanPredict(pnp_ypd,gimbal_yp);
+                predictPtr->kalmanPredict(pnp_ypd,gimbal_ypd);
+                solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
                 yaw_abs = predictPtr->yaw; //将yaw更新为预测值，pitch就不预测
 //                /*** 1-20 测试版预测 ***/
 //                predictPtr->test1Predict(abs_ypd,deltat);

@@ -68,7 +68,7 @@ void Predictor::testPredictLineSpeed(Vector3f target_ypd, Vector3f yp_speed, con
  * @brief
  * */
 void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
-    Vector3d target_xyz;
+    Vector3f target_xyz;
     calWorldPoint(target_ypd,target_xyz);
 
     float dx;
@@ -90,7 +90,7 @@ void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
         kf.Update(z_k);
         for(int len = 0;len<kf.x_k.size();len++)
             show_data.push_back(kf.x_k[len]);
-
+        predict_xyz << kf.x_k[0], kf.x_k[1], kf.x_k[2];
         //cout << "delta x between 2 frame: " << dx << endl;
         string str[] = {"m_x","m_y","m_z","kf_x","kf_y","kf_z","kf_vx","kf_vy","kf_vz"};
         showData(show_data, str);
@@ -133,16 +133,13 @@ void Predictor::showData(vector<float> data, string *str){
     imshow("data window",background);
 }
 
-void Predictor::calWorldPoint(Vector3f target_ypd, Vector3d &target_xyz) {
+void Predictor::calWorldPoint(Vector3f target_ypd, Vector3f &target_xyz) {
     pair<float, float> quadrant[4] = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
-    float yaw_;
-    if(target_ypd[0] > 0)
-        yaw_ = target_ypd[0] - (int)(target_ypd[0] / 360) * 360;
-    else
-        yaw_ = target_ypd[0] - (int)(target_ypd[0] / 360 - 1) * 360;
 
-    float tan_yaw = tan(yaw_ / 360 * 2 * CV_PI);
-    float tan_pitch = tan(target_ypd[1] / 360 * 2 * CV_PI);
+    float yaw_ = RMTools::total2circle(target_ypd[0]);
+
+    float tan_yaw = tan(yaw_ * degree2rad);
+    float tan_pitch = tan(target_ypd[1] * degree2rad);
     float dist2 = target_ypd[2] * target_ypd[2]; //
     z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
     x_ = z_ * fabs(tan_yaw);
@@ -153,7 +150,4 @@ void Predictor::calWorldPoint(Vector3f target_ypd, Vector3d &target_xyz) {
     target_xyz << x_, y_, z_;
 }
 
-void Predictor::backProject2D(Vector3f delta_ypd) {
-    Vector3d cam_xyz;
-    calWorldPoint( delta_ypd, cam_xyz);
-}
+
