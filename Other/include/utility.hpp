@@ -255,6 +255,16 @@ namespace RMTools {
         return W;
     }
 
+    /**
+     * @brief 将陀螺仪角度 total 值转化为 0 ~ 360°
+     * */
+    inline float total2circle(float theta){
+        if(theta > 0)
+            return theta - (int)(theta / 360) * 360;
+        else
+            return theta - (int)(theta / 360 - 1) * 360;
+    }
+
 /**
  *  the descriptor of the point in the route, including the color, location, velocity and the situation of point.
  */
