@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(20,600,1000){
+Predictor::Predictor() : waveClass(1000,600,1000){
     for (int i = 0; i < 7; i++) {
         frame_list.push_back(i);
     }
@@ -21,7 +21,7 @@ void Predictor::test1Predict(Vector3f ypd, const float deltaT) {
     abs_pyd.push_back(ypd);
     if(abs_pyd.size()>4){
         Vector3f v_ypd = (abs_pyd.back() - abs_pyd[abs_pyd.size()-4]) / (deltaT*3/1000);
-        predict_ypd = abs_pyd.back() + v_ypd * 0.2;
+        //predict_ypd = abs_pyd.back() + v_ypd * 0.2;
         //predict_yp = tmp.col(1);
     }
 }
@@ -68,18 +68,26 @@ void Predictor::testPredictLineSpeed(Vector3f target_ypd, Vector3f yp_speed, con
  * @brief
  * */
 void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
-    Vector3f target_xyz;
-    calWorldPoint(target_ypd,target_xyz);
+    pair<float, float> quadrant[4] = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
+
+    float yaw_ = RMTools::total2circle(target_ypd[0]);
+    int circle_times = target_ypd[0] / 360;
+
+    float tan_yaw = tan(yaw_ * degree2rad);
+    float tan_pitch = tan(target_ypd[1] * degree2rad);
+    float dist2 = target_ypd[2] * target_ypd[2]; //
+    z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
+    x_ = z_ * fabs(tan_yaw);
+    y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
+    //算x,z符号
+    int t = yaw_ / 90;
+    x_ *= quadrant[t].first; z_ *= quadrant[t].second;
+    target_xyz << x_, y_, z_;
 
     float dx;
     if(kf_flag)
         dx = x_ - target_x.back();
     target_x.push_back(x_);
-    target_z.push_back(z_);
-    if(target_x.size()>8){
-        vector<float> cut_x (target_x.end() - 7, target_x.end());
-        k = RMTools::LeastSquare(frame_list, cut_x, 1); //目前用最小二乘法做一次函数拟合，二次有无必要？
-    }
 
     z_k = target_xyz;
     vector<float> show_data;
@@ -88,28 +96,50 @@ void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd) {
 
     if(kf_flag){
         kf.Update(z_k);
+        //kf.Predict(100);
         for(int len = 0;len<kf.x_k.size();len++)
             show_data.push_back(kf.x_k[len]);
-        predict_xyz << kf.x_k[0], kf.x_k[1], kf.x_k[2];
-        //cout << "delta x between 2 frame: " << dx << endl;
-        string str[] = {"m_x","m_y","m_z","kf_x","kf_y","kf_z","kf_vx","kf_vy","kf_vz"};
+        predict_xyz << kf.x_k[0] + frame*kf.x_k[3], kf.x_k[1]+frame*kf.x_k[4], kf.x_k[2] + frame*kf.x_k[5];
+        //predict_xyz << kf.x_l_k[0], kf.x_l_k[1], kf.x_l_k[2];
+//        predict_xyz << kf.x_k[0] + frame*kf.x_k[3] + 0.5*kf.x_k[6]*frame*frame,
+//                        kf.x_k[1]+frame*kf.x_k[4]+0.5*kf.x_k[7]*frame*frame,
+//                        kf.x_k[2] + frame*kf.x_k[5]+0.5*kf.x_k[8]*frame*frame;
+        predict_ypd = RMTools::calXYZ2YPD(predict_xyz);
+        if(predict_ypd[0] < 0 && yaw > 90)
+            predict_ypd[0] += 360;
+        for(int i=0;i<3;i++)
+            show_data.push_back(predict_ypd[i]);
+        string str[] = {"m_x","m_y","m_z",
+                        "kf_x","kf_y","kf_z",
+                        "kf_vx","kf_vy","kf_vz",
+                        "kf_ax","kf_ay","kf_az",
+                        "pre_yaw","pre_pitch","pre_dist"};
         showData(show_data, str);
         if(target_x.size()>8)
-            waveClass.displayWave(0, kf.x_k[3]);
+            waveClass.displayWave(predict_xyz[0], x_);
 
     }else{
         kf_flag = true;
-        kf.Init(3,6,1); //滤波器初始化
+        kf.Init(3,9,1); //滤波器初始化
         kf.x_k = kf.H_.transpose() * z_k;  //设置第一次状态估计
-        kf.Q_ << 150,0,0,0,0,0,
-                 0,35,0,0,0,0,
-                 0,0,35,0,0,0,
-                 0,0,0,1,0,0,
-                 0,0,0,0,1,0,
-                 0,0,0,0,0,1 ;
+//        kf.Q_ << 150,0,0,0,0,0,
+//                 0,35,0,0,0,0,
+//                 0,0,35,0,0,0,
+//                 0,0,0,1,0,0,
+//                 0,0,0,0,1,0,
+//                 0,0,0,0,0,1 ;
+        kf.Q_ << 150,0,0,0,0,0,0,0,0,
+                0,30,0,0,0,0,0,0,0,
+                0,0,50,0,0,0,0,0,0,
+                0,0,0,1,0,0,0,0,0,
+                0,0,0,0,1,0,0,0,0,
+                0,0,0,0,0,1,0,0,0,
+                0,0,0,0,0,0,10,0,0,
+                0,0,0,0,0,0,0,10,0,
+                0,0,0,0,0,0,0,0,10;
 
-        kf.R_ << 800,0,0,
-                 0,65,0,
+        kf.R_ << 200,0,0,
+                 0,400,0,
                  0,0,65 ;
     }
 }

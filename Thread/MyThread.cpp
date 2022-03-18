@@ -366,12 +366,12 @@ namespace rm
                                 receiveData.pitchAngle + solverPtr->pitch,
                                 solverPtr->dist;
 
-                    pnp_ypd <<  solverPtr->yaw,
+                    pnp_ypd <<  0 + solverPtr->yaw,
                                 solverPtr->pitch,
                                 solverPtr->dist;
                 }
                 Vector3f gimbal_ypd ;
-                gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, pnp_ypd[2]; //电控数据
+                gimbal_ypd << 0, receiveData.pitchAngle, pnp_ypd[2]; //电控数据
                 pitch_abs = abs_ypd[1];
                 //predictPtr->armorPredictor(abs_ypd,gimbal_yp,deltat);
                 predictPtr->kalmanPredict(pnp_ypd,gimbal_ypd);
