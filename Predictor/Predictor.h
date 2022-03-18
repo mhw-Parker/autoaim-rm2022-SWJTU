@@ -32,13 +32,14 @@ public:
 
     void Refresh();
 
-    Vector3f predict_ypd;
     vector<Point2f>predict_point;
 
     float yaw, pitch;
 
     float x_,y_,z_;
     Vector3f predict_xyz;
+    Vector3f predict_ypd;
+    Vector3f target_xyz;
 
 private:
 
@@ -57,10 +58,9 @@ private:
     vector<float> abs_yaw;
     vector<float> frame_list;
     vector<float> time_list;
-    vector<float> predict_yaw;
     vector<float> target_x;
     vector<float> target_z;
-    float frame = 70.0; //预测帧数，根据情况预测可能从帧改变为时间
+    float frame = 30.0; //预测帧数，根据情况预测可能从帧改变为时间
     Eigen::MatrixXd k;
 
     double rate[4] = {0,0,0,0}, yaw_arr[4] = {0,0,0,0};

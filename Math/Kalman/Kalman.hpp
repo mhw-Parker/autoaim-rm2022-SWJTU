@@ -48,6 +48,8 @@ public:
     MatrixXf K_;  //滤波增益系数，卡尔曼系数
     MatrixXf I;
 
+    VectorXf x_l_k;
+
 private:
 
 };

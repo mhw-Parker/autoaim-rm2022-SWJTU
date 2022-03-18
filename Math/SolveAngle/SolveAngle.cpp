@@ -247,7 +247,7 @@ void SolveAngle::backProject(Point3f obj_p_xyz, Point2f &p) {
 }
 
 void SolveAngle::backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd) {
-    Vector3f cam_xyz, pix_xyz;
+    Vector3f cam_xyz, pix_uv1;
     Vector3f gim_d_ypd;
     gim_d_ypd << RMTools::total2circle(gimbal_ypd[0]), gimbal_ypd[1], gimbal_ypd[2];
 
@@ -263,15 +263,17 @@ void SolveAngle::backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_yp
     float cos_p = cos(gim_d_ypd[1]);
 
     Matrix3f Ry, Rp;
-    Ry << cos_y , 0     , sin_y ,
+    Ry <<   cos_y , 0     , sin_y ,
             0     , 1     , 0     ,
             -sin_y, 0     , cos_y ;
 
-    Rp << 1     , 0     , 0     ,
+    Rp <<   1     , 0     , 0     ,
             0     , cos_p , -sin_p,
             0     , sin_p , cos_p ;
 
     cam_xyz = Ry * Rp * target_xyz;
-    pix_xyz = cam_mat * cam_xyz;
-    circle(src, Point2f(pix_xyz[0],pix_xyz[1]), 2, Scalar(100, 240, 15), 3);
+    pix_uv1 = cam_mat * cam_xyz / cam_xyz[2];
+    //cout << "--- camera location :" << endl << cam_xyz << endl;
+    //cout << "--- pixel location : " << endl << pix_uv1 << endl;
+    circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 2, Scalar(100, 240, 15), 3);
 }
