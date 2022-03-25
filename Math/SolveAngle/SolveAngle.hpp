@@ -36,6 +36,8 @@ public:
      * @param v 当前弹速
      * */
     void Compensator(Vector3f cam_xyz, float v);
+
+    void pitchCompensate();
     /**
      * @brief 将预测点反投影到图像上
      * @param src 预测点的（ yaw, pitch, dist ）坐标
