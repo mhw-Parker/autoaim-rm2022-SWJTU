@@ -19,28 +19,39 @@ class SolveAngle
 public:
 	SolveAngle();
 
-    float scale = 0.99f;
-	float f_ = 1500;
-
-    float yaw = 0,pitch = 0,dist = 0;
-	vector<Point2f> rectPoint2D;
-    Vector3f p_cam_xyz; //相机坐标系下的x,y,z
-    Vector3f ypd;
-	bool shoot;
-
 	void Generate2DPoints(Rect rect);
 	void GetPose(const Rect& rect, float ballet_speed, bool small);
+    /**
+     * @brief 用 pnp 解算目标相对相机坐标系的 yaw pitch
+     * @param armor_mode 大装甲板还是小装甲
+     * @param pts 装甲板 4 点坐标
+     * @param v_ 弹速
+     * */
     void GetPoseV(const vector<Point2f>& pts, bool armor_mode, const float v_); //Pnp模型
-    void GetPoseSH(const Point2f p); //小孔成像模型
+
 	void Generate3DPoints(bool mode);
-
+    /**
+     * @brief 弹道补偿函数
+     * @param fitXYZ 相机相对枪口 左 上 前 为正 单位为：mm
+     * @param v 当前弹速
+     * */
     void Compensator(Vector3f cam_xyz, float v);
+    /**
+     * @brief 将预测点反投影到图像上
+     * @param src 预测点的（ yaw, pitch, dist ）坐标
+     * @param target_xyz 目标的陀螺仪绝对坐标
+     * @param gimbal_ypd 旋转矩阵
+     * */
+    void backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd, int direct_y = 1,int direct_p = 1);
 
-    void backProjection(Vector3f obj_p_ypd, vector<Point2f> &img_p);
-    void backProject(Point3f obj_p_xyz, Point2f &p);
+    float scale = 0.99f;
+    float f_ = 1500;
 
-    void backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd);
-
+    float yaw = 0,pitch = 0,dist = 0;
+    vector<Point2f> rectPoint2D;
+    Vector3f p_cam_xyz; //相机坐标系下的x,y,z
+    Vector3f ypd;
+    bool shoot;
 
 private:
     void camXYZ2YPD(Mat tvecs);
@@ -65,8 +76,6 @@ private:
     float yaw_static, pitch_static;
     float x_static, y_static;
 
-	int value;
-    Mat waveBG = Mat(480,640,CV_8UC3,Scalar(0,0,0));
     Vector3f fit_xyz;
     Vector3f gun_xyz; //枪口坐标系下的x,y,z
 };

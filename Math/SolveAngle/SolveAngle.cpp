@@ -26,22 +26,20 @@ SolveAngle::SolveAngle()
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            direct = 1;
             //静态校正值
             yaw_static = 1.6;
             pitch_static = 0.5;
-            //枪口坐标系
+            //枪口坐标系相对位置
             fit_xyz << 0, 50, 50; //x y z
             break;
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            direct = -1;
             //静态校正值
             yaw_static = 1.5;
             pitch_static = -0.6;
-            //枪口坐标系
+            //枪口坐标系相对位置
             fit_xyz << 30, 50, 50;
             break;
         case INFANTRY_TRACK:
@@ -110,9 +108,6 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const flo
              false,
              SOLVEPNP_ITERATIVE);
 
-    rvecs.convertTo(Rvec, CV_32F);    //旋转向量
-    tvecs.convertTo(Tvec, CV_32F);   //平移向量
-
     cv2eigen(tvecs,p_cam_xyz);
 
     //Compensator(p_cam_xyz,v_);
@@ -120,7 +115,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const flo
 
     if(fabs(yaw)>1)
         yaw = yaw + (-0.05626 * yaw + 0.204);
-    //cout << "yaw = " << yaw << '\t' << "pitch = " << pitch <<endl;
+
 
     averageX = 0;
     averageY = 0;
@@ -142,35 +137,21 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const flo
     targetPoints3D.clear();
 }
 
-/**
- * @brief 小孔成像模型
- * */
-void SolveAngle::GetPoseSH(const Point2f p)
-{
-    float deltaX = p.x - IMAGEWIDTH/2;
-    float deltaY = -(p.y - IMAGEHEIGHT/2);
-    yaw = atan(deltaX / camMat_E(0,2)) * 180 / CV_PI ;
-    pitch = atan(deltaY / camMat_E(1,2)) * 180 / CV_PI ;
-}
 
 /**
  * @brief 相机坐标系 xyz 变为 yaw pitch dist
  * */
 void SolveAngle::camXYZ2YPD(Mat tvecs)
 {
-    yaw = atan2(p_cam_xyz[0],p_cam_xyz[2]) / (2*CV_PI) * 360 ; //arctan(x/z)
-    pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / (2*CV_PI) * 360 * direct; //arctan(y/sqrt(x^2 + z^2))
+    yaw = atan2(p_cam_xyz[0],p_cam_xyz[2]) / degree2rad ; //arctan(x/z)
+    pitch = -atan2(p_cam_xyz[1], sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[2]*p_cam_xyz[2]) ) / degree2rad; //arctan(y/sqrt(x^2 + z^2))
     dist = sqrt(p_cam_xyz[0]*p_cam_xyz[0] + p_cam_xyz[1]*p_cam_xyz[1] + p_cam_xyz[2]*p_cam_xyz[2]); //sqrt(x^2 + y^2 + z^2)
     ///静态补偿
     yaw = yaw + yaw_static;
     pitch = pitch + pitch_static;
-
+    ypd << yaw, pitch, dist;
 }
-/**
- * @brief 弹道补偿函数
- * @param fitXYZ 相机相对枪口 左上前为正 单位为：mm
- * @param v 当前弹速
- * */
+
 void SolveAngle::Compensator(Vector3f cam_xyz, float v)
 {
     gun_xyz = cam_xyz - fit_xyz; //枪管坐标系
@@ -178,8 +159,8 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
     float dy = 0.5 * 9.8 * dt * dt * 1000; //将补偿量化为 mm
     gun_xyz[2] = gun_xyz[2] - dy;
     ///动态补偿
-    yaw = atan2(gun_xyz[0],gun_xyz[2]) / (2*CV_PI) * 360;
-    pitch = - atan2(gun_xyz[1], sqrt(gun_xyz[0]*gun_xyz[0] + gun_xyz[2]*gun_xyz[2])) / (2*CV_PI) * 360 * direct;
+    yaw = atan2(gun_xyz[0],gun_xyz[2]) / degree2rad;
+    pitch = - atan2(gun_xyz[1], sqrt(gun_xyz[0]*gun_xyz[0] + gun_xyz[2]*gun_xyz[2])) / degree2rad;
     dist = sqrt(pow(gun_xyz[0],2) + pow(gun_xyz[1],2) + pow(gun_xyz[2],2));
     ///静态补偿
     yaw = yaw + yaw_static;
@@ -211,56 +192,30 @@ void SolveAngle::Generate3DPoints(bool mode)
 
 /**
  * @brief 将预测点反投影到图像上
- * @param obj_p_ypd 预测点的（ yaw, pitch, dist ）坐标
- * @param tvecs 平移矩阵
- * @param rvecs 旋转矩阵
- * @param img_p 反投影图像上的坐标
+ * @param src 预测点的（ yaw, pitch, dist ）坐标
+ * @param target_xyz 目标的陀螺仪绝对坐标
+ * @param gimbal_ypd 旋转矩阵
  * */
-void SolveAngle::backProjection(Vector3f obj_p_ypd, vector<Point2f> &img_p) {
-    vector<Point3f> obj_p_xyz;
-    float a = tan(obj_p_ypd[0] / 360 * 2*CV_PI); //tan(yaw)，转为弧度值
-    float b = tan(obj_p_ypd[1] / 360 * 2*CV_PI); //tan(pitch)
-    float d = pow(obj_p_ypd[2],2);        //dist^2
-    obj_p_xyz[0].x = sqrt((a*a*d*d)/(a*a+1)/(b*b+1) ) * (obj_p_ypd[0]<0?-1:1); //若yaw为负值，x也为负值
-    obj_p_xyz[0].y = sqrt(d/(1+1/(b*b)) ) * (obj_p_ypd[1]<0?1:-1); //若pitch为负值，由于相机坐标系下为正，所以此时y为正值
-    obj_p_xyz[0].z = sqrt(d*d/(a*a+1)/(b*b+1) );
-    projectPoints(obj_p_xyz,
-                  rvecs,
-                  tvecs,
-                  cameraMatrix,
-                  distortionCoefficients,
-                  img_p);
-}
+void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz, Vector3f gimbal_ypd, int direct_y, int direct_p) {
+    Vector3f temp_xyz, cam_xyz, pix_uv1;
+    Vector3f rotate_ypd;
+    rotate_ypd << gimbal_ypd[0],
+                direct_p * gimbal_ypd[1],
+                gimbal_ypd[2];
+    temp_xyz = target_xyz;
 
-void SolveAngle::backProject(Point3f obj_p_xyz, Point2f &p) {
-    vector<Point3f> obj_p_xyz_vec;
-    obj_p_xyz_vec.push_back(obj_p_xyz);
-
-    vector<Point2f> img_p;
-    projectPoints(obj_p_xyz_vec,
-                  rvecs,
-                  tvecs,
-                  cameraMatrix,
-                  distortionCoefficients,
-                  img_p);
-    p = img_p.back();
-}
-
-void SolveAngle::backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd) {
-    Vector3f cam_xyz, pix_uv1;
-    Vector3f gim_d_ypd;
-    gim_d_ypd << RMTools::total2circle(gimbal_ypd[0]), gimbal_ypd[1], gimbal_ypd[2];
-
+    //cout << target_xyz << endl;
+    //cout << gim_d_ypd << endl;
     Matrix3f vec_degree2rad;
     vec_degree2rad << degree2rad, 0, 0,
                       0, degree2rad, 0,
                       0,     0,      1;
-    gim_d_ypd = vec_degree2rad * gim_d_ypd;
+    rotate_ypd = vec_degree2rad * rotate_ypd;
 
-    float sin_y = sin(gim_d_ypd[0]);
-    float cos_y = cos(gim_d_ypd[0]);
-    float sin_p = sin(gim_d_ypd[1]);
-    float cos_p = cos(gim_d_ypd[1]);
+    float sin_y = sin(rotate_ypd[0]);
+    float cos_y = cos(rotate_ypd[0]);
+    float sin_p = sin(rotate_ypd[1]);
+    float cos_p = cos(rotate_ypd[1]);
 
     Matrix3f Ry, Rp;
     Ry <<   cos_y , 0     , sin_y ,
@@ -273,6 +228,7 @@ void SolveAngle::backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_yp
 
     cam_xyz = Ry * Rp * target_xyz;
     pix_uv1 = cam_mat * cam_xyz / cam_xyz[2];
+    //cout << "--- target location :" << endl << target_xyz << endl;
     //cout << "--- camera location :" << endl << cam_xyz << endl;
     //cout << "--- pixel location : " << endl << pix_uv1 << endl;
     circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 2, Scalar(100, 240, 15), 3);

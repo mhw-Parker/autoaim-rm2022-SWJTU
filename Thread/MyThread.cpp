@@ -168,6 +168,7 @@ namespace rm
 #endif
                 break;
             case INFANTRY_MELEE0:
+                direct_y = -1;
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -189,6 +190,7 @@ namespace rm
                 driver = &v4l2Capture;
                 break;
             case VIDEO:
+                direct_y = -1;
                 driver = &videoCapture;
                 break;
             case NOTDEFINED:
@@ -202,14 +204,12 @@ namespace rm
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
         {
-            //LOGM("Camera Initialized\n");
-            //LOGM("Camera Set Down\n");
-            //LOGM("Camera Start to Grab Frames\n");
+           /// log
         }
         else
         {
             driver->StopGrab();
-            //LOGW("Camera Resource Released\n");
+
             exit(-1);
         }
 
@@ -279,11 +279,11 @@ namespace rm
     
     void ImgProdCons::Detect() 
     {
-        if(lastControlState == curControlState){ //如果状态未发生改变
-            lastControlState = curControlState; //更新上一次的状态值
-        }else{ //如果状态值改变为大幅模式
+        if(lastControlState == curControlState){
+            lastControlState = curControlState;
+        }else{
             if(curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
-                energyPtr->init(); //初始化大幅识别
+                energyPtr->init();
             //else
             /* 装甲板识别初始化，滤波器初始化啥的 */
             if(curControlState == AUTO_SHOOT_STATE)
@@ -294,7 +294,7 @@ namespace rm
             case AUTO_SHOOT_STATE: Armor(); break;
             case BIG_ENERGY_STATE: Energy(); break;
             case SMALL_ENERGY_STATE: Energy(); break;
-            default: Armor(); break;
+            default: Armor();
         }
     }
 
@@ -358,33 +358,33 @@ namespace rm
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
                                     armorDetectorPtr->IsSmall(),16);
                 Vector3f abs_ypd;
-                Vector3f pnp_ypd;
+                Vector3f analog_ypd;
+                Vector3f gimbal_ypd;
+
                 if(carName == SENTRY){
 
+                }else if(carName == VIDEO){
+                    // 用于平时的视频测试时
+                    gimbal_ypd << 0, 0, solverPtr->dist;
+                    analog_ypd << gimbal_ypd[0] + direct_y * solverPtr->yaw,
+                                gimbal_ypd[1] + direct_p * solverPtr->pitch,
+                                solverPtr->dist;
+
+                    predictPtr->kalmanPredict(analog_ypd,gimbal_ypd,direct_y);
+
                 }else{
-                    abs_ypd <<  receiveData.yawAngle - solverPtr->yaw,
-                                receiveData.pitchAngle + solverPtr->pitch,
+                    gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
+                    abs_ypd <<  receiveData.yawAngle + direct_y * solverPtr->yaw,
+                                receiveData.pitchAngle + direct_p * solverPtr->pitch,
                                 solverPtr->dist;
-
-                    pnp_ypd <<  0 + solverPtr->yaw,
-                                solverPtr->pitch,
-                                solverPtr->dist;
+                    predictPtr->kalmanPredict(abs_ypd,gimbal_ypd,direct_y);
                 }
-                Vector3f gimbal_ypd ;
-                gimbal_ypd << 0, receiveData.pitchAngle, pnp_ypd[2]; //电控数据
-                pitch_abs = abs_ypd[1];
-                //predictPtr->armorPredictor(abs_ypd,gimbal_yp,deltat);
-                predictPtr->kalmanPredict(pnp_ypd,gimbal_ypd);
-                solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
-                yaw_abs = predictPtr->yaw; //将yaw更新为预测值，pitch就不预测
-//                /*** 1-20 测试版预测 ***/
-//                predictPtr->test1Predict(abs_ypd,deltat);
-//                yaw_abs = predictPtr->predict_ypd[0];
-//                pitch_abs = predictPtr->predict_ypd[1];
-//                /*** ***/
 
-//                yaw_abs = abs_ypd[0];
-//                pitch_abs = abs_ypd[1];
+                solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd,direct_y,direct_p);
+
+                pitch_abs = abs_ypd[1];
+                yaw_abs = predictPtr->yaw; //将yaw更新为预测值，pitch就不预测
+
 
 #if SAVE_TEST_DATA == 1
                 // **** 目标陀螺仪 x y z **** //
@@ -481,16 +481,14 @@ namespace rm
              YAW axis. If so, reduce the target Angle of the holder and indirectly slow down the rotation speed of the
              holder.
              *******************************************************************************************************/
-
             if(!armorDetectorPtr->findState)
             {
                 predictPtr->Refresh(); //clear
-                //LOGE("lost_target_count : %d\n", ++lost_target_count);
                 yawTran /= 1.2;
                 pitchTran /= 1.2;
 
                 /** reset kalman filter **/
-                //kalman->SetKF(Point(0,0),true);
+
 
                 if(fabs(yawTran) > 0.1 && fabs(pitchTran) > 0.1)
                     armorDetectorPtr->findState = true;
@@ -652,40 +650,6 @@ namespace rm
         }
 
         /** Receive data from low-end machine to update parameters(the color of robot, the task mode, etc) **/
-//        if(serialPtr->ReadData(receiveData))
-//        {
-//#if DEBUG_MSG == 1
-//            LOGM("Receive Data\n");
-//#endif
-//            /** Update task mode, if receiving data failed, the most reasonable decision may be just keep the status
-//             * as the last time **/
-//            curControlState = receiveData.targetMode;
-//
-//            /** because the logic in armor detection task need the color of enemy, so we need to negate to color variable
-//             * received, receiveData.targetColor means the color of OUR robot, but not the enemy's **/
-//            blueTarget = (receiveData.targetColor) == 0;
-//
-//            direction = +static_cast<int>(receiveData.direction);
-//
-//#if SAVE_LOG == 1
-//            logWrite<<"[Feedback Time Consume] : "<<((double)getTickCount() - taskTime)/getTickFrequency()<<endl;
-//                logWrite<<"[Total Time Consume] : "<<((double)getTickCount() - timeFlag)/getTickFrequency()<<endl;
-//                //logWrite<<"[Direction] :" <<receiveData.direction<<endl;
-//                //logWrite<<"[Target Color] : "<<blueTarget<<endl;
-//                logWrite<<"[Current Yaw Angle] : "<<receiveData.yawAngle<<endl;
-//                logWrite<<"[Current Pitch Angle] : "<<receiveData.pitchAngle<<endl;
-//#endif
-//
-//#if DEBUG_MSG == 1
-//            LOGM("BlueTarget: %d\n",(int)blueTarget);
-//#endif
-//        }
-//        else
-//        {
-//#if SAVE_LOG == 1
-//            logWrite<<"[Receive Data from USB2TTL FAILED]"<<endl;
-//#endif
-//        }
 #if SHOWTIME == 1
         cout << "FeedBack Mission Cost : " << CalWasteTime(taskTime,freq) << " ms" << endl;
 #endif

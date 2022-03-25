@@ -201,6 +201,25 @@ namespace RMTools {
         strftime(tmp, sizeof(tmp), "%Y-%m-%d_%H:%M:%S", localtime(&timep));
         return tmp;
     }
+/**
+ * @brief 数据显示窗口
+ * @param data 输入 vector<float> 型的数据
+ * @param *str 数据对应的名称
+ * */
+    inline bool showData(vector<float> data, string *str, const string win_name){
+        int c = data.size() * 33;
+        if(data.size() - sizeof(data) /sizeof (data[0]) == 0){
+            cout << "The vector length doesn't match !" << endl;
+            return false;
+        }
+        Mat background = Mat(c,400,CV_8UC3,Scalar::all(0));
+        for(int i = 0;i<data.size();i++){
+            putText(background, str[i], Point(0, 30*(i+1)), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
+            putText(background, to_string(data[i]), Point(150, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+        }
+        imshow(win_name,background);
+        return true;
+    }
 
 /**
  * 求平均值
@@ -273,8 +292,20 @@ namespace RMTools {
     inline float total2circle(float theta){
         if(theta > 0)
             return theta - (int)(theta / 360) * 360;
-        else
+        else if(theta < 0)
             return theta - (int)(theta / 360 - 1) * 360;
+    }
+    /**
+     * @brief 二维平面x,z转换成极坐标rho,theta。顺加逆减。
+     * @param XZ 目标x,z坐标。
+     * @return {rho, theta}。
+     */
+    inline Eigen::Vector2f XZ2RhoTheta(const Eigen::Vector2f& XZ) {
+        float x = XZ[0], z = XZ[1];
+        float rho= sqrt(x * x + z * z);
+        float sin_theta = x / rho;
+        float theta = z > 0 ? asin(sin_theta) : CV_PI + asin(sin_theta);
+        return {rho, theta};
     }
 
 /**

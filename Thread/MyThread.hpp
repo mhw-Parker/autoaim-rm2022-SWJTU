@@ -23,6 +23,7 @@
 #include "utility.hpp"
 #include "Predictor/Predictor.h"
 
+
 #ifdef DAHUA
 #include "Media/RMDriver.h"
 #endif
@@ -116,6 +117,9 @@ namespace rm
         static void SignalHandler(int);
         static void InitSignals(void);
         //double calFPS(double BeginTime, double freq);
+
+        int direct_y = 1; //不同兵种的 yaw 参考不
+        int direct_p = 1;
 
         double taskTime;
         double freq;
