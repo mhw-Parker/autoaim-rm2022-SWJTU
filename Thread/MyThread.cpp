@@ -383,7 +383,7 @@ namespace rm
                 solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd,direct_y,direct_p);
 
                 pitch_abs = abs_ypd[1];
-                yaw_abs = predictPtr->yaw; //将yaw更新为预测值，pitch就不预测
+                yaw_abs = predictPtr->yaw + solverPtr->pitchCompensate(solverPtr->dist,16); //将yaw更新为预测值，pitch就不预测
 
 
 #if SAVE_TEST_DATA == 1
