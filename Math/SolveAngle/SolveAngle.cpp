@@ -169,6 +169,12 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
     ypd << yaw, pitch, dist;
 }
 
+float SolveAngle::pitchCompensate(const float dist, float v) {
+    float dt = dist/1000 / v;
+    float dy = 0.5 * 9.8 * dt * dt * 1000;
+    return atan(dy/dist) / degree2rad;
+}
+
 /**
  * @brief 将装甲板中心设为 pnp 解算 4 点模型的解算原点
  * @remark 装甲板的实际大小可能要根据情况修改
