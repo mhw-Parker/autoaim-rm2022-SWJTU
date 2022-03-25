@@ -29,6 +29,7 @@ include_directories(${PROJECT_SOURCE_DIR}/Other/include)
 include_directories(${PROJECT_SOURCE_DIR}/Math/Kalman)
 include_directories(${PROJECT_SOURCE_DIR}/Math/SolveAngle)
 include_directories(${PROJECT_SOURCE_DIR}/Math/Filter)
+include_directories(${PROJECT_SOURCE_DIR}/Math/RMKF)
 #include_directories(${PROJECT_SOURCE_DIR}/Predictor)
 include_directories(${PROJECT_SOURCE_DIR}/Detector/Energy)
 include_directories(${PROJECT_SOURCE_DIR}/Drivers/V4L2KAS/include)
@@ -74,7 +75,7 @@ message(STATUS "Ceres PATH: ${CERES_LIBS_DIR}")
 
 FILE(GLOB_RECURSE sourceFiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detector/Armor/*.cpp" "Serials/*.cpp" "Thread/*.cpp"
         "Math/Filter/*.cpp" "Math/SolveAngle/*.cpp" "Math/Kalman/*.cpp" "Drivers/V4L2KAS/src/*.cpp" "Drivers/VideoDriver/src/*.cpp"
-        )
+        "Math/RMKF/*.cpp")
 
 #when "Drivers/DAHUA/src/*.cpp" is added to the sourcefiles at last line, these .cpp files looks like not been complied
 ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourceFiles} ${DRIVER_SRC} Predictor/Predictor.h Predictor/Predictor.cpp)

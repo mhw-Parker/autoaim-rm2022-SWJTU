@@ -14,6 +14,7 @@
 #include <opencv2/core/eigen.hpp>
 #include "utility.hpp"
 #include "Kalman.hpp"
+#include "RMKF.hpp"
 
 using namespace std;
 using namespace cv;
@@ -24,11 +25,13 @@ public:
     Predictor();
     ~Predictor();
 
-    void test1Predict(Vector3f pyd, const float deltaT);
+
 
     void armorPredictor(Vector3f ypd, Vector3f gimbal_ypd, const float deltaT);
-    void testPredictLineSpeed(Vector3f ypd, Vector3f yp_speed, const float deltaT);
-    void kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd);
+
+    void InitKfAcceleration(const float dt);
+
+    void kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd, int direct = 1);
 
     void Refresh();
 
@@ -39,17 +42,23 @@ public:
     float x_,y_,z_;
     Vector3f predict_xyz;
     Vector3f predict_ypd;
+
     Vector3f target_xyz;
+    Vector3f target_v_xyz{};
 
 private:
-
-    void showData(vector<float> data, string *str);
     /**
-     * @brief 从陀螺仪 yaw pitch dist 解算目标点的世界坐标
-     * @param target_ypd 目标的绝对 yaw pitch dist
-     * @param target_xyz 目标的世界坐标系 x y z
-     * */
-    void calWorldPoint(Vector3f target_ypd, Vector3f &target_xyz);
+     * @brief RMKF更新，包括预测部分和更正部分
+     * @param z_k 观测量 默认为三维坐标 x y z
+     */
+    void UpdateKF(Vector3f z_k);
+    /**
+     * @brief 迭代更新卡尔曼滤波器一定次数达到预测
+     * @param KF 当前卡尔曼滤波器
+     * @param iterate_times 迭代次数
+     * @return 预测目标xyz坐标
+     */
+    Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
 
     vector<Vector3f> abs_pyd;
     Vector3f gim_d_ypd;
@@ -68,10 +77,13 @@ private:
     RMTools::DisPlayWaveCLASS waveClass;
 
     Kalman kf;
-    Vector3f z_k; //观测量
     bool kf_flag = false;
+    EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);
+    bool RMKF_flag = false;
+    Vector3f z_k; //观测量
 
-    MatrixXd A,Q,R,H;
+
+
 };
 
 //#endif //MASTER_PREDICTOR_H

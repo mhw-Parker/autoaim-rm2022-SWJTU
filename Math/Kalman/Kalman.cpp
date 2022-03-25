@@ -5,11 +5,13 @@ Kalman::Kalman() {}
 void Kalman::Init(int z_dim, int x_dim, float step) {
     H_ = MatrixXf::Identity(z_dim,x_dim); //初始化为 z_dim * x_dim 的标准矩阵
     A_ = MatrixXf::Identity(x_dim,x_dim); //初始化为 x_dim * x_dim 的标准矩阵
+    /// 速度模型
     if(x_dim / z_dim == 2){
         for(int i = 0; i < z_dim; i++){
             A_(i,z_dim + i) = step;
         }
-    }else if(x_dim / z_dim == 3){
+    }/// 加速度模型
+    else if(x_dim / z_dim == 3){
         for(int i = 0; i < x_dim - z_dim; i++){
             A_(i,z_dim + i) = step;
         }
@@ -28,7 +30,8 @@ void Kalman::Update(VectorXf z_k) {
     //k时刻先验估计协方差
     MatrixXf P_bar = A_ * P_ * A_.transpose() + Q_;
     //更新卡尔曼系数
-    K_ = P_bar * H_.transpose() * (H_ * P_bar * H_.transpose() + R_).inverse();
+    MatrixXf P_H_trans = P_bar * H_.transpose();
+    K_ = P_H_trans * (H_ * P_H_trans + R_).inverse();
     //更新状态估计值
     x_k = x_k_bar + K_ * (z_k - H_ * x_k_bar);
     //更新估计协方差
