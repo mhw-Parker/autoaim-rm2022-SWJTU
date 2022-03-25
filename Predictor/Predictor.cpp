@@ -13,32 +13,57 @@ Predictor::~Predictor() = default;
 
 
 /**
- * @brief nuc上测试效果还行的绝对角度预测
+ * @brief 装甲板预测
  * */
- void Predictor::armorPredictor(Vector3f ypd, Vector3f gimbal_ypd, const float deltaT) {
-     abs_yaw.push_back(ypd(0,0));
-     if(abs_yaw.size() > 8){
-         vector<float> cut_yaw (abs_yaw.end() - 7, abs_yaw.end());
-         k = RMTools::LeastSquare(frame_list, cut_yaw, 1); //目前用最小二乘法做一次函数拟合，二次有无必要？
-         for(int i = 0; i < sizeof (rate)/sizeof (rate[i]) - 1; i++){
-             rate[i] = rate[i+1];
-             yaw_arr[i] = yaw_arr[i+1];
-         }
-         rate[3] = k(0,0);
-         float avg_k =RMTools::average(rate,4); //移除速度数据突变的可能性
-         yaw_arr[3] = abs_yaw.back() + avg_k * frame;
-         if(abs_yaw.size() > 13){
-             yaw = RMTools::average(yaw_arr,4); //预测后 60 帧 yaw 角度
-         }else
-             yaw = yaw_arr[3];
-         waveClass.displayWave(yaw_arr[2]-gimbal_ypd[0], 0);
-     }
+ void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, int direct) {
+    target_xyz = getGyroXYZ(target_ypd,direct);
+    vector<float> show_data;
+    for(int len = 0;len<target_xyz.size();len++)
+        show_data.push_back(target_xyz[len]);
+
+    float delta_yaw = kalmanPredict(target_xyz,direct);
+    predict_ypd = {target_ypd[0] + delta_yaw, target_ypd[1], target_ypd[2]};
+
+    for(int len = 0;len<RMKF.state_post_.rows();len++)
+        show_data.push_back(RMKF.state_post_[len]);
+    for(int i=0;i<3;i++)
+        show_data.push_back(predict_ypd[i]);
+    string str[] = {"m_x","m_y","m_z",
+                    "kf_x","kf_y","kf_z",
+                    "kf_vx","kf_vy","kf_vz",
+                    "kf_ax","kf_ay","kf_az",
+                    "pre_yaw","pre_pitch","pre_dist"};
+    RMTools::showData(show_data, str, "data window");
  }
 
 /**
  * @brief
  * */
-void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd, int direct) {
+float Predictor::kalmanPredict(Vector3f target_xyz, int direct) {
+
+    if(RMKF_flag){
+        UpdateKF(target_xyz);
+        target_v_xyz << RMKF.state_post_[3],
+                        RMKF.state_post_[4],
+                        RMKF.state_post_[5];
+        target_a_xyz << RMKF.state_post_[6],
+                        RMKF.state_post_[7],
+                        RMKF.state_post_[8];
+        //predict_xyz << kf.x_k[0] + frame*kf.x_k[3], kf.x_k[1]+frame*kf.x_k[4], kf.x_k[2] + frame*kf.x_k[5];
+
+    }else{
+        RMKF_flag = true;
+        InitKfAcceleration(0.025);
+    }
+    predict_xyz = PredictKF(RMKF, 30);
+    return RMTools::GetDeltaTheta(target_xyz,predict_xyz,direct);
+}
+/**
+ * @brief 获得陀螺仪坐标系下的 x y z
+ * @param direct 方向，极坐标正向取向右
+ * @param target_ypd 目标的 yaw pitch dist
+ * */
+Vector3f Predictor::getGyroXYZ(Vector3f target_ypd, int direct) {
     pair<float, float> quadrant[4] = {{direct, direct},
                                       {-direct, direct},
                                       {-direct, -direct},
@@ -49,50 +74,13 @@ void Predictor::kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd, int dire
     float tan_yaw = tan(yaw_ * degree2rad);
     float tan_pitch = tan(target_ypd[1] * degree2rad);
     float dist2 = target_ypd[2] * target_ypd[2]; //
-    z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
-    x_ = z_ * fabs(tan_yaw);
-    y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
+    float z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
+    float x_ = z_ * fabs(tan_yaw);
+    float y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
     //算x,z符号
     int t = yaw_ / 90;
     x_ *= quadrant[t].first; z_ *= quadrant[t].second;
-    target_xyz << x_, y_, z_;
-
-    vector<float> show_data;
-    for(int len = 0;len<target_xyz.size();len++)
-        show_data.push_back(target_xyz[len]);
-
-    if(RMKF_flag){
-        UpdateKF(target_xyz);
-
-        for(int len = 0;len<RMKF.state_post_.rows();len++)
-            show_data.push_back(RMKF.state_post_[len]);
-        //predict_xyz << kf.x_k[0] + frame*kf.x_k[3], kf.x_k[1]+frame*kf.x_k[4], kf.x_k[2] + frame*kf.x_k[5];
-
-        if(target_x.size()>8)
-            waveClass.displayWave(x_, predict_xyz[0]);
-
-    }else{
-        RMKF_flag = true;
-        InitKfAcceleration(0.025);
-    }
-    predict_xyz = PredictKF(RMKF, 30);
-    float target_theta = RMTools::XZ2RhoTheta({x_,z_}).y();
-    float predict_theta = RMTools::XZ2RhoTheta({predict_xyz[0], predict_xyz[2]}).y();
-    float delta_yaw = predict_theta - target_theta;
-    if (delta_yaw > CV_PI)
-        delta_yaw -= CV_PI;
-    if (delta_yaw < -CV_PI)
-        delta_yaw += CV_PI;
-    predict_ypd = {target_ypd[0] + direct * delta_yaw / degree2rad, gimbal_ypd[1], gimbal_ypd[2]};
-
-    for(int i=0;i<3;i++)
-        show_data.push_back(predict_ypd[i]);
-    string str[] = {"m_x","m_y","m_z",
-                    "kf_x","kf_y","kf_z",
-                    "kf_vx","kf_vy","kf_vz",
-                    "kf_ax","kf_ay","kf_az",
-                    "pre_yaw","pre_pitch","pre_dist"};
-    RMTools::showData(show_data, str, "data window");
+    return {x_,y_,z_};
 }
 
 /**
@@ -128,9 +116,9 @@ void Predictor::InitKfAcceleration(const float dt) {
             target_v_xyz[0],
             target_v_xyz[1],
             target_v_xyz[2],
-            0,
-            0,
-            0;
+            target_a_xyz[0],
+            target_a_xyz[1],
+            target_a_xyz[2];
 }
 
 /**
@@ -140,7 +128,7 @@ void Predictor::UpdateKF(Vector3f z_k) {
     // 预测
     RMKF.predict();
     // 更正
-    RMKF.correct(target_xyz);
+    RMKF.correct(z_k);
 }
 
 /**

@@ -308,6 +308,17 @@ namespace RMTools {
         return {rho, theta};
     }
 
+    inline float GetDeltaTheta(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz, int direct){
+        float target_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
+        float predict_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
+        float delta_yaw = predict_theta - target_theta;
+        if (delta_yaw > CV_PI)
+            delta_yaw -= CV_PI;
+        if (delta_yaw < -CV_PI)
+            delta_yaw += CV_PI;
+        return delta_yaw * direct / CV_PI * 180;
+    }
+
 /**
  *  the descriptor of the point in the route, including the color, location, velocity and the situation of point.
  */
