@@ -173,6 +173,7 @@ namespace rm
 
         float yaw_abs;
         float pitch_abs;
+        Vector3f target_ypd;
 
         struct ReceiveData receiveData;
         int armorType;

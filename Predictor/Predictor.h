@@ -25,13 +25,13 @@ public:
     Predictor();
     ~Predictor();
 
-
-
-    void armorPredictor(Vector3f ypd, Vector3f gimbal_ypd, const float deltaT);
+    void armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, int direct = 1);
 
     void InitKfAcceleration(const float dt);
 
-    void kalmanPredict(Vector3f target_ypd, Vector3f gimbal_ypd, int direct = 1);
+    float kalmanPredict(Vector3f target_xyz, int direct);
+
+    Vector3f getGyroXYZ(Vector3f target_ypd, int direct);
 
     void Refresh();
 
@@ -39,12 +39,12 @@ public:
 
     float yaw, pitch;
 
-    float x_,y_,z_;
     Vector3f predict_xyz;
     Vector3f predict_ypd;
 
-    Vector3f target_xyz;
+    Vector3f target_xyz{};
     Vector3f target_v_xyz{};
+    Vector3f target_a_xyz{};
 
 private:
     /**
