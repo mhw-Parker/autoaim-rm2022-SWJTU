@@ -389,11 +389,12 @@ namespace rm
                 dataWrite << predictPtr->x_ << " " << predictPtr->y_ << " " << predictPtr->z_ << endl;
 #endif
             }else if(armorDetectorPtr->findState && armorDetectorPtr->lossCnt > 0 && armorDetectorPtr->lossCnt < 3){
-                Vector3f temp_xyz;
+                if(armorDetectorPtr->lossCnt == 1)
+                    last_xyz = predictPtr->target_xyz;
                 float dt = tt / cnt1 / 1000;
-                temp_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt + 0.5 * predictPtr->target_a_xyz * dt * dt;
-                yaw_abs = target_ypd[0] + GetDeltaTheta(temp_xyz,predictPtr->target_xyz,direct_y)
-                        + predictPtr->kalmanPredict(temp_xyz,direct_y);
+                predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt + 0.5 * predictPtr->target_a_xyz * dt * dt;
+                yaw_abs = target_ypd[0] + GetDeltaTheta(predictPtr->target_xyz,last_xyz,direct_y)
+                        + predictPtr->kalmanPredict(predictPtr->target_xyz,direct_y);
 
             }
 #if DEBUG == 1
