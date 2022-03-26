@@ -28,6 +28,7 @@ Predictor::~Predictor() = default;
         show_data.push_back(RMKF.state_post_[len]);
     for(int i=0;i<3;i++)
         show_data.push_back(predict_ypd[i]);
+
     string str[] = {"m_x","m_y","m_z",
                     "kf_x","kf_y","kf_z",
                     "kf_vx","kf_vy","kf_vz",
@@ -49,7 +50,7 @@ float Predictor::kalmanPredict(Vector3f target_xyz, int direct) {
         target_a_xyz << RMKF.state_post_[6],
                         RMKF.state_post_[7],
                         RMKF.state_post_[8];
-        //predict_xyz << kf.x_k[0] + frame*kf.x_k[3], kf.x_k[1]+frame*kf.x_k[4], kf.x_k[2] + frame*kf.x_k[5];
+
 
     }else{
         RMKF_flag = true;
@@ -113,12 +114,12 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.state_post_ << target_xyz[0],
             target_xyz[1],
             target_xyz[2],
-            target_v_xyz[0],
-            target_v_xyz[1],
-            target_v_xyz[2],
-            target_a_xyz[0],
-            target_a_xyz[1],
-            target_a_xyz[2];
+            0,
+            0,
+            0,
+            0,
+            0,
+            0;
 }
 
 /**
@@ -139,16 +140,16 @@ void Predictor::UpdateKF(Vector3f z_k) {
  */
 Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
     Vector3f temp_target_xyz;
-    temp_target_xyz << KF.state_post_(0),
-            KF.state_post_(1),
-            KF.state_post_(2);
+    temp_target_xyz <<  KF.state_post_(0),
+                        KF.state_post_(1),
+                        KF.state_post_(2);
 
     for (int i = 0; i < iterate_times; ++i) {
         KF.predict();
         KF.correct(temp_target_xyz);
-        temp_target_xyz << KF.state_post_(0),
-                KF.state_post_(1),
-                KF.state_post_(2);
+        temp_target_xyz <<  KF.state_post_(0),
+                            KF.state_post_(1),
+                            KF.state_post_(2);
     }
     return temp_target_xyz;
 }
