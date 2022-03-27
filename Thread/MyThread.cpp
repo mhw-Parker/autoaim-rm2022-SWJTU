@@ -237,6 +237,10 @@ namespace rm
     void ImgProdCons::Produce()
     {
         taskTime = (double)getTickCount();
+        if(serialPtr->ReadData(receiveData)){
+            curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+        }
+        cout << "read data from elc cost : " << CalWasteTime(taskTime,freq) << endl;
         /** 计算上一次执行耗时 **/
         if(tmp_t!=0)
             last_mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
@@ -352,7 +356,7 @@ namespace rm
     {
         taskTime = (double)getTickCount();
         if(curControlState == AUTO_SHOOT_STATE) {
-            if (armorDetectorPtr->findState && armorDetectorPtr->lossCnt == 0)
+            if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0)
             {
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
@@ -364,37 +368,37 @@ namespace rm
                 }else if(carName == VIDEO){
                     // 用于平时的视频测试时
                     gimbal_ypd << 0, 0, solverPtr->dist;
-                    target_ypd << gimbal_ypd[0] + direct_y * solverPtr->yaw,
-                                gimbal_ypd[1] + direct_p * solverPtr->pitch,
+                    target_ypd << gimbal_ypd[0] - solverPtr->yaw,
+                                gimbal_ypd[1] + solverPtr->pitch,
                                 solverPtr->dist;
 
-                    predictPtr->armorPredictor(target_ypd,gimbal_ypd,direct_y);
+                    predictPtr->armorPredictor(target_ypd,v_bullet);
 
                 }else{
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
-                    target_ypd <<  receiveData.yawAngle + direct_y * solverPtr->yaw,
-                                receiveData.pitchAngle + direct_p * solverPtr->pitch,
-                                solverPtr->dist;
-                    predictPtr->armorPredictor(target_ypd,gimbal_ypd,direct_y);
+                    target_ypd <<   receiveData.yawAngle - solverPtr->yaw,
+                                    receiveData.pitchAngle + solverPtr->pitch,
+                                    solverPtr->dist;
+                    predictPtr->armorPredictor(target_ypd,v_bullet);
                 }
 
-                solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd,direct_y,direct_p);
+                solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
 
-                pitch_abs = target_ypd[1];
-                yaw_abs = predictPtr->yaw + solverPtr->pitchCompensate(solverPtr->dist,16); //将yaw更新为预测值，pitch就不预测
+                pitch_abs = target_ypd[1] + solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet);
+                yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
 
 
 #if SAVE_TEST_DATA == 1
                 // **** 目标陀螺仪 x y z **** //
                 dataWrite << predictPtr->x_ << " " << predictPtr->y_ << " " << predictPtr->z_ << endl;
 #endif
-            }else if(armorDetectorPtr->findState && armorDetectorPtr->lossCnt > 0 && armorDetectorPtr->lossCnt < 3){
+            }else if(armorDetectorPtr->findState && armorDetectorPtr->lostCnt > 0 && armorDetectorPtr->lostCnt < 3){
                 if(armorDetectorPtr->lossCnt == 1)
                     last_xyz = predictPtr->target_xyz;
                 float dt = tt / cnt1 / 1000;
                 predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt + 0.5 * predictPtr->target_a_xyz * dt * dt;
-                yaw_abs = target_ypd[0] + GetDeltaTheta(predictPtr->target_xyz,last_xyz,direct_y)
-                        + predictPtr->kalmanPredict(predictPtr->target_xyz,direct_y);
+                yaw_abs = target_ypd[0] + GetDeltaTheta(predictPtr->target_xyz,last_xyz)
+                        + predictPtr->kalmanPredict(predictPtr->target_xyz,solverPtr->dist,v_bullet);
 
             }
 #if DEBUG == 1

@@ -221,6 +221,7 @@ namespace rm
 
         /*loss cnt*/
         int lossCnt;
+        int lostCnt = 130;
 
         /** variables would be used in functions**/
     private:
@@ -250,7 +251,7 @@ namespace rm
         /**the frequency information**/
     private:
         /*the number of frames that program don't get a target armor constantly*/
-        int lostCnt = 130;
+
 
         /*the number of frames that program get a target armor constantly*/
         int detectCnt = 0;

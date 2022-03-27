@@ -296,19 +296,19 @@ namespace RMTools {
             return theta - (int)(theta / 360 - 1) * 360;
     }
     /**
-     * @brief 二维平面x,z转换成极坐标rho,theta。顺加逆减。
+     * @brief 二维平面x,z转换成极坐标rho,theta。顺-逆+。
      * @param XZ 目标x,z坐标。
      * @return {rho, theta}。
      */
     inline Eigen::Vector2f XZ2RhoTheta(const Eigen::Vector2f& XZ) {
         float x = XZ[0], z = XZ[1];
-        float rho= sqrt(x * x + z * z);
+        float rho = sqrt(x * x + z * z);
         float sin_theta = x / rho;
-        float theta = z > 0 ? asin(sin_theta) : CV_PI + asin(sin_theta);
+        float theta = z > 0 ? -asin(sin_theta) : CV_PI - asin(sin_theta);
         return {rho, theta};
     }
 
-    inline float GetDeltaTheta(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz, int direct){
+    inline float GetDeltaTheta(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
         float target_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
         float predict_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
         float delta_yaw = predict_theta - target_theta;
@@ -316,7 +316,7 @@ namespace RMTools {
             delta_yaw -= CV_PI;
         if (delta_yaw < -CV_PI)
             delta_yaw += CV_PI;
-        return delta_yaw * direct / CV_PI * 180;
+        return delta_yaw / CV_PI * 180;
     }
 
 /**

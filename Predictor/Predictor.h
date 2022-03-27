@@ -25,13 +25,13 @@ public:
     Predictor();
     ~Predictor();
 
-    void armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, int direct = 1);
+    void armorPredictor(Vector3f target_ypd, const float v_);
 
     void InitKfAcceleration(const float dt);
 
-    float kalmanPredict(Vector3f target_xyz, int direct);
+    float kalmanPredict(Vector3f target_xyz, float dist, float v_);
 
-    Vector3f getGyroXYZ(Vector3f target_ypd, int direct);
+    Vector3f getGyroXYZ(Vector3f target_ypd);
 
     void Refresh();
 
@@ -61,26 +61,22 @@ private:
     Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
 
     vector<Vector3f> abs_pyd;
-    Vector3f gim_d_ypd;
+
     float degree2rad = CV_PI / 180;
 
     vector<float> abs_yaw;
     vector<float> frame_list;
     vector<float> time_list;
-    vector<float> target_x;
-    vector<float> target_z;
-    float frame = 30.0; //预测帧数，根据情况预测可能从帧改变为时间
-    Eigen::MatrixXd k;
 
-    double rate[4] = {0,0,0,0}, yaw_arr[4] = {0,0,0,0};
+    float frame = 30.0; //预测帧数，根据情况预测可能从帧改变为时间
 
     RMTools::DisPlayWaveCLASS waveClass;
 
-    Kalman kf;
-    bool kf_flag = false;
     EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);
     bool RMKF_flag = false;
-    Vector3f z_k; //观测量
+    float dist = 0; // mm
+    float delta_t = 0.033; // s
+
 
 
 
