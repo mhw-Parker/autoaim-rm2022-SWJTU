@@ -542,7 +542,7 @@ namespace rm
     /**
      * @brief 新的灯条识别，田翊扬 2022/1/7
      * */
-     vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
+    vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
         float angle_ = 0;
         Scalar_<double> avg,avgBrightness;
         Mat_<int> lampImage;
@@ -598,7 +598,7 @@ namespace rm
         }
         imshow("test",background);
         return lampVector;
-     }
+    }
 
     /**
     * @brief get he region of interest
@@ -752,7 +752,7 @@ namespace rm
         resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
 
         pyrDown(warpPerspective_dst,warpPerspective_dst);
-       // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
+        // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
         imshow("svm",warpPerspective_dst);
 

@@ -10,13 +10,13 @@ using namespace cv;
 
 SolveAngle::SolveAngle()
 {
-	string filename ="../Math/SolveAngle/camera.xml";
-	FileStorage fs(filename, FileStorage::READ);
-	if (!fs.isOpened()) {
-		cout << "no such file" << endl;
-		return;
-	}
-	switch(carName)
+    string filename ="../Math/SolveAngle/camera.xml";
+    FileStorage fs(filename, FileStorage::READ);
+    if (!fs.isOpened()) {
+        cout << "no such file" << endl;
+        return;
+    }
+    switch(carName)
     {
         case HERO:
             fs["Distortion_Coefficients4_Realsense"] >> distortionCoefficients;
@@ -61,26 +61,26 @@ SolveAngle::SolveAngle()
             break;
     }
     cv2eigen(cameraMatrix,camMat_E);
-	fs.release();
+    fs.release();
 }
 
 void SolveAngle::Generate2DPoints(Rect rect)
 {
-	Point2f pt;
-	pt.x = rect.x;
-	pt.y = rect.y;
+    Point2f pt;
+    pt.x = rect.x;
+    pt.y = rect.y;
     rectPoint2D.push_back(pt);
 
-	pt.x = rect.x + rect.width;
-	pt.y = rect.y;
+    pt.x = rect.x + rect.width;
+    pt.y = rect.y;
     rectPoint2D.push_back(pt);
 
-	pt.x = rect.x + rect.width;
-	pt.y = rect.y + rect.height;
+    pt.x = rect.x + rect.width;
+    pt.y = rect.y + rect.height;
     rectPoint2D.push_back(pt);
 
-	pt.x = rect.x;
-	pt.y = rect.y + rect.height;
+    pt.x = rect.x;
+    pt.y = rect.y + rect.height;
     rectPoint2D.push_back(pt);
 }
 /**
@@ -169,9 +169,10 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
     ypd << yaw, pitch, dist;
 }
 
-float SolveAngle::pitchCompensate(const float dist, float v) {
+float SolveAngle::pitchCompensate(Vector3f target_xyz, const float dist, float v) {
+    float d_2 = dist * dist;
     float dt = dist/1000 / v;
-    float dy = 0.5 * 9.8 * dt * dt * 1000;
+    float dy = 0.5 * 9.8 * d_2 * 1000;
     return atan(dy/dist) / degree2rad;
 }
 
@@ -182,14 +183,14 @@ float SolveAngle::pitchCompensate(const float dist, float v) {
 void SolveAngle::Generate3DPoints(bool mode)
 {
     //because the armor is  incline,so the height of the armor should be smaller than reality.
-	if (mode){
+    if (mode){
         targetHeight3D = 125;
         targetWidth3D = 135;
-	}
-	else{
+    }
+    else{
         targetHeight3D = 140;
         targetWidth3D = 225;
-	}
+    }
     targetPoints3D.emplace_back(-targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, targetHeight3D / 2, 0);
@@ -202,20 +203,20 @@ void SolveAngle::Generate3DPoints(bool mode)
  * @param target_xyz 目标的陀螺仪绝对坐标
  * @param gimbal_ypd 旋转矩阵
  * */
-void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz, Vector3f gimbal_ypd, int direct_y, int direct_p) {
+void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz, Vector3f gimbal_ypd) {
     Vector3f temp_xyz, cam_xyz, pix_uv1;
     Vector3f rotate_ypd;
     rotate_ypd << gimbal_ypd[0],
-                direct_p * gimbal_ypd[1],
-                gimbal_ypd[2];
+            gimbal_ypd[1],
+            gimbal_ypd[2];
     temp_xyz = target_xyz;
 
     //cout << target_xyz << endl;
     //cout << gim_d_ypd << endl;
     Matrix3f vec_degree2rad;
     vec_degree2rad << degree2rad, 0, 0,
-                      0, degree2rad, 0,
-                      0,     0,      1;
+            0, degree2rad, 0,
+            0,     0,      1;
     rotate_ypd = vec_degree2rad * rotate_ypd;
 
     float sin_y = sin(rotate_ypd[0]);

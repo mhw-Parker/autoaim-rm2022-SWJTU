@@ -220,6 +220,7 @@ namespace rm
         Mat img;
 
         /*loss cnt*/
+        int lostCnt = 130;
         int lossCnt;
 
         /** variables would be used in functions**/
@@ -250,7 +251,7 @@ namespace rm
         /**the frequency information**/
     private:
         /*the number of frames that program don't get a target armor constantly*/
-        int lostCnt = 130;
+
 
         /*the number of frames that program get a target armor constantly*/
         int detectCnt = 0;
@@ -283,7 +284,7 @@ namespace rm
         Point2f srcPoints[4];   //warpPerspective srcPoints		透射变换的原图上的目标点 tl->tr->br->bl  左上 右上 右下 左下
         Point2f dstPoints[4];	//warpPerspective dstPoints     透射变换的目标图中的点   tl->tr->br->bl  左上 右上 右下 左下
 
-    //deep learning
+        //deep learning
     private:
         String cfgPath;
         String weightPath;

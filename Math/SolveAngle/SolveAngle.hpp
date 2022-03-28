@@ -17,10 +17,10 @@ using namespace Eigen;
 class SolveAngle
 {
 public:
-	SolveAngle();
+    SolveAngle();
 
-	void Generate2DPoints(Rect rect);
-	void GetPose(const Rect& rect, float ballet_speed, bool small);
+    void Generate2DPoints(Rect rect);
+    void GetPose(const Rect& rect, float ballet_speed, bool small);
     /**
      * @brief 用 pnp 解算目标相对相机坐标系的 yaw pitch
      * @param armor_mode 大装甲板还是小装甲
@@ -29,7 +29,7 @@ public:
      * */
     void GetPoseV(const vector<Point2f>& pts, bool armor_mode, const float v_); //Pnp模型
 
-	void Generate3DPoints(bool mode);
+    void Generate3DPoints(bool mode);
     /**
      * @brief 弹道补偿函数
      * @param fitXYZ 相机相对枪口 左 上 前 为正 单位为：mm
@@ -37,14 +37,14 @@ public:
      * */
     void Compensator(Vector3f cam_xyz, float v);
 
-    float pitchCompensate(const float dist, float v);
+    float pitchCompensate(Vector3f target_xyz, const float dist, float v);
     /**
      * @brief 将预测点反投影到图像上
      * @param src 预测点的（ yaw, pitch, dist ）坐标
      * @param target_xyz 目标的陀螺仪绝对坐标
      * @param gimbal_ypd 旋转矩阵
      * */
-    void backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd, int direct_y = 1,int direct_p = 1);
+    void backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd);
 
     float scale = 0.99f;
     float f_ = 1500;
@@ -64,16 +64,16 @@ private:
     Mat tvecs;
     Mat rvecs;
 
-	Mat_<double> cameraMatrix;
-	Mat_<double> distortionCoefficients;
-	vector<Point3f> targetPoints3D;
-	float targetWidth3D{};
-	float targetHeight3D{};
+    Mat_<double> cameraMatrix;
+    Mat_<double> distortionCoefficients;
+    vector<Point3f> targetPoints3D;
+    float targetWidth3D{};
+    float targetHeight3D{};
 
     Matrix3f camMat_E;
-	int shootPriority = 0;
-	float averageX;
-	float averageY;
+    int shootPriority = 0;
+    float averageX;
+    float averageY;
 
     float yaw_static, pitch_static;
     float x_static, y_static;

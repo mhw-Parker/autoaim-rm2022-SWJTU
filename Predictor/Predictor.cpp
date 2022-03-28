@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(1000,600,1000){
+Predictor::Predictor() : waveClass(30,300,500){
     for (int i = 0; i < 7; i++) {
         frame_list.push_back(i);
     }
@@ -15,13 +15,13 @@ Predictor::~Predictor() = default;
 /**
  * @brief 装甲板预测
  * */
- void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, int direct) {
-    target_xyz = getGyroXYZ(target_ypd,direct);
+void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
+    target_xyz = getGyroXYZ(target_ypd);
     vector<float> show_data;
     for(int len = 0;len<target_xyz.size();len++)
         show_data.push_back(target_xyz[len]);
 
-    float delta_yaw = kalmanPredict(target_xyz,direct);
+    float delta_yaw = kalmanPredict(target_xyz,target_ypd[2], v_);
     predict_ypd = {target_ypd[0] + delta_yaw, target_ypd[1], target_ypd[2]};
 
     for(int len = 0;len<RMKF.state_post_.rows();len++)
@@ -35,13 +35,15 @@ Predictor::~Predictor() = default;
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
     RMTools::showData(show_data, str, "data window");
- }
+    waveClass.displayWave(target_ypd[0],predict_ypd[0]);
+}
 
 /**
- * @brief
+ * @brief kalman
  * */
-float Predictor::kalmanPredict(Vector3f target_xyz, int direct) {
-
+float Predictor::kalmanPredict(Vector3f target_xyz, float dist, float v_) {
+    int step = dist / 1000 / v_ / delta_t + 1;
+    cout << step << endl;
     if(RMKF_flag){
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -54,21 +56,21 @@ float Predictor::kalmanPredict(Vector3f target_xyz, int direct) {
 
     }else{
         RMKF_flag = true;
-        InitKfAcceleration(0.025);
+        InitKfAcceleration(delta_t);
     }
-    predict_xyz = PredictKF(RMKF, 30);
-    return RMTools::GetDeltaTheta(target_xyz,predict_xyz,direct);
+    predict_xyz = PredictKF(RMKF, 10);
+    return RMTools::GetDeltaTheta(target_xyz,predict_xyz);
 }
 /**
  * @brief 获得陀螺仪坐标系下的 x y z
  * @param direct 方向，极坐标正向取向右
  * @param target_ypd 目标的 yaw pitch dist
  * */
-Vector3f Predictor::getGyroXYZ(Vector3f target_ypd, int direct) {
-    pair<float, float> quadrant[4] = {{direct, direct},
-                                      {-direct, direct},
-                                      {-direct, -direct},
-                                      {direct, -direct}};
+Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
+    pair<float, float> quadrant[4] = {{-1, 1},
+                                      {-1, -1},
+                                      {1, -1},
+                                      {1, 1}};
 
     float yaw_ = RMTools::total2circle(target_ypd[0]);
 
@@ -112,14 +114,14 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.error_post_.setIdentity();
     // 后验估计
     RMKF.state_post_ << target_xyz[0],
-            target_xyz[1],
-            target_xyz[2],
-            0,
-            0,
-            0,
-            0,
-            0,
-            0;
+                        target_xyz[1],
+                        target_xyz[2],
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0;
 }
 
 /**
@@ -158,7 +160,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * @brief 变更目标时更新预测器
  * */
 void Predictor::Refresh() {
-    kf_flag = false;
+    RMKF_flag = false;
     abs_pyd.clear();
     abs_yaw.clear();
 }
