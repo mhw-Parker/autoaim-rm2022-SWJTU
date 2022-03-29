@@ -46,7 +46,7 @@ endif (DAHUA)
 
 if (MIND)
     include_directories(${PROJECT_SOURCE_DIR}/Drivers/MindVision/include)
-    link_directories(${PROJECT_SOURCE_DIR}/Drivers/MindVision/lib)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lMVSDK")
     link_libraries(MVSDK)
     file(GLOB_RECURSE DRIVER_SRC "Drivers/MindVision/src/*.cpp")
 endif (MIND)
