@@ -20,8 +20,9 @@
 #include "EnergyDetector.h"
 #include "V4L2KAS.h"
 #include "VideoDriver.hpp"
-
 #include "utility.hpp"
+#include "Predictor/Predictor.h"
+
 
 #ifdef DAHUA
 #include "Media/RMDriver.h"
@@ -106,8 +107,8 @@ namespace rm
         bool GrabFlag = true;
 
     public:
-            /* Camera */
-            Driver *driver;
+        /* Camera */
+        Driver *driver;
     private:
         /*
         * To prevent camera from dying!
@@ -117,12 +118,15 @@ namespace rm
         static void InitSignals(void);
         //double calFPS(double BeginTime, double freq);
 
+        int direct_y = 1; //不同兵种的 yaw 参考不
+        int direct_p = 1;
+
         double taskTime;
         double freq;
 
         /***/
         double tmp_t = 0;
-        double mission_time; //任务总体耗时
+        double last_mission_time; //上一次任务总体耗时
         vector<double> whole_time_arr;
         int time_cnt;
         float total_time;
@@ -160,12 +164,18 @@ namespace rm
 
         std::unique_ptr<Kalman> kalman;
 
+        std::unique_ptr<Predictor> predictPtr;
+        //Predictor predictPtr;
+
         Mat frame;
         Mat detectFrame;
         Mat energyFrame;
 
         float yaw_abs;
         float pitch_abs;
+        Vector3f target_ypd;
+        Vector3f last_xyz; //用于存储丢目标前最后一帧的目标位置
+        float v_bullet = 10;
 
         struct ReceiveData receiveData;
         int armorType;
