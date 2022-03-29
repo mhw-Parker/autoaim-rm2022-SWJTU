@@ -201,25 +201,6 @@ namespace RMTools {
         strftime(tmp, sizeof(tmp), "%Y-%m-%d_%H:%M:%S", localtime(&timep));
         return tmp;
     }
-/**
- * @brief 数据显示窗口
- * @param data 输入 vector<float> 型的数据
- * @param *str 数据对应的名称
- * */
-    inline bool showData(vector<float> data, string *str, const string win_name){
-        int c = data.size() * 33;
-        if(data.size() - sizeof(data) /sizeof (data[0]) == 0){
-            cout << "The vector length doesn't match !" << endl;
-            return false;
-        }
-        Mat background = Mat(c,400,CV_8UC3,Scalar::all(0));
-        for(int i = 0;i<data.size();i++){
-            putText(background, str[i], Point(0, 30*(i+1)), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-            putText(background, to_string(data[i]), Point(150, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
-        }
-        imshow(win_name,background);
-        return true;
-    }
 
 /**
  * 求平均值
@@ -272,51 +253,6 @@ namespace RMTools {
         }
         W = (A.transpose() * A).inverse() * A.transpose() * B;
         return W;
-    }
-
-    /**
-     * @brief 用坐标系 xyz 计算 yaw pitch dist
-     * */
-    inline Eigen::Vector3f calXYZ2YPD(Eigen::Vector3f xyz){
-        float yaw, pitch, dist;
-        Eigen::Vector3f ypd;
-        yaw = atan2(xyz[0],xyz[2]) / CV_PI * 180;
-        pitch = - atan2(xyz[1], sqrt(xyz[0]*xyz[0] + xyz[2]*xyz[2])) / CV_PI * 180;
-        dist = sqrt(pow(xyz[0],2) + pow(xyz[1],2) + pow(xyz[2],2));
-        ypd << yaw, pitch, dist;
-        return ypd;
-    }
-    /**
-     * @brief 将陀螺仪角度 total 值转化为 0 ~ 360°
-     * */
-    inline float total2circle(float theta){
-        if(theta > 0)
-            return theta - (int)(theta / 360) * 360;
-        else if(theta < 0)
-            return theta - (int)(theta / 360 - 1) * 360;
-    }
-    /**
-     * @brief 二维平面x,z转换成极坐标rho,theta。顺加逆减。
-     * @param XZ 目标x,z坐标。
-     * @return {rho, theta}。
-     */
-    inline Eigen::Vector2f XZ2RhoTheta(const Eigen::Vector2f& XZ) {
-        float x = XZ[0], z = XZ[1];
-        float rho= sqrt(x * x + z * z);
-        float sin_theta = x / rho;
-        float theta = z > 0 ? asin(sin_theta) : CV_PI + asin(sin_theta);
-        return {rho, theta};
-    }
-
-    inline float GetDeltaTheta(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz, int direct){
-        float target_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
-        float predict_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
-        float delta_yaw = predict_theta - target_theta;
-        if (delta_yaw > CV_PI)
-            delta_yaw -= CV_PI;
-        if (delta_yaw < -CV_PI)
-            delta_yaw += CV_PI;
-        return delta_yaw * direct / CV_PI * 180;
     }
 
 /**

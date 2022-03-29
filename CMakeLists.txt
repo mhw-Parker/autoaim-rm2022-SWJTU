@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.9)
 
 project(MASTER)
 SET(CMAKE_BUILE_TYPE DEBUG)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g -std=c++14 -pthread -lv4l1 -lv4l2 -lrealsense2")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g -std=c++14 -pthread -lv4l1 -lv4l2")
 SET(BIN_NAME "run")
 #根据实际路径修改
 set(OpenCV_DIR "/home/tyy/opencv-4.5.4/build")
@@ -46,7 +46,7 @@ endif (DAHUA)
 
 if (MIND)
     include_directories(${PROJECT_SOURCE_DIR}/Drivers/MindVision/include)
-    link_directories(${PROJECT_SOURCE_DIR}/Drivers/MindVision/lib)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lMVSDK")
     link_libraries(MVSDK)
     file(GLOB_RECURSE DRIVER_SRC "Drivers/MindVision/src/*.cpp")
 endif (MIND)

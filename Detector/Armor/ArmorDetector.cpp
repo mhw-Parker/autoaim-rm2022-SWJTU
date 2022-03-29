@@ -201,11 +201,11 @@ namespace rm
 
         vector<Lamp> lights;
 
-        if (showBinaryImg){
+        if (showBianryImg){
             imshow("binary_brightness_img", thresholdMap);
         }
 
-        //lights = LampDetection(thresholdMap);
+        lights = LampDetection(thresholdMap);
         lights = LightDetection(thresholdMap);
 
         if (showLamps)
@@ -232,7 +232,8 @@ namespace rm
             targetArmor.rect  = targetArmor.rect + Point(roiRect.x, roiRect.y);
             targetArmor.center +=  Point(roiRect.x, roiRect.y);
 
-            for(int i = 0; i< 4;i++){
+            for(int i = 0; i< 4;i++)
+            {
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
 
@@ -315,20 +316,20 @@ namespace rm
 
         if (lights.size() < 2)
             return;
-        //过滤器
+
         for (unsigned int i = 0; i < lights.size() - 1; i++)
         {
             for (unsigned int j = i + 1; j < lights.size(); j++)
             {
-                /* the difference between two angles 灯条角度 */
+                /*the difference between two angles*/
                 dAngle = fabs(lights[i].lightAngle - lights[j].lightAngle);
                 if(dAngle > param.maxAngleError)continue;
 
-                /*the difference ratio of the two lights' height 灯条长度 */
+                /*the difference ratio of the two lights' height*/
                 contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) / max(lights[i].rect.size.height, lights[j].rect.size.height);
                 if(contourLen1 > param.maxLengthError)continue;
 
-                /*the difference ratio of the two lights' width 灯条宽度比 */
+                /*the difference ratio of the two lights' width*/
                 contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) / max(lights[i].rect.size.width, lights[j].rect.size.width);
 
                 /*the average height of two lights(also the height of the armor defined by these two lights)*/
@@ -377,7 +378,7 @@ namespace rm
 
         findState = true;
 
-        sort(matchLights.begin(), matchLights.end(), compMatchFactor); //元素从小到大排序
+        sort(matchLights.begin(), matchLights.end(), compMatchFactor);
 
 #if NUM_RECOGNIZE == 1
         uint8_t mostPossibleLampsIndex1 = matchLights[0].matchIndex1, mostPossibleLampsIndex2 = matchLights[0].matchIndex2;
@@ -396,11 +397,9 @@ namespace rm
                 curArmor = Armor(lights[matchLights[i].matchIndex1], lights[matchLights[i].matchIndex2],matchLights[i].matchFactor);
                 MakeRectSafe(curArmor.rect,roiRect.size());
 
-                SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]); //设置用于svm识别的4点区域
+                SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]);
 
-                armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
-                cout << "SVM model detect : " << armorNumber << endl;
-
+                armorNumber = GetArmorNumber();
                 if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
                 {
                     targetMatchIndex = i;
@@ -435,8 +434,8 @@ namespace rm
 
     /**
     * @brief pre-procession of an image captured
-    * @param img the ROI image that clipped by the GetRIO function
-    * @param type choose to Preprocess the current image or the lastest two images, when the type is true, parameter
+    * @param [img] the ROI image that clipped by the GetRIO function
+    * @param [type] choose to Preprocess the current image or the lastest two images, when the type is true, parameter
     * img must be the origin image but not the roi image
     * @return none
     * @details if average value in a region of the colorMap is larger than 0, then we can inference that in this region
@@ -455,18 +454,15 @@ namespace rm
 
         //Attention!!!if the calculate result is small than 0, because the mat format is CV_UC3, it will be set as 0.
         cv::subtract(channels[0],channels[2],bSubR);
-        cv::subtract(channels[2],channels[0],rSubB);
-        sub = rSubB - bSubR;
-        //imshow ("rSubB - bSubR",sub);
-        //imshow ("r - b",rSubB);
-        threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
-        GaussianBlur(bright,bright,Size(5,5),5);
-        threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
-        //Mat adaptive;
-        //adaptiveThreshold(bright,adaptive,255,)
-        //imshow("grey",bright);
-        colorMap = Mat_<int>(rSubB) - Mat_<int>(bSubR);
+        cv::subtract(channels[2],channels[1],rSubB);
 
+
+        threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
+
+        GaussianBlur(bright,bright,Size(5,5),3);
+        threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
+
+        colorMap = Mat_<int>(rSubB) - Mat_<int>(bSubR);
     }
 
     /**
@@ -497,36 +493,35 @@ namespace rm
                 continue;
 
             double length = arcLength(i, true);
-
-            //cout << length << endl;
-            if (length > 20 && length < 800) //条件1：灯条周长
+            cout << length << endl;
+            if (length > 10 && length < 400)
             {
-                //cout << "周长：" << length << endl;
-                possibleLamp = fitEllipse(i); //用椭圆近似形状
-                //possibleLamp = minAreaRect(i);
+                possibleLamp = fitEllipse(i);
                 lampArea = possibleLamp.size.width * possibleLamp.size.height;
                 //LOGM("lampArea : %f\n",lampArea);
-                if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea))continue; //条件2：面积
+                if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea))continue;
                 float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
                 //LOGM("rate_height2width : %f\n",rate_height2width);
-                if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H))continue; //条件3：长宽比例
+                if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H))continue;
+
                 angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
+
                 //LOGM("angle_ : %f\n",angle_);
-                if(fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
+                if(fabs(angle_) >= param.maxLightAngle)continue;
 
-                rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
-                MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
-                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的全1灰度图
+                rectLamp = possibleLamp.boundingRect();
+                MakeRectSafe(rectLamp,colorMap.size());
+                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1);
 
-                /* Add this to make sure numbers on armors will not be recognized as lamps */
+                /*Add this to make sure numbers on armors will not be recognized as lamps*/
                 lampImage = colorMap(rectLamp);
-                avgBrightness = mean(lampImage, mask); //求两者均值
+                avgBrightness = mean(lampImage, mask);
 
                 avg = Scalar_<float>(avgBrightness);
 
                 //cout<<avg<<endl;
 
-                if((blueTarget && avg[0] < -10) || (!blueTarget && avg[0] > 10)) //灯条和数字的重叠面积有较大差别
+                if((blueTarget && avg[0] < -30) || (!blueTarget && avg[0] > 30))
                 {
                     Lamp buildLampInfo(possibleLamp, angle_, avg[0]);
                     lampVector.emplace_back(buildLampInfo);
@@ -543,10 +538,21 @@ namespace rm
      * @brief 新的灯条识别，田翊扬 2022/1/7
      * */
      vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
+         /** 预处理 **/
+        /*Mat blue_binary, red_binary, binary;
+        Mat single, blue_c, red_c;
+        vector<Mat> channels;
+        split(img, channels);
+        blue_c = channels.at(0);
+        red_c = channels.at(2);
+        threshold(blue_c,blue_binary,90,255,THRESH_BINARY);
+        threshold(red_c,red_binary,90,255,THRESH_BINARY);
+        binary = blueTarget ? blue_binary - red_binary : red_binary - blue_binary; //滤掉白光
+        imshow("sub channel",binary);*/
+        /**  **/
         float angle_ = 0;
         Scalar_<double> avg,avgBrightness;
-        Mat_<int> lampImage;
-        float lamp_area;
+        float lampArea;
 
         RotatedRect possibleLamp;
         Rect rectLamp;
@@ -555,49 +561,20 @@ namespace rm
         vector<vector<Point>> contoursLight;
         findContours(img,contoursLight,RETR_EXTERNAL,CHAIN_APPROX_NONE);
         Mat background = Mat(img.size(), CV_8UC3, Scalar(0, 0, 0));
-        for(auto &lamp_contour:contoursLight){ //遍历所有点集
+        for(auto &lamp_contour:contoursLight){
             if(lamp_contour.size() < 10)
                 continue;
-            RotatedRect min_rect, ellipse_rect;
-            std::vector<cv::Point2f> intersection;
-            min_rect = minAreaRect(lamp_contour);
-            ellipse_rect = fitEllipse(lamp_contour);
-
-            ///灯条角度筛选
-            float angle_ = (ellipse_rect.angle > 90) ? (ellipse_rect.angle - 180) : ellipse_rect.angle;
-            if(fabs(angle_) > param.maxLightAngle) continue;
-            ///灯条颜色筛选
-            rectLamp = ellipse_rect.boundingRect(); //最小正矩形
-            MakeRectSafe(rectLamp,sub.size());
-            lampImage = blueTarget ? bSubR(rectLamp) - rSubB(rectLamp) : rSubB(rectLamp) - bSubR(rectLamp);
-            double percent = lampImage.dot(Mat_<int>::ones(rectLamp.height,rectLamp.width)) / (255 * rectLamp.width * rectLamp.height / 2);
-            cout << "count : " << percent << endl;
-            if(percent < 0.12) continue;
-            ///灯条长宽比
-            float lamp_ratio = min_rect.size.height / min_rect.size.width;
-            //cout << "----lamp ratio : " << lamp_ratio << endl;
-            //if(lamp_ratio < param.minLightW2H || lamp_ratio > param.maxLightW2H) continue; //灯条长宽比
-
-            lamp_area = min_rect.size.height * min_rect.size.width; //椭圆拟合的灯条矩形面积
-            //if((lamp_area > param.maxLightArea) || (lamp_area < param.minLightArea)) continue; //灯条面积筛选
-            possibleLamp = min_rect;
-
-
-            Lamp buildLampInfo(possibleLamp, angle_, 0);
-            lampVector.emplace_back(buildLampInfo);
-
+            possibleLamp = minAreaRect(lamp_contour);
             Point2f pts[4];
-            min_rect.points(pts);
+            possibleLamp.points(pts);
             for (int i = 0; i < 4; i++) {
                 line(background, pts[i], pts[(i + 1) % (4)],
                      Scalar(0, 255, 0), 1, LINE_8);
             }
-            //possibleLamp = fitEllipse(lamp_contour);
-            ellipse(background,ellipse_rect,Scalar(240,10,10));
-
+            possibleLamp = fitEllipse(lamp_contour);
+            ellipse(background,possibleLamp,Scalar(240,10,10));
         }
         imshow("test",background);
-        return lampVector;
      }
 
     /**
@@ -612,7 +589,6 @@ namespace rm
         if (lostCnt>3 || rectTemp.width == 0 || rectTemp.height == 0)
         {
             roiRect = Rect(0, 0,FRAMEWIDTH, FRAMEHEIGHT);
-            findState = false;
         }
         else if(detectCnt>0)
         {
@@ -713,7 +689,6 @@ namespace rm
             cout<<"Svm load error! Please check the path!"<<endl;
             exit(0);
         }
-
         svmArmorSize = armorImgSize;
 
         //set dstPoints (the same to armorImgSize, as it can avoid resize armorImg)
@@ -745,7 +720,7 @@ namespace rm
     int ArmorDetector::GetArmorNumber()
     {
 #if USEROI == 1
-        warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints); //对 svm 矩形区域进行透视变换
+        warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
         warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat, Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE), INTER_NEAREST, BORDER_CONSTANT, Scalar(0)); //warpPerspective to get armorImage
 
         warpPerspective_dst = warpPerspective_dst.colRange(6,34).clone();
@@ -754,7 +729,7 @@ namespace rm
         pyrDown(warpPerspective_dst,warpPerspective_dst);
        // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
-        imshow("svm",warpPerspective_dst);
+       // imshow("warpPerspective_dst",warpPerspective_dst);
 
         svmParamMatrix = warpPerspective_dst.reshape(1, 1);
         svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
@@ -875,7 +850,7 @@ namespace rm
                     line(frame, targetArmor.pts[j], targetArmor.pts[(j + 1) % 4], Scalar(0, 255, 255), 2);
                 }
 
-                circle(frame,targetArmor.center,5,Scalar(0,255,255),-1);
+                circle(frame,targetArmor.center,10,Scalar(0,255,255),-1);
             }
 
             /**update roi rect, last armor, average of lamps' R channel subtract B channel value**/

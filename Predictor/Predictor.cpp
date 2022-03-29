@@ -3,7 +3,11 @@
 //
 #include "Predictor.h"
 
+<<<<<<< HEAD
 Predictor::Predictor() : waveClass(1000,600,1000){
+=======
+Predictor::Predictor() : waveClass(30,300,500){
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
     for (int i = 0; i < 7; i++) {
         frame_list.push_back(i);
     }
@@ -15,13 +19,22 @@ Predictor::~Predictor() = default;
 /**
  * @brief 装甲板预测
  * */
+<<<<<<< HEAD
  void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, int direct) {
     target_xyz = getGyroXYZ(target_ypd,direct);
+=======
+void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
+    target_xyz = getGyroXYZ(target_ypd);
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
     vector<float> show_data;
     for(int len = 0;len<target_xyz.size();len++)
         show_data.push_back(target_xyz[len]);
 
+<<<<<<< HEAD
     float delta_yaw = kalmanPredict(target_xyz,direct);
+=======
+    float delta_yaw = kalmanPredict(target_xyz,target_ypd[2], v_);
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
     predict_ypd = {target_ypd[0] + delta_yaw, target_ypd[1], target_ypd[2]};
 
     for(int len = 0;len<RMKF.state_post_.rows();len++)
@@ -35,6 +48,7 @@ Predictor::~Predictor() = default;
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
     RMTools::showData(show_data, str, "data window");
+<<<<<<< HEAD
  }
 
 /**
@@ -42,6 +56,17 @@ Predictor::~Predictor() = default;
  * */
 float Predictor::kalmanPredict(Vector3f target_xyz, int direct) {
 
+=======
+    waveClass.displayWave(target_ypd[0],predict_ypd[0]);
+}
+
+/**
+ * @brief kalman
+ * */
+float Predictor::kalmanPredict(Vector3f target_xyz, float dist, float v_) {
+    int step = dist / 1000 / v_ / delta_t + 1;
+    cout << step << endl;
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
     if(RMKF_flag){
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -54,21 +79,36 @@ float Predictor::kalmanPredict(Vector3f target_xyz, int direct) {
 
     }else{
         RMKF_flag = true;
+<<<<<<< HEAD
         InitKfAcceleration(0.025);
     }
     predict_xyz = PredictKF(RMKF, 30);
     return RMTools::GetDeltaTheta(target_xyz,predict_xyz,direct);
+=======
+        InitKfAcceleration(delta_t);
+    }
+    predict_xyz = PredictKF(RMKF, 10);
+    return RMTools::GetDeltaTheta(target_xyz,predict_xyz);
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
 }
 /**
  * @brief 获得陀螺仪坐标系下的 x y z
  * @param direct 方向，极坐标正向取向右
  * @param target_ypd 目标的 yaw pitch dist
  * */
+<<<<<<< HEAD
 Vector3f Predictor::getGyroXYZ(Vector3f target_ypd, int direct) {
     pair<float, float> quadrant[4] = {{direct, direct},
                                       {-direct, direct},
                                       {-direct, -direct},
                                       {direct, -direct}};
+=======
+Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
+    pair<float, float> quadrant[4] = {{-1, 1},
+                                      {-1, -1},
+                                      {1, -1},
+                                      {1, 1}};
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
 
     float yaw_ = RMTools::total2circle(target_ypd[0]);
 
@@ -112,6 +152,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.error_post_.setIdentity();
     // 后验估计
     RMKF.state_post_ << target_xyz[0],
+<<<<<<< HEAD
             target_xyz[1],
             target_xyz[2],
             0,
@@ -120,6 +161,16 @@ void Predictor::InitKfAcceleration(const float dt) {
             0,
             0,
             0;
+=======
+                        target_xyz[1],
+                        target_xyz[2],
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0;
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
 }
 
 /**
@@ -158,7 +209,11 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * @brief 变更目标时更新预测器
  * */
 void Predictor::Refresh() {
+<<<<<<< HEAD
     kf_flag = false;
+=======
+    RMKF_flag = false;
+>>>>>>> c2c726514c54921773c1399a06c837a862c6155b
     abs_pyd.clear();
     abs_yaw.clear();
 }
