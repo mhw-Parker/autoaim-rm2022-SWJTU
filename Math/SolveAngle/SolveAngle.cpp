@@ -169,10 +169,11 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
     ypd << yaw, pitch, dist;
 }
 
-float SolveAngle::pitchCompensate(Vector3f target_xyz, const float dist, float v) {
+float SolveAngle::pitchCompensate(Vector3f target_xyz, float v) {
+    float dist = sqrt(target_xyz[0]*target_xyz[0] + target_xyz[1]*target_xyz[1] + target_xyz[2]*target_xyz[2]);
     float d_2 = dist * dist;
     float dt = dist/1000 / v;
-    float dy = 0.5 * 9.8 * d_2 * 1000;
+    float dy = 0.5 * 9.8 * dt*dt * 1000;
     return atan(dy/dist) / degree2rad;
 }
 

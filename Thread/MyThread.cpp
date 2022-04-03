@@ -379,12 +379,15 @@ namespace rm
                     target_ypd <<   receiveData.yawAngle - solverPtr->yaw,
                             receiveData.pitchAngle + solverPtr->pitch,
                             solverPtr->dist;
-                    predictPtr->armorPredictor(target_ypd,v_bullet);
+
                 }
 
                 solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
 
-                pitch_abs = target_ypd[1] /*+ solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet)*/;
+                predictPtr->armorPredictor(target_ypd,v_bullet);
+                float p_comp = solverPtr->pitchCompensate(predictPtr->target_xyz,v_bullet);
+                cout << "pitch补偿角度 ：" << p_comp << endl;
+                pitch_abs = target_ypd[1] + p_comp;/*+ solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet)*/;
                 yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
 
 

@@ -28,12 +28,13 @@ void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
         show_data.push_back(RMKF.state_post_[len]);
     for(int i=0;i<3;i++)
         show_data.push_back(predict_ypd[i]);
-
+    show_data.push_back(step); //步数
     string str[] = {"m_x","m_y","m_z",
                     "kf_x","kf_y","kf_z",
                     "kf_vx","kf_vy","kf_vz",
                     "kf_ax","kf_ay","kf_az",
-                    "pre_yaw","pre_pitch","pre_dist"};
+                    "pre_yaw","pre_pitch","pre_dist",
+                    "step"};
     RMTools::showData(show_data, str, "data window");
     waveClass.displayWave(target_ypd[0],predict_ypd[0]);
 }
@@ -42,8 +43,8 @@ void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
  * @brief kalman
  * */
 float Predictor::kalmanPredict(Vector3f target_xyz, float dist, float v_) {
-    int step = dist / 1000 / v_ / delta_t + 1;
-    cout << step << endl;
+    step = dist / 1000 / v_ / delta_t + 10;
+    //cout << step << endl;
     if(RMKF_flag){
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -58,7 +59,7 @@ float Predictor::kalmanPredict(Vector3f target_xyz, float dist, float v_) {
         RMKF_flag = true;
         InitKfAcceleration(delta_t);
     }
-    predict_xyz = PredictKF(RMKF, 10);
+    predict_xyz = PredictKF(RMKF, step);
     return RMTools::GetDeltaTheta(target_xyz,predict_xyz);
 }
 /**

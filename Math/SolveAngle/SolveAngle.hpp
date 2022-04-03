@@ -37,7 +37,7 @@ public:
      * */
     void Compensator(Vector3f cam_xyz, float v);
 
-    float pitchCompensate(Vector3f target_xyz, const float dist, float v);
+    float pitchCompensate(Vector3f target_xyz, float v);
     /**
      * @brief 将预测点反投影到图像上
      * @param src 预测点的（ yaw, pitch, dist ）坐标
