@@ -29,7 +29,7 @@ public:
 
     void InitKfAcceleration(const float dt);
 
-    float kalmanPredict(Vector3f target_xyz, float dist, float v_);
+    Vector3f kalmanPredict(Vector3f target_xyz, float v_);
 
     Vector3f getGyroXYZ(Vector3f target_ypd);
 

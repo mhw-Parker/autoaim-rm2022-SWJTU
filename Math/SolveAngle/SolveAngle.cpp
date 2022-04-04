@@ -51,7 +51,7 @@ SolveAngle::SolveAngle()
             yaw_static = 1.6;
             pitch_static = 0.5;
         case SENTRY:
-            fs["Distortion_Coefficients4_MIND"] >> distortionCoefficients;
+            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             break;
@@ -172,7 +172,7 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
 float SolveAngle::pitchCompensate(Vector3f target_xyz, const float dist, float v) {
     float d_2 = dist * dist;
     float dt = dist/1000 / v;
-    float dy = 0.5 * 9.8 * d_2 * 1000;
+    float dy = 0.5 * 9.8 * dt*dt * 1000;
     return atan(dy/dist) / degree2rad;
 }
 
@@ -209,8 +209,8 @@ void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz, Vector3f gim
     rotate_ypd << gimbal_ypd[0],
             gimbal_ypd[1],
             gimbal_ypd[2];
-    temp_xyz = target_xyz;
 
+    cout << rotate_ypd << endl;
     //cout << target_xyz << endl;
     //cout << gim_d_ypd << endl;
     Matrix3f vec_degree2rad;

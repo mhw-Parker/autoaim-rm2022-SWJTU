@@ -145,7 +145,8 @@ namespace rm
             predictPtr(unique_ptr<Predictor>(new Predictor())),
             armorType(BIG_ARMOR),
             driver(),
-            missCount(0)
+            missCount(0),
+            showWave(100,300,500)
     {
 //#if SAVE_LOG == 1
 //        logWrite<<"Find    "<<"TARGET X    "<<"TARGET Y    "<<"TARGET HEIGHT    "<<"TARGET WIDTH    "<<"YAW    "<<"PITCH    "\
@@ -182,6 +183,9 @@ namespace rm
                 driver = &v4l2Capture;
                 break;
             case SENTRY:
+#ifdef MIND
+                driver = &mindCapture;
+#endif
 #ifdef DAHUA
                 driver = &dahuaCapture;
 #endif
@@ -363,93 +367,54 @@ namespace rm
                                     armorDetectorPtr->IsSmall(),16);
 
                 Vector3f gimbal_ypd;
-                if(carName == SENTRY){
 
-                }else if(carName == VIDEO){
+                if(carName == VIDEO) {
                     // 用于平时的视频测试时
                     gimbal_ypd << 0, 0, solverPtr->dist;
                     target_ypd << gimbal_ypd[0] - solverPtr->yaw,
-                            gimbal_ypd[1] + solverPtr->pitch,
-                            solverPtr->dist;
-
+                                  gimbal_ypd[1] + solverPtr->pitch,
+                                  solverPtr->dist;
                     predictPtr->armorPredictor(target_ypd,v_bullet);
 
-                }else{
+                } else {
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
-                    target_ypd <<   receiveData.yawAngle - solverPtr->yaw,
-                            receiveData.pitchAngle + solverPtr->pitch,
-                            solverPtr->dist;
+                    target_ypd << receiveData.yawAngle - solverPtr->yaw,
+                                  receiveData.pitchAngle + solverPtr->pitch,
+                                  solverPtr->dist;
+
                     predictPtr->armorPredictor(target_ypd,v_bullet);
+                    string str[] = {//"pnp-yaw",
+                            //"pnp-pitch",
+                            "re-yaw:",
+                            "re-pitch:",
+                            "AbsYaw:",
+                            "AbsPitch:"};
+                    vector<float> data(6);
+                    data = {receiveData.yawAngle,receiveData.pitchAngle,yaw_abs,pitch_abs};
+                    RMTools::showData(data,str,"abs degree");
+
+                    yaw_abs = target_ypd[0];
+                    pitch_abs = target_ypd[1] /*+ solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet)*/;
+                    //yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
                 }
 
                 solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
-
-                pitch_abs = target_ypd[1] /*+ solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet)*/;
-                yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
-
 
 #if SAVE_TEST_DATA == 1
                 // **** 目标陀螺仪 x y z **** //
                 dataWrite << predictPtr->x_ << " " << predictPtr->y_ << " " << predictPtr->z_ << endl;
 #endif
-            }else if(armorDetectorPtr->findState && armorDetectorPtr->lostCnt > 0 && armorDetectorPtr->lostCnt < 3){
+            } else if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt > 0 && armorDetectorPtr->lostCnt < 3) {
                 if(armorDetectorPtr->lossCnt == 1)
                     last_xyz = predictPtr->target_xyz;
                 float dt = tt / cnt1 / 1000;
                 predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt + 0.5 * predictPtr->target_a_xyz * dt * dt;
-                yaw_abs = target_ypd[0] + GetDeltaTheta(predictPtr->target_xyz,last_xyz)
-                          + predictPtr->kalmanPredict(predictPtr->target_xyz,solverPtr->dist,v_bullet);
-
+                Vector3f predict_xyz = predictPtr->kalmanPredict(predictPtr->target_xyz, v_bullet);
+                Vector3f predict_ypd = target_ypd + GetDeltaYPD(predict_xyz, last_xyz);
+                yaw_abs = predict_ypd[0];
+                pitch_abs = predict_ypd[1];
             }
-#if DEBUG == 1
-            frequency = getTickFrequency()/((double)getTickCount() - timeFlag);
 
-                debugWindowCanvas.colRange(0,299).setTo(0);
-                putText(debugWindowCanvas,"Yaw: ",Point(10,30),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                putText(debugWindowCanvas,to_string(yawTran).substr(0,5),Point(100,30),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-
-                putText(debugWindowCanvas,"Pitch: ",Point(10,60),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                putText(debugWindowCanvas,to_string(pitchTran).substr(0,5),Point(100,60),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-
-                putText(debugWindowCanvas,"Dist: ",Point(10,90),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                if(carName != HERO)
-                    putText(debugWindowCanvas,to_string(solverPtr->dist).substr(0,5),Point(100,90),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                else
-                    putText(debugWindowCanvas,to_string(dynamic_cast<RealSenseDriver*>(driver)->dist2Armor).substr(0,5),Point(100,90),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                putText(debugWindowCanvas,"Shoot: ",Point(10,120),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                if(solverPtr->shoot)
-                    circle(debugWindowCanvas,Point(100,115),8,Scalar(255),-1);
-
-                putText(debugWindowCanvas,"Num: ",Point(10,150),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                putText(debugWindowCanvas,to_string(armorDetectorPtr->armorNumber),Point(100,150),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-
-                putText(debugWindowCanvas,"Fre: ",Point(10,180),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                putText(debugWindowCanvas,to_string(frequency),Point(100,180),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-
-                if(armorDetectorPtr->findState)
-                    rectangle(debugWindowCanvas,Rect(10,225,50,50),Scalar(255),-1);
-
-                if(armorDetectorPtr->IsSmall())
-                    putText(debugWindowCanvas,"S",Point(110,255),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                else
-                    putText(debugWindowCanvas,"B",Point(110,255),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-
-                if(curControlState)
-                    putText(debugWindowCanvas,"B",Point(210,255),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-                else
-                    putText(debugWindowCanvas,"R",Point(210,255),FONT_HERSHEY_SIMPLEX,0.5,Scalar(255),1);
-
-                predictX = kalman->p_predictx/5;
-                originalX = armorDetectorPtr->targetArmor.center.x/5;
-
-//                printf("Original X:%d\t",originalX);
-//                printf("prediect X:%d\n",predictX);
-//                pyrDown(debugWindowCanvas,debugWindowCanvas);
-
-                imshow("DEBUG",debugWindowCanvas);
-
-//                waveWindowPanel->DisplayWave2();
-#endif
 
             /*******************************************************************************************************
              * when the armor-detector has not detected target armor successfully, that may be caused by the suddenly

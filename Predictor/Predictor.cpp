@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(30,300,500){
+Predictor::Predictor() : waveClass(90,300,500){
     for (int i = 0; i < 7; i++) {
         frame_list.push_back(i);
     }
@@ -18,49 +18,27 @@ Predictor::~Predictor() = default;
 void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
     target_xyz = getGyroXYZ(target_ypd);
     vector<float> show_data;
+
+    Vector3f predict_xyz = kalmanPredict(target_xyz, v_);
+
+    Vector3f predict_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+
+    // 以下为debug显示数据
     for(int len = 0;len<target_xyz.size();len++)
         show_data.push_back(target_xyz[len]);
-
-    float delta_yaw = kalmanPredict(target_xyz,target_ypd[2], v_);
-    predict_ypd = {target_ypd[0] + delta_yaw, target_ypd[1], target_ypd[2]};
-
     for(int len = 0;len<RMKF.state_post_.rows();len++)
         show_data.push_back(RMKF.state_post_[len]);
     for(int i=0;i<3;i++)
         show_data.push_back(predict_ypd[i]);
-
     string str[] = {"m_x","m_y","m_z",
                     "kf_x","kf_y","kf_z",
                     "kf_vx","kf_vy","kf_vz",
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
     RMTools::showData(show_data, str, "data window");
-    waveClass.displayWave(target_ypd[0],predict_ypd[0]);
+    waveClass.displayWave(target_ypd[1],predict_ypd[1]);
 }
 
-/**
- * @brief kalman
- * */
-float Predictor::kalmanPredict(Vector3f target_xyz, float dist, float v_) {
-    int step = dist / 1000 / v_ / delta_t + 1;
-    cout << step << endl;
-    if(RMKF_flag){
-        UpdateKF(target_xyz);
-        target_v_xyz << RMKF.state_post_[3],
-                        RMKF.state_post_[4],
-                        RMKF.state_post_[5];
-        target_a_xyz << RMKF.state_post_[6],
-                        RMKF.state_post_[7],
-                        RMKF.state_post_[8];
-
-
-    }else{
-        RMKF_flag = true;
-        InitKfAcceleration(delta_t);
-    }
-    predict_xyz = PredictKF(RMKF, 10);
-    return RMTools::GetDeltaTheta(target_xyz,predict_xyz);
-}
 /**
  * @brief 获得陀螺仪坐标系下的 x y z
  * @param direct 方向，极坐标正向取向右
@@ -79,11 +57,38 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
     float dist2 = target_ypd[2] * target_ypd[2]; //
     float z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
     float x_ = z_ * fabs(tan_yaw);
-    float y_ = tan_pitch * sqrt(x_ * x_ + z_ * z_);
+    float y_ = -tan_pitch * sqrt(x_ * x_ + z_ * z_);
     //算x,z符号
     int t = yaw_ / 90;
     x_ *= quadrant[t].first; z_ *= quadrant[t].second;
     return {x_,y_,z_};
+}
+
+/**
+ * @brief kalman
+ * */
+Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
+    float x = target_xyz[0], y = target_xyz[1], z = target_xyz[2];
+    float dist = sqrt(x*x + y*y + z*z);
+
+    int step = dist / 1000 / v_ / delta_t + 1;
+    cout << "step: " << step << endl;
+    if(RMKF_flag){
+        UpdateKF(target_xyz);
+        target_v_xyz << RMKF.state_post_[3],
+                        RMKF.state_post_[4],
+                        RMKF.state_post_[5];
+        target_a_xyz << RMKF.state_post_[6],
+                        RMKF.state_post_[7],
+                        RMKF.state_post_[8];
+
+
+    }else{
+        RMKF_flag = true;
+        InitKfAcceleration(delta_t);
+    }
+    predict_xyz = PredictKF(RMKF, 10);
+    return predict_xyz;
 }
 
 /**

@@ -308,15 +308,27 @@ namespace RMTools {
         return {rho, theta};
     }
 
-    inline float GetDeltaTheta(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
-        float target_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
-        float predict_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
+    inline Eigen::Vector3f GetDeltaYPD(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
+        float lx = last_xyz[0], ly = last_xyz[1], lz = last_xyz[2];
+        float ldist = sqrt(lx*lx + ly*ly + lz*lz);
+        float x = cur_xyz[0], y = cur_xyz[1], z = cur_xyz[2];
+        float dist = sqrt(x*x + y*y + z*z);
+
+        // 计算delta_yaw
+        float predict_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
+        float target_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
         float delta_yaw = predict_theta - target_theta;
         if (delta_yaw > CV_PI)
             delta_yaw -= CV_PI;
         if (delta_yaw < -CV_PI)
             delta_yaw += CV_PI;
-        return delta_yaw / CV_PI * 180;
+
+        // 计算delta_pitch
+        target_theta = -asin(ly / ldist);
+        predict_theta = -asin(y / dist);
+        float delta_pitch = predict_theta - target_theta;
+
+        return Eigen::Vector3f{delta_yaw, delta_pitch, dist} / CV_PI * 180;
     }
 
 /**
