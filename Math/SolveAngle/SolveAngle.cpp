@@ -23,8 +23,8 @@ SolveAngle::SolveAngle()
             fs["Intrinsic_Matrix_Realsense"] >> cameraMatrix;
             break;
         case INFANTRY_MELEE0:
-            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             //静态校正值
             yaw_static = 1.6;
@@ -33,8 +33,8 @@ SolveAngle::SolveAngle()
             fit_xyz << 0, 50, 50; //x y z
             break;
         case INFANTRY_MELEE1:
-            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             //静态校正值
             yaw_static = 1.5;
@@ -45,14 +45,14 @@ SolveAngle::SolveAngle()
         case INFANTRY_TRACK:
             break;
         case VIDEO:
-            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             yaw_static = 1.6;
             pitch_static = 0.5;
         case SENTRY:
-            fs["Distortion_Coefficients5_MIND"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND"] >> cameraMatrix;
+            fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             break;
         case UAV:
