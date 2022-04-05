@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(90,300,500){
+Predictor::Predictor() : waveClass(180,300,500){
     for (int i = 0; i < 7; i++) {
         frame_list.push_back(i);
     }
@@ -21,7 +21,8 @@ void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
 
     Vector3f predict_xyz = kalmanPredict(target_xyz, v_);
 
-    Vector3f predict_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+    Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+    predict_ypd = target_ypd + delta_ypd;
 
     // 以下为debug显示数据
     for(int len = 0;len<target_xyz.size();len++)
@@ -36,7 +37,7 @@ void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
     RMTools::showData(show_data, str, "data window");
-    waveClass.displayWave(target_ypd[1],predict_ypd[1]);
+    waveClass.displayWave(target_ypd[0],predict_ypd[0]);
 }
 
 /**
@@ -73,7 +74,7 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
 
     int step = dist / 1000 / v_ / delta_t + 1;
     cout << "step: " << step << endl;
-    if(RMKF_flag){
+    if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
                         RMKF.state_post_[4],
@@ -83,7 +84,7 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
                         RMKF.state_post_[8];
 
 
-    }else{
+    } else {
         RMKF_flag = true;
         InitKfAcceleration(delta_t);
     }

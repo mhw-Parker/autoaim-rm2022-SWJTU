@@ -328,7 +328,10 @@ namespace RMTools {
         predict_theta = -asin(y / dist);
         float delta_pitch = predict_theta - target_theta;
 
-        return Eigen::Vector3f{delta_yaw, delta_pitch, dist} / CV_PI * 180;
+        Eigen::Vector3f result(delta_yaw, delta_pitch, dist);
+        for (int i = 0; i < 2; i++)
+            result[i] = result[i] / CV_PI * 180;
+        return result;
     }
 
 /**

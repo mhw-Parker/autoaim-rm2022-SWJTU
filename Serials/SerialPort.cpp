@@ -142,7 +142,7 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
     while(maxReadTime--)
     {
         read(fd, &buffRead[0], 1);
-        if(buffRead[0] == 0xA5)break;
+        if(buffRead[0] == 0xA5) break;
     }
 
     if(maxReadTime == 0)return false;

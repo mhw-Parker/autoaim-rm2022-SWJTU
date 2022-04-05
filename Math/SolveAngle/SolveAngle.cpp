@@ -54,6 +54,11 @@ SolveAngle::SolveAngle()
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
+            //静态校正值
+            yaw_static = 1.6;
+            pitch_static = 0.5;
+            //枪口坐标系相对位置
+            fit_xyz << 0, 50, 50; //x y z
             break;
         case UAV:
             break;
@@ -208,16 +213,16 @@ void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz, Vector3f gim
     Vector3f temp_xyz, cam_xyz, pix_uv1;
     Vector3f rotate_ypd;
     rotate_ypd << gimbal_ypd[0],
-            gimbal_ypd[1],
-            gimbal_ypd[2];
+                  gimbal_ypd[1],
+                  gimbal_ypd[2];
 
-    cout << rotate_ypd << endl;
+    //cout << rotate_ypd << endl;
     //cout << target_xyz << endl;
     //cout << gim_d_ypd << endl;
     Matrix3f vec_degree2rad;
     vec_degree2rad << degree2rad, 0, 0,
-            0, degree2rad, 0,
-            0,     0,      1;
+                      0, degree2rad, 0,
+                      0,     0,      1;
     rotate_ypd = vec_degree2rad * rotate_ypd;
 
     float sin_y = sin(rotate_ypd[0]);

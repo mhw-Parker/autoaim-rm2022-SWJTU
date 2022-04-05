@@ -383,6 +383,9 @@ namespace rm
                                   solverPtr->dist;
 
                     predictPtr->armorPredictor(target_ypd,v_bullet);
+                    pitch_abs = target_ypd[1] + 1/*+ solverPtr->pitchCompensate(predictPtr->predict_xyz, v_bullet)*/;
+                    yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
+
                     string str[] = {//"pnp-yaw",
                             //"pnp-pitch",
                             "re-yaw:",
@@ -392,10 +395,6 @@ namespace rm
                     vector<float> data(6);
                     data = {receiveData.yawAngle,receiveData.pitchAngle,yaw_abs,pitch_abs};
                     RMTools::showData(data,str,"abs degree");
-
-                    yaw_abs = target_ypd[0];
-                    pitch_abs = target_ypd[1] /*+ solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet)*/;
-                    //yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
                 }
 
                 solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
