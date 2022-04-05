@@ -69,6 +69,7 @@ private:
     vector<float> time_list;
 
     float frame = 30.0; //预测帧数，根据情况预测可能从帧改变为时间
+    int step = 10;
 
     RMTools::DisPlayWaveCLASS waveClass;
 
