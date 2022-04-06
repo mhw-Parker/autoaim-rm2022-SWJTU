@@ -37,6 +37,7 @@ public:
      * */
     void Compensator(Vector3f cam_xyz, float v);
 
+    float CalPitch(Vector3f target_xyz, float v);
     float pitchCompensate(Vector3f target_xyz, float v);
     /**
      * @brief 将预测点反投影到图像上
@@ -57,7 +58,8 @@ public:
 
 private:
     void camXYZ2YPD(Mat tvecs);
-    int direct = 1;
+    float g = 9.8; //
+
     float degree2rad = CV_PI / 180;
     Matrix3f cam_mat;
 

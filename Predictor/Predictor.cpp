@@ -37,7 +37,7 @@ void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
     RMTools::showData(show_data, str, "data window");
-    waveClass.displayWave(target_ypd[0],predict_ypd[0]);
+    waveClass.displayWave(target_ypd[0],predict_ypd[0],"yaw");
 }
 
 /**
@@ -72,7 +72,7 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
     float x = target_xyz[0], y = target_xyz[1], z = target_xyz[2];
     float dist = sqrt(x*x + y*y + z*z);
 
-    int step = dist / 1000 / v_ / delta_t + 1;
+    int step = dist / 1000 / v_ / delta_t + 6;
     cout << "step: " << step << endl;
     if (RMKF_flag) {
         UpdateKF(target_xyz);

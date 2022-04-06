@@ -375,6 +375,11 @@ namespace rm
                                   gimbal_ypd[1] + solverPtr->pitch,
                                   solverPtr->dist;
                     predictPtr->armorPredictor(target_ypd,v_bullet);
+                    float pp = solverPtr->pitchCompensate(predictPtr->predict_xyz,v_bullet);
+                    string str[] = {"old","new"};
+                    vector<float> data(2);
+                    data = {solverPtr->pitch+pp,solverPtr->CalPitch(predictPtr->predict_xyz,v_bullet)};
+                    RMTools::showData(data,str,"pitch");
 
                 } else {
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;

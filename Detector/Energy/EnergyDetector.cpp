@@ -226,7 +226,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
             if (mode == SMALL_ENERGY_STATE) getPredictPointSmall();
             else if (mode == BIG_ENERGY_STATE) {
                 getPredictPoint();
-                waveClass.displayWave(av_omega.back(), predict_rad);
+                waveClass.displayWave(av_omega.back(), predict_rad,"energy rad");
             }
         }
         //waveClass.displayWave(omega.back(), av_omega.back());
@@ -345,7 +345,7 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int t
 #endif
             //problem.AddResidualBlock(cost_func, NULL, &a_, &phi_ );
             cout << t_[i]-t_[st] << " " << omega_[i] << endl;
-            waveClass.displayWave(omega_[i], 1);
+            waveClass.displayWave(omega_[i], 1,"curve fitting");
         }
         Solver::Options options;
         options.max_num_iterations = 25;

@@ -175,11 +175,30 @@ void SolveAngle::Compensator(Vector3f cam_xyz, float v)
 }
 
 float SolveAngle::pitchCompensate(Vector3f target_xyz, float v) {
-    float dist = sqrt(target_xyz[0]*target_xyz[0] + target_xyz[1]*target_xyz[1] + target_xyz[2]*target_xyz[2]);
-    float d_2 = dist * dist;
     float dt = dist/1000 / v;
     float dy = 0.5 * 9.8 * dt*dt * 1000;
     return atan(dy/dist) / degree2rad;
+}
+float SolveAngle::CalPitch(Vector3f target_xyz, float v) {
+    float x = target_xyz[0]/1000, y = target_xyz[1]/1000, z = target_xyz[2]/1000; // mm -> m
+    float dist = sqrt(x*x + y*y + z*z);
+    float d = sqrt(x*x + z*z);
+    float h = fabsf(y);
+    float v2 = v*v;
+    float h2 = h*h;
+    float d2 = d*d;
+
+    float a = 4 * v2*v2 * (h2+d2);
+    float b = -4 * d2 * v2 * (g*h+v2);
+    float c = g*g * d2*d2;
+
+    float cos_the2 = (-b + sqrt(b*b-4*a*c)) / 2 / a; // cos_theta^2
+    float cos_the = sqrt(cos_the2);
+    float theta = acos(cos_the); // arccos(theta)
+    theta = min({fabsf(theta),fabsf(CV_PI-theta)});
+
+    return theta / degree2rad;
+
 }
 
 /**
