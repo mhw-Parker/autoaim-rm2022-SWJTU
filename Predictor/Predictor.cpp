@@ -15,13 +15,14 @@ Predictor::~Predictor() = default;
 /**
  * @brief 装甲板预测
  * */
-void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
+void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v_) {
     target_xyz = getGyroXYZ(target_ypd);
     vector<float> show_data;
 
-    Vector3f predict_xyz = kalmanPredict(target_xyz, v_);
+    predict_xyz = kalmanPredict(target_xyz, v_);
 
-    Vector3f predict_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+    Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+    predict_ypd = target_ypd + delta_ypd;
 
     // 以下为debug显示数据
     for(int len = 0;len<target_xyz.size();len++)
@@ -36,7 +37,7 @@ void Predictor::armorPredictor(Vector3f target_ypd, const float v_) {
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
     RMTools::showData(show_data, str, "data window");
-    waveClass.displayWave(target_ypd[1],predict_ypd[1]);
+    waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
 }
 
 /**
@@ -54,7 +55,7 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
 
     float tan_yaw = tan(yaw_ * degree2rad);
     float tan_pitch = tan(target_ypd[1] * degree2rad);
-    float dist2 = target_ypd[2] * target_ypd[2]; //
+    float dist2 = target_ypd[2] * target_ypd[2];
     float z_ = sqrt( dist2 / (1 + tan_yaw * tan_yaw) / (1 + tan_pitch * tan_pitch) );
     float x_ = z_ * fabs(tan_yaw);
     float y_ = -tan_pitch * sqrt(x_ * x_ + z_ * z_);
@@ -71,9 +72,9 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
     float x = target_xyz[0], y = target_xyz[1], z = target_xyz[2];
     float dist = sqrt(x*x + y*y + z*z);
 
-    int step = dist / 1000 / v_ / delta_t + 1;
+    int step = dist / 1000 / v_ / delta_t + 7;
     cout << "step: " << step << endl;
-    if(RMKF_flag){
+    if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
                         RMKF.state_post_[4],
@@ -83,11 +84,11 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
                         RMKF.state_post_[8];
 
 
-    }else{
+    } else {
         RMKF_flag = true;
         InitKfAcceleration(delta_t);
     }
-    predict_xyz = PredictKF(RMKF, 10);
+    predict_xyz = PredictKF(RMKF, step);
     return predict_xyz;
 }
 
@@ -132,7 +133,7 @@ void Predictor::InitKfAcceleration(const float dt) {
 /**
  * @brief RMKF更新，包括预测部分和更正部分
  */
-void Predictor::UpdateKF(Vector3f z_k) {
+void Predictor::UpdateKF(const Vector3f& z_k) {
     // 预测
     RMKF.predict();
     // 更正

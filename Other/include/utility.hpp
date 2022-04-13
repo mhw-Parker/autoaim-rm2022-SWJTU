@@ -16,6 +16,8 @@
 
 #include <Eigen/Dense>
 
+#include "mydefine.h"
+
 using namespace cv;
 using namespace std;
 
@@ -140,7 +142,7 @@ namespace RMTools {
 
         /** 2021-12-9 tyy **/
         //因为没看懂上面的波形显示调用方法，决定重写一个
-        void displayWave(const float input1, const float input2) {
+        void displayWave(const float input1, const float input2, string win_name) {
             int amplitude1 = mid_h - ratio * input1;
             int amplitude2 = mid_h - ratio * input2;
             if (amplitude1 < 0 || amplitude2 < 0) {
@@ -154,15 +156,13 @@ namespace RMTools {
 
             Point2f cur_p1 = Point2f(cnt, amplitude1);
             Point2f cur_p2 = Point2f(cnt, amplitude2);
-            circle(copy, cur_p1, 1, Scalar(0, 0, 255));
-            circle(copy, cur_p2, 1, Scalar(255, 0, 0));
 
             if (last_p1 != Point2f(0, 0)) {
-                line(copy, cur_p1, last_p1, Scalar(0, 255, 0));
-                line(copy, cur_p2, last_p2, Scalar(0, 255, 255));
+                line(copy, cur_p1, last_p1, Scalar(0, 255, 0));     // line input 1
+                line(copy, cur_p2, last_p2, Scalar(0, 255, 255));   // line input 2
             }
 
-            imshow("WaveForm", copy);
+            imshow(win_name, copy);
             waitKey(1);
 
             cnt += 2;
@@ -324,11 +324,20 @@ namespace RMTools {
             delta_yaw += CV_PI;
 
         // 计算delta_pitch
-        target_theta = -asin(ly / ldist);
-        predict_theta = -asin(y / dist);
+        if (carName == SENTRY) {
+            target_theta = asin(ly / ldist);
+            predict_theta = asin(y / dist);
+        } else {
+            target_theta = -asin(ly / ldist);
+            predict_theta = -asin(y / dist);
+        }
+
         float delta_pitch = predict_theta - target_theta;
 
-        return Eigen::Vector3f{delta_yaw, delta_pitch, dist} / CV_PI * 180;
+        Eigen::Vector3f result(delta_yaw, delta_pitch, dist - ldist);
+        for (int i = 0; i < 2; i++)
+            result[i] = result[i] / CV_PI * 180;
+        return result;
     }
 
 /**

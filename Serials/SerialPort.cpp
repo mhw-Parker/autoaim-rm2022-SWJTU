@@ -138,11 +138,11 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
     static int onceReadCount = 0;
 
     tcflush(fd, TCIFLUSH);
-    
+
     while(maxReadTime--)
     {
         read(fd, &buffRead[0], 1);
-        if(buffRead[0] == 0xA5)break;
+        if(buffRead[0] == 0xA5) break;
     }
 
     if(maxReadTime == 0)return false;
@@ -176,7 +176,7 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
     {
         memcpy(&buffer_.yawAngle,buffRead + 2,4);
         memcpy(&buffer_.pitchAngle,buffRead + 6,4);
-        memcpy(&buffer_.yawSpeed,buffRead + 10,4);
+        memcpy(&buffer_.bulletSpeed,buffRead + 10,4);
         memcpy(&buffer_.pitchSpeed,buffRead + 14,4);
         memcpy(&buffer_.targetMode,buffRead + 18,1);
         memcpy(&buffer_.targetColor,buffRead + 19,1);

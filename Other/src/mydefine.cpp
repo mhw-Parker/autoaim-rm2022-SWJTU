@@ -18,6 +18,8 @@ int FRAMEHEIGHT;
 
 CARNAME carName = VIDEO;
 int cameraIndex = 0;
-std::string videoPath = "/home/leonxu/视频/EnergyVideo/RedStill.mp4";
+std::string videoPath = "../blue_car.avi";
 
 float feedbackDelta  = 1.32;
+
+std::vector<float> time_stamp; // 全局时间戳

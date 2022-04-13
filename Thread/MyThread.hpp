@@ -175,7 +175,7 @@ namespace rm
         float pitch_abs;
         Vector3f target_ypd;
         Vector3f last_xyz; //用于存储丢目标前最后一帧的目标位置
-        float v_bullet = 10;
+        float v_bullet = 12.5;
         RMTools::DisPlayWaveCLASS showWave;
 
         struct ReceiveData receiveData;

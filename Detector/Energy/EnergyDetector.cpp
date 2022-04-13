@@ -226,7 +226,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
             if (mode == SMALL_ENERGY_STATE) getPredictPointSmall();
             else if (mode == BIG_ENERGY_STATE) {
                 getPredictPoint();
-                waveClass.displayWave(av_omega.back(), predict_rad);
+                waveClass.displayWave(av_omega.back(), predict_rad,"energy rad");
             }
         }
         //waveClass.displayWave(omega.back(), av_omega.back());
@@ -345,7 +345,7 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_, int t
 #endif
             //problem.AddResidualBlock(cost_func, NULL, &a_, &phi_ );
             cout << t_[i]-t_[st] << " " << omega_[i] << endl;
-            waveClass.displayWave(omega_[i], 1);
+            waveClass.displayWave(omega_[i], 1,"curve fitting");
         }
         Solver::Options options;
         options.max_num_iterations = 25;
@@ -456,7 +456,7 @@ bool EnergyDetector::detectArmor(Mat &src) {
     Mat armor_dilate = src.clone();
 #if DEBUG == 1
     imshow("armor_dilate", armor_dilate);
- #endif
+#endif
     //寻找所有装甲
     std::vector<vector<Point> > armor_contours;
     std::vector<vector<Point> > armor_contours_external;
@@ -483,9 +483,9 @@ bool EnergyDetector::detectArmor(Mat &src) {
         if (!isValidArmorContour(armor_contour)) {
             continue;
         }
-		RotatedRect flow_rect = cv::minAreaRect(armor_contour);
-		valid_armors.push_back(flow_rect);
-		Point2f flow_pts[4];
+        RotatedRect flow_rect = cv::minAreaRect(armor_contour);
+        valid_armors.push_back(flow_rect);
+        Point2f flow_pts[4];
         flow_rect.points(flow_pts);
         if(showEnergy){
             for (int i = 0; i < 4; i++) {
@@ -565,13 +565,13 @@ bool EnergyDetector::detectFlowStripFan(Mat &src) {
  * @remark 检测提取风车中心点
  */
 bool EnergyDetector::detectCircleCenter(Mat &src){
-	Mat img = src.clone();
-	Mat CannyEdge;
-	std::vector<vector<Point> > circle_contours;
+    Mat img = src.clone();
+    Mat CannyEdge;
+    std::vector<vector<Point> > circle_contours;
     vector<Vec3f> circle_point;
 
-	Canny(img, CannyEdge, 50, 150);
-	findContours(CannyEdge, circle_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    Canny(img, CannyEdge, 50, 150);
+    findContours(CannyEdge, circle_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
     for (size_t t = 0; t <  circle_contours.size(); t++) {
         double area = contourArea( circle_contours[t]);
@@ -715,7 +715,7 @@ Point2f EnergyDetector::calPredict(Point2f p, Point2f center, float theta) const
     Eigen::Vector2f cur_vec, pre_vec;
     float c = cos(theta), s = sin(theta);
     rotate_matrix << c, -s,
-                     s,  c; //旋转矩阵
+            s,  c; //旋转矩阵
     cur_vec << (p.x-center.x), (p.y-center.y);
     pre_vec = rotate_matrix * cur_vec;
     return Point2f (center.x + pre_vec[0], center.y + pre_vec[1]);
@@ -1041,7 +1041,7 @@ void EnergyDetector::getPts(RotatedRect armor) {
 bool EnergyDetector::isValidCenterRContour(const vector<cv::Point> &center_R_contour) {
     double cur_contour_area = contourArea(center_R_contour);
     if (cur_contour_area > _flow.Center_R_Control_area_max ||
-    cur_contour_area < _flow.Center_R_Control_area_min) {
+        cur_contour_area < _flow.Center_R_Control_area_min) {
         return false;
     }
     return true;

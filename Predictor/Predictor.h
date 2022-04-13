@@ -25,7 +25,7 @@ public:
     Predictor();
     ~Predictor();
 
-    void armorPredictor(Vector3f target_ypd, const float v_);
+    void armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v_);
 
     void InitKfAcceleration(const float dt);
 
@@ -51,7 +51,7 @@ private:
      * @brief RMKF更新，包括预测部分和更正部分
      * @param z_k 观测量 默认为三维坐标 x y z
      */
-    void UpdateKF(Vector3f z_k);
+    void UpdateKF(const Vector3f& z_k);
     /**
      * @brief 迭代更新卡尔曼滤波器一定次数达到预测
      * @param KF 当前卡尔曼滤波器

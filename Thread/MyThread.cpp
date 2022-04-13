@@ -164,8 +164,8 @@ namespace rm
 
         switch (carName) {
             case HERO:
-#ifdef REALSENSE
-                driver = &intelCapture;
+#ifdef MIND
+                driver = &mindCapture;
 #endif
                 break;
             case INFANTRY_MELEE0:
@@ -277,6 +277,7 @@ namespace rm
         //get current gimbal degree while capture
         if(serialPtr->ReadData(receiveData)){
             curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+            v_bullet = receiveData.bulletSpeed == 0 ? 14 : receiveData.bulletSpeed;
         }
 
         detectFrame = frame.clone();
@@ -356,16 +357,14 @@ namespace rm
 #endif
     }
 
-    void ImgProdCons::Feedback()
-    {
+    void ImgProdCons::Feedback() {
         taskTime = (double)getTickCount();
         if(curControlState == AUTO_SHOOT_STATE) {
-            if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0)
-            {
+            if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0) {
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
-                                    armorDetectorPtr->IsSmall(),16);
-
+                                    armorDetectorPtr->IsSmall());
+                // 云台当前yaw pitch
                 Vector3f gimbal_ypd;
 
                 if(carName == VIDEO) {
@@ -374,35 +373,44 @@ namespace rm
                     target_ypd << gimbal_ypd[0] - solverPtr->yaw,
                                   gimbal_ypd[1] + solverPtr->pitch,
                                   solverPtr->dist;
-                    predictPtr->armorPredictor(target_ypd,v_bullet);
+                    predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                    float pp = solverPtr->pitchCompensate(predictPtr->predict_xyz,v_bullet);
+                    string str[] = {"old","new"};
+                    vector<float> data(2);
+                    data = {solverPtr->pitch+pp,solverPtr->CalPitch(predictPtr->predict_xyz, v_bullet)};
+                    RMTools::showData(data,str,"pitch");
 
                 } else {
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                                  receiveData.pitchAngle + solverPtr->pitch,
+                                  receiveData.pitchAngle - solverPtr->pitch,
                                   solverPtr->dist;
+                    cout << "solverPtr->yaw: " << solverPtr->yaw << endl;
+                    cout << "Gimbal yaw: " << gimbal_ypd[0] << endl;
+                    cout << "Target yaw: " << target_ypd[0] << endl;
 
-                    predictPtr->armorPredictor(target_ypd,v_bullet);
+                    predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                    yaw_abs = predictPtr->predict_ypd[0];
+                    //pitch_abs = 3 + solverPtr->CalPitch(predictPtr->predict_xyz,target_ypd,v_bullet);
+                    pitch_abs = predictPtr->predict_ypd[1];
+
                     string str[] = {//"pnp-yaw",
-                            //"pnp-pitch",
-                            "re-yaw:",
-                            "re-pitch:",
-                            "AbsYaw:",
-                            "AbsPitch:"};
+                                    //"pnp-pitch",
+                                    "re-yaw:",
+                                    "re-pitch:",
+                                    "AbsYaw:",
+                                    "AbsPitch:",
+                                    "v bullet:"};
                     vector<float> data(6);
-                    data = {receiveData.yawAngle,receiveData.pitchAngle,yaw_abs,pitch_abs};
+                    data = {receiveData.yawAngle,receiveData.pitchAngle,yaw_abs,pitch_abs,v_bullet};
                     RMTools::showData(data,str,"abs degree");
-
-                    yaw_abs = target_ypd[0];
-                    pitch_abs = target_ypd[1] /*+ solverPtr->pitchCompensate(predictPtr->predict_xyz,solverPtr->dist,v_bullet)*/;
-                    //yaw_abs = predictPtr->predict_ypd[0]; //将yaw更新为预测值，pitch就不预测
                 }
 
                 solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
 
 #if SAVE_TEST_DATA == 1
                 // **** 目标陀螺仪 x y z **** //
-                dataWrite << predictPtr->x_ << " " << predictPtr->y_ << " " << predictPtr->z_ << endl;
+                dataWrite << gimbal_ypd[0] << " " << target_ypd[0] << endl;
 #endif
             } else if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt > 0 && armorDetectorPtr->lostCnt < 3) {
                 if(armorDetectorPtr->lossCnt == 1)
@@ -507,36 +515,19 @@ namespace rm
             //cout<<solverPtr->shoot<<endl;
             //cout<<armorDetectorPtr->findState<<" "<<yawTran<<" "<<pitchTran<<" "<<yawDeviation<<endl;
             /** package data and prepare for sending data to lower-machine **/
-            if(carName != HERO){
-                serialPtr->pack(yaw_abs,
-                                pitch_abs,
-                                solverPtr->dist,
-                                solverPtr->shoot,
-                                armorDetectorPtr->findState,
-                                AUTO_SHOOT_STATE,
-                                0);
-#if SAVE_TEST_DATA == 1
-                // **** 当前相角  当前角速度  预测弧度值 **** //
-                dataWrite << solverPtr->p_cam_xyz[0] << " " << solverPtr->p_cam_xyz[1] << " " << solverPtr->p_cam_xyz[2] << endl;
-#endif
-            }
-
-            else
-            {
-#ifdef REALSENSE
-                dynamic_cast<RealSenseDriver*>(driver)->measure(armorDetectorPtr->targetArmor.rect);
-                serialPtr->pack(receiveData.yawAngle + feedbackDelta*yawTran,receiveData.pitchAngle + pitchTran,1000*static_cast<RealSenseDriver*>(driver)->dist2Armor, solverPtr->shoot,
-                                armorDetectorPtr->findState, AUTO_SHOOT_STATE,0);
-#endif
-            }
+            serialPtr->pack(yaw_abs,
+                            pitch_abs,
+                            solverPtr->dist,
+                            solverPtr->shoot,
+                            armorDetectorPtr->findState,
+                            AUTO_SHOOT_STATE,
+                            0);
             feedbackDelta = 1;
 #if DEBUG_MSG == 1
             LOGM("Write Data\n");
 #endif
-        }
-        else
-        {
-            solverPtr->GetPoseV(energyPtr->predict_pts,false,0);
+        } else {
+            solverPtr->GetPoseV(energyPtr->predict_pts,false);
             //solverPtr->GetPoseV(energyPtr->pts,false,16);
 
             ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -

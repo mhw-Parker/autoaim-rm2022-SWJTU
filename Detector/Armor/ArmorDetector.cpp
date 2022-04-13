@@ -232,6 +232,12 @@ namespace rm
             targetArmor.rect  = targetArmor.rect + Point(roiRect.x, roiRect.y);
             targetArmor.center +=  Point(roiRect.x, roiRect.y);
 
+            Armor(targetArmor.rect);
+            if(targetArmor.armorType==SMALL_ARMOR)
+                cout << "--small target !" << endl;
+            else if(targetArmor.armorType==BIG_ARMOR)
+                cout << "--big target !" << endl;
+
             for(int i = 0; i< 4;i++){
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
@@ -523,7 +529,6 @@ namespace rm
                 avgBrightness = mean(lampImage, mask); //求两者均值
 
                 avg = Scalar_<float>(avgBrightness);
-
                 //cout<<avg<<endl;
 
                 if((blueTarget && avg[0] < -10) || (!blueTarget && avg[0] > 10)) //灯条和数字的重叠面积有较大差别

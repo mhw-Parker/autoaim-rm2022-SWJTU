@@ -6,6 +6,7 @@
 #define ROBOMASTER_MYDEFINE_H
 
 #include <string>
+#include <vector>
 
 #ifndef AUTO_SHOOT_STATE
 #define  AUTO_SHOOT_STATE 0

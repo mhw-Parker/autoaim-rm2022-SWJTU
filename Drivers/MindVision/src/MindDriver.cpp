@@ -69,7 +69,7 @@ bool MindDriver::SetCam()
     CameraReleaseImageBuffer(hCamera,pbyBuffer); //释放缓存
 
     CameraSetAeState(hCamera, false); //设置为手动曝光
-    CameraSetExposureTime(hCamera,15000); //设置曝光时间
+    CameraSetExposureTime(hCamera,5000); //设置曝光时间
 
     //CameraSetAnalogGainX(hCamera,14); //设置增益系数
     /* 让SDK进入工作模式，开始接收来自相机发送的图像

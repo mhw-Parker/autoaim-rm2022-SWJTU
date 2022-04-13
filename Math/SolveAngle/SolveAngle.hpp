@@ -20,24 +20,23 @@ public:
     SolveAngle();
 
     void Generate2DPoints(Rect rect);
-    void GetPose(const Rect& rect, float ballet_speed, bool small);
     /**
      * @brief 用 pnp 解算目标相对相机坐标系的 yaw pitch
      * @param armor_mode 大装甲板还是小装甲
      * @param pts 装甲板 4 点坐标
      * @param v_ 弹速
      * */
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode, const float v_); //Pnp模型
+    void GetPoseV(const vector<Point2f>& pts, bool armor_mode); //Pnp模型
 
-    void Generate3DPoints(bool mode);
     /**
      * @brief 弹道补偿函数
      * @param fitXYZ 相机相对枪口 左 上 前 为正 单位为：mm
      * @param v 当前弹速
      * */
     void Compensator(Vector3f cam_xyz, float v);
-
+    float CalPitch(Vector3f target_xyz, float v);
     float pitchCompensate(Vector3f target_xyz, float v);
+
     /**
      * @brief 将预测点反投影到图像上
      * @param src 预测点的（ yaw, pitch, dist ）坐标
@@ -49,15 +48,21 @@ public:
     float scale = 0.99f;
     float f_ = 1500;
 
-    float yaw = 0,pitch = 0,dist = 0;
+    float yaw{};
+    float pitch{};
+    float dist{};
     vector<Point2f> rectPoint2D;
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
-    Vector3f ypd;
     bool shoot;
 
 private:
-    void camXYZ2YPD(Mat tvecs);
-    int direct = 1;
+    void Generate3DPoints(bool mode);
+    void camXYZ2YPD();
+    void GunXYZ2YPD(Vector3f cam_xyz);
+
+    float g = 9.8; //
+    float g2 = 9.8*9.8;
+
     float degree2rad = CV_PI / 180;
     Matrix3f cam_mat;
 
@@ -75,7 +80,8 @@ private:
     float averageX;
     float averageY;
 
-    float yaw_static, pitch_static;
+    float yaw_static{};
+    float pitch_static{};
     float x_static, y_static;
 
     Vector3f fit_xyz;

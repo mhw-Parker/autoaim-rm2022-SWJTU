@@ -50,8 +50,8 @@ namespace rm
         float maxLengthError = 0.50;
         float maxDeviationAngle = 45;
         float maxYDiff = 2;
-        float maxRatio = 10;
-        float minRatio = 0.6;
+        float maxRatio = 3;
+        float minRatio = 1;
 
         float minLightArea = 10;
         float maxLightArea = 8000;
@@ -195,6 +195,8 @@ namespace rm
         Rect GetArmorRect() const;
 
         bool IsSmall() const;
+
+        void JudgeSize();
 
         static void saveMatchParam(FILE* fileP,int selectedIndex1,int selectedIndex2);
 
