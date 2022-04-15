@@ -363,7 +363,7 @@ namespace rm
             if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0) {
                 /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                 solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
-                                    armorDetectorPtr->IsSmall());
+                                    armorDetectorPtr->targetArmor.armorType);
                 // 云台当前yaw pitch
                 Vector3f gimbal_ypd;
 
@@ -375,42 +375,58 @@ namespace rm
                                   solverPtr->dist;
                     predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
                     float pp = solverPtr->pitchCompensate(predictPtr->predict_xyz,v_bullet);
+                    float temp_t;
+                    float cal_pitch = solverPtr->CalPitch(predictPtr->predict_xyz, v_bullet, temp_t);
                     string str[] = {"old","new"};
                     vector<float> data(2);
-                    data = {solverPtr->pitch+pp,solverPtr->CalPitch(predictPtr->predict_xyz, v_bullet)};
+                    data = {solverPtr->pitch+pp,cal_pitch};
                     RMTools::showData(data,str,"pitch");
 
+                } else if(carName = SENTRY) {
+                    gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
+                    target_ypd << receiveData.yawAngle - solverPtr->yaw,
+                            receiveData.pitchAngle - solverPtr->pitch,
+                            solverPtr->dist;
+                    predictPtr->test415(target_ypd,v_bullet,last_mission_time/1000);
+                    yaw_abs = target_ypd[0];
+                    pitch_abs = target_ypd[1];
                 } else {
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                                  receiveData.pitchAngle - solverPtr->pitch,
+                                  receiveData.pitchAngle + solverPtr->pitch,
                                   solverPtr->dist;
-                    cout << "solverPtr->yaw: " << solverPtr->yaw << endl;
-                    cout << "Gimbal yaw: " << gimbal_ypd[0] << endl;
-                    cout << "Target yaw: " << target_ypd[0] << endl;
+//                    cout << "solverPtr->yaw: " << solverPtr->yaw << endl;
+//                    cout << "Gimbal yaw: " << gimbal_ypd[0] << endl;
+//                    cout << "Target yaw: " << target_ypd[0] << endl;
 
-                    predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                    //predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                    predictPtr->test415(target_ypd,v_bullet,last_mission_time/1000);
                     yaw_abs = predictPtr->predict_ypd[0];
                     //pitch_abs = 3 + solverPtr->CalPitch(predictPtr->predict_xyz,target_ypd,v_bullet);
                     pitch_abs = predictPtr->predict_ypd[1];
 
-                    string str[] = {//"pnp-yaw",
-                                    //"pnp-pitch",
-                                    "re-yaw:",
-                                    "re-pitch:",
-                                    "AbsYaw:",
-                                    "AbsPitch:",
-                                    "v bullet:"};
-                    vector<float> data(6);
-                    data = {receiveData.yawAngle,receiveData.pitchAngle,yaw_abs,pitch_abs,v_bullet};
-                    RMTools::showData(data,str,"abs degree");
                 }
-
+                string str[] = {"re-yaw:",
+                                "re-pitch:",
+                                "tar-yaw:",
+                                "tar-pit:",
+                                "pre-yaw",
+                                "pre-pit",
+                                "v bullet:"};
+                vector<float> data(7);
+                data = {receiveData.yawAngle,
+                        receiveData.pitchAngle,
+                        target_ypd[0],
+                        target_ypd[1],
+                        predictPtr->predict_ypd[0],
+                        predictPtr->predict_ypd[1],
+                        v_bullet};
+                //RMTools::showData(data,str,"abs degree");
                 solverPtr->backProject2D(detectFrame,predictPtr->predict_xyz,gimbal_ypd);
 
 #if SAVE_TEST_DATA == 1
                 // **** 目标陀螺仪 x y z **** //
-                dataWrite << gimbal_ypd[0] << " " << target_ypd[0] << endl;
+                dataWrite << gimbal_ypd[1] << " " << solverPtr->yaw << endl;
 #endif
             } else if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt > 0 && armorDetectorPtr->lostCnt < 3) {
                 if(armorDetectorPtr->lossCnt == 1)

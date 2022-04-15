@@ -96,7 +96,6 @@
 
 #ifndef SAVE_TEST_DATA
 #define SAVE_TEST_DATA 0
-
 #endif
 
 #ifndef GPUMODE

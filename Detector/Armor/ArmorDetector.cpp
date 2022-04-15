@@ -759,7 +759,7 @@ namespace rm
         pyrDown(warpPerspective_dst,warpPerspective_dst);
         // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
-        imshow("svm",warpPerspective_dst);
+        //imshow("svm",warpPerspective_dst);
 
         svmParamMatrix = warpPerspective_dst.reshape(1, 1);
         svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);

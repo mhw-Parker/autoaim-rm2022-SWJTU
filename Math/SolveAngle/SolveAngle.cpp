@@ -140,7 +140,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode) {
     cv2eigen(tvecs,p_cam_xyz);
 
     //Compensator(p_cam_xyz,v_);
-    camXYZ2YPD(/*tvecs*/); //直接输出目标点 yaw pitch dist
+    camXYZ2YPD(  ); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 
 //    if (fabs(yaw) > 1)
@@ -216,21 +216,20 @@ float SolveAngle::pitchCompensate(Vector3f target_xyz,float v) {
  * @param v 子弹速度
  * @return pitch相对于地面的角度
  */
-float SolveAngle::CalPitch(Vector3f target_xyz, float v) {
+float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) {
     float x = target_xyz[0]/1000, y = target_xyz[1]/1000, z = target_xyz[2]/1000; //转换为m
     float d = sqrt(x*x+z*z);
     float a = 0.25 * g2;
     float b = -(g*y + v*v);
     float c = y*y + d*d;
     float x_2 = (-b-sqrt(b*b-4*a*c)) /2/a;
-    float t;
     t = sqrt(x_2);
     float s_the = (0.5*g*t*t - y) / (v*t);
     float theta = asin(s_the) / degree2rad;
     string str[] = {"x-z","y","t","theta"};
     vector<float> data(4);
     data = {d,y,t,theta};
-    RMTools::showData(data,str,"CalPitch");
+    //RMTools::showData(data,str,"CalPitch");
     if(y<-0.4){
         theta += 6 * -y;
     }

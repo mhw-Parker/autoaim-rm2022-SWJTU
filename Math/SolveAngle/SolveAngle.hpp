@@ -34,7 +34,7 @@ public:
      * @param v 当前弹速
      * */
     void Compensator(Vector3f cam_xyz, float v);
-    float CalPitch(Vector3f target_xyz, float v);
+    float CalPitch(Vector3f target_xyz, float v, float &t);
     float pitchCompensate(Vector3f target_xyz, float v);
 
     /**

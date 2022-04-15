@@ -15,6 +15,7 @@
 #include "utility.hpp"
 #include "Kalman.hpp"
 #include "RMKF.hpp"
+#include "SolveAngle.hpp"
 
 using namespace std;
 using namespace cv;
@@ -26,11 +27,20 @@ public:
     ~Predictor();
 
     void armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v_);
-
-    void InitKfAcceleration(const float dt);
+    void test415(Vector3f target_ypd, float v_, float last_t);
 
     Vector3f kalmanPredict(Vector3f target_xyz, float v_);
-
+    /**
+     * @brief 一般 加速度kalman模型+时间 预测
+     * @param target_xyz
+     * @param v_ 子弹初速度  单位：m/s
+     * @param last_dt 上一次单次处理时延  单位：s
+     * @param pre_t 预测时长  单位：s
+     * */
+    Vector3f CommonPredict(Vector3f target_xyz, float last_dt, float pre_t);
+    /**
+     * @brief 获取陀螺仪下的目标坐标 xyz
+     * */
     Vector3f getGyroXYZ(Vector3f target_ypd);
 
     void Refresh();
@@ -59,6 +69,14 @@ private:
      * @return 预测目标xyz坐标
      */
     Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
+    /**
+     * @brief 初始化转移矩阵
+     * */
+    void InitTransMat(const float dt);
+    /**
+     * @brief 初始化匀加速kalman模型
+     * */
+    void InitKfAcceleration(const float dt);
 
     vector<Vector3f> abs_pyd;
 
@@ -75,8 +93,10 @@ private:
 
     EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);
     bool RMKF_flag = false;
-    float dist = 0; // mm
+    float pre_t = 0.5;
     float delta_t = 0.033; // s
+
+    SolveAngle solveAngle;
 };
 
 //#endif //MASTER_PREDICTOR_H

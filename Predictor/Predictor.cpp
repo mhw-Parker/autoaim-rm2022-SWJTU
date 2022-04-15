@@ -17,7 +17,6 @@ Predictor::~Predictor() = default;
  * */
 void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v_) {
     target_xyz = getGyroXYZ(target_ypd);
-    vector<float> show_data;
 
     predict_xyz = kalmanPredict(target_xyz, v_);
 
@@ -25,6 +24,7 @@ void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v
     predict_ypd = target_ypd + delta_ypd;
 
     // 以下为debug显示数据
+    vector<float> show_data;
     for(int len = 0;len<target_xyz.size();len++)
         show_data.push_back(target_xyz[len]);
     for(int len = 0;len<RMKF.state_post_.rows();len++)
@@ -42,7 +42,6 @@ void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v
 
 /**
  * @brief 获得陀螺仪坐标系下的 x y z
- * @param direct 方向，极坐标正向取向右
  * @param target_ypd 目标的 yaw pitch dist
  * */
 Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
@@ -66,12 +65,14 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
 }
 
 /**
- * @brief kalman
+ * @brief kalman 迭代预测
+ * @param target_xyz 目标的绝对坐标 xyz
+ * @param v_ 裁判系统读取的弹速
  * */
 Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
     float x = target_xyz[0], y = target_xyz[1], z = target_xyz[2];
     float dist = sqrt(x*x + y*y + z*z);
-
+    Vector3f pre_xyz;
     int step = dist / 1000 / v_ / delta_t + 7;
     cout << "step: " << step << endl;
     if (RMKF_flag) {
@@ -88,8 +89,59 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
         RMKF_flag = true;
         InitKfAcceleration(delta_t);
     }
-    predict_xyz = PredictKF(RMKF, step);
+    pre_xyz = PredictKF(RMKF, step);
+    return pre_xyz;
+}
+/**
+ * @brief 一般的 加速度kalman模型+时间 预测
+ * @param target_xyz
+ * @param v_ 子弹初速度
+ * @param last_dt 上一次单次处理时延
+ * @param predict_t 预测时长
+ * */
+Vector3f Predictor::CommonPredict(Vector3f target_xyz, float last_dt, float predict_t) {
+    if(RMKF_flag) {
+        InitTransMat(last_dt);
+        UpdateKF(target_xyz);
+        target_v_xyz << RMKF.state_post_[3],
+                        RMKF.state_post_[4],
+                        RMKF.state_post_[5];
+        target_a_xyz << RMKF.state_post_[6],
+                        RMKF.state_post_[7],
+                        RMKF.state_post_[8];
+    }else {
+        RMKF_flag = true;
+        InitKfAcceleration(delta_t);
+    }
+    predict_xyz = target_xyz + target_v_xyz*predict_t + 0.5*target_a_xyz*predict_t*predict_t;
     return predict_xyz;
+}
+/**
+ * @brief 2022.4.15 testing version
+ * */
+void Predictor::test415(Vector3f target_ypd, float v_, float last_t) {
+    target_xyz = getGyroXYZ(target_ypd);
+    CommonPredict(target_xyz,last_t,pre_t);
+    float fly_t = 0;
+    solveAngle.CalPitch(predict_xyz,v_,fly_t);
+    pre_t = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+    Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+    predict_ypd = target_ypd + delta_ypd;
+    // 以下为debug显示数据
+    vector<float> show_data;
+    for(int len = 0;len<target_xyz.size();len++)
+        show_data.push_back(target_xyz[len]);
+    for(int len = 0;len<RMKF.state_post_.rows();len++)
+        show_data.push_back(RMKF.state_post_[len]);
+//    for(int i=0;i<3;i++)
+//        show_data.push_back(predict_ypd[i]);
+    string str[] = {"m_x","m_y","m_z",
+                    "kf_x","kf_y","kf_z",
+                    "kf_vx","kf_vy","kf_vz",
+                    "kf_ax","kf_ay","kf_az",
+                    /*"pre_yaw","pre_pitch","pre_dist"*/};
+    //RMTools::showData(show_data, str, "data window");
+    //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
 }
 
 /**
@@ -97,18 +149,8 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_) {
  * @param dt 两帧间隔
  */
 void Predictor::InitKfAcceleration(const float dt) {
-    // 1/2 * a * t^2
-    float t0 = 0.5f * dt * dt;
     // 转移矩阵
-    RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
-                        0, 1, 0, 0, dt, 0, 0, t0, 0,
-                        0, 0, 1, 0, 0, dt, 0, 0, t0,
-                        0, 0, 0, 1, 0, 0, dt, 0, 0,
-                        0, 0, 0, 0, 1, 0, 0, dt, 0,
-                        0, 0, 0, 0, 0, 1, 0, 0, dt,
-                        0, 0, 0, 0, 0, 0, 1, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 1, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 1;
+    InitTransMat(dt);
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
@@ -128,6 +170,18 @@ void Predictor::InitKfAcceleration(const float dt) {
                         0,
                         0,
                         0;
+}
+void Predictor::InitTransMat(const float dt) {
+    float t0 = 0.5f * dt * dt;
+    RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
+                        0, 1, 0, 0, dt, 0, 0, t0, 0,
+                        0, 0, 1, 0, 0, dt, 0, 0, t0,
+                        0, 0, 0, 1, 0, 0, dt, 0, 0,
+                        0, 0, 0, 0, 1, 0, 0, dt, 0,
+                        0, 0, 0, 0, 0, 1, 0, 0, dt,
+                        0, 0, 0, 0, 0, 0, 1, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 1, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 1;
 }
 
 /**
@@ -167,8 +221,9 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * */
 void Predictor::Refresh() {
     RMKF_flag = false;
-    abs_pyd.clear();
-    abs_yaw.clear();
+    target_a_xyz << 0, 0, 0;
+    target_v_xyz << 0, 0, 0;
+    pre_t = 0.5;
 }
 
 

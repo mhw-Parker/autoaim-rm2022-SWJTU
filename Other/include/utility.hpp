@@ -218,6 +218,7 @@ namespace RMTools {
             putText(background, to_string(data[i]), Point(150, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
         }
         imshow(win_name,background);
+        waitKey(1);
         return true;
     }
 
@@ -307,7 +308,9 @@ namespace RMTools {
         float theta = z > 0 ? -asin(sin_theta) : CV_PI - asin(sin_theta);
         return {rho, theta};
     }
-
+    /**
+     * @brief 获取
+     * */
     inline Eigen::Vector3f GetDeltaYPD(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
         float lx = last_xyz[0], ly = last_xyz[1], lz = last_xyz[2];
         float ldist = sqrt(lx*lx + ly*ly + lz*lz);
