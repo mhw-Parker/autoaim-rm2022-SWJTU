@@ -90,19 +90,14 @@ namespace rm
         void Detect();
 
         /**
-         * @Brief: detect armor
-         */
-        void Armor();
-
-        /**
-         * @Brief: energy
-         */
-        void Energy();
-
-        /**
-         * @Brief: derivation
+         * @Brief: receive data from lower machine
          */
         void Receive();
+
+        /**
+         * @brief show debug images
+         * */
+        void ShowImage();
 
         bool GrabFlag = true;
 
@@ -110,6 +105,15 @@ namespace rm
         /* Camera */
         Driver *driver;
     private:
+        /**
+         * @Brief: detect armor
+         */
+        void Armor();
+
+        /**
+         * @Brief: detect fan
+         */
+        void Energy();
         /*
         * To prevent camera from dying!
         */
@@ -118,10 +122,9 @@ namespace rm
         static void InitSignals(void);
         //double calFPS(double BeginTime, double freq);
 
-        int direct_y = 1; //不同兵种的 yaw 参考不
-        int direct_p = 1;
 
         double taskTime;
+        double produceTime, detectTime, feedbackTime, receiveTime, showImgTime;
         double freq;
 
         /***/

@@ -36,8 +36,8 @@ void Predictor::armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v
                     "kf_vx","kf_vy","kf_vz",
                     "kf_ax","kf_ay","kf_az",
                     "pre_yaw","pre_pitch","pre_dist"};
-    RMTools::showData(show_data, str, "data window");
-    waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
+    //RMTools::showData(show_data, str, "data window");
+    //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
 }
 
 /**
