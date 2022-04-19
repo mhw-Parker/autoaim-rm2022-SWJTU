@@ -141,7 +141,7 @@ namespace rm
         roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         findState = false;
         detectCnt = 0;
-        lostCnt = 120;
+        lostCnt = 10;
         armorNumber = 0;
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
         lossCnt = 0;
@@ -270,7 +270,6 @@ namespace rm
         {
             detectCnt = 0;
             lostCnt++;
-
             return false;
         }
     }

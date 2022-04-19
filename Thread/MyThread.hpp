@@ -173,12 +173,13 @@ namespace rm
         Mat frame;
         Mat detectFrame;
         Mat energyFrame;
+        Mat show_img;
 
         float yaw_abs;
         float pitch_abs;
         Vector3f target_ypd;
         Vector3f last_xyz; //用于存储丢目标前最后一帧的目标位置
-        float v_bullet = 12.5;
+        float v_bullet = 14;
         RMTools::DisPlayWaveCLASS showWave;
 
         struct ReceiveData receiveData;

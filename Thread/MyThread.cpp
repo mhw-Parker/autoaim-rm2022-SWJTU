@@ -235,85 +235,6 @@ namespace rm
         return true;
     }
 
-    void ImgProdCons::Produce()
-    {
-        do {
-            double st = (double) getTickCount();
-            //Receive();
-            //cout << "read data from elc cost : " << CalWasteTime(taskTime,freq) << endl;
-
-            if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH) {
-                missCount++;
-                //LOGW("FRAME GRAB FAILED!\n");
-                if (missCount > 5) {
-                    driver->StopGrab();
-                    GrabFlag = false;
-                    quitFlag = true;
-                    raise(SIGINT);
-                    break;
-                }
-            }
-            if (carName != VIDEO && saveVideo)
-                videowriter.write(frame);
-            detectFrame = frame.clone();
-            produceTime = CalWasteTime(st,freq);
-            produceMission = true;
-#if SHOWTIME == 1
-            //cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
-#endif
-        }while(!quitFlag);
-    }
-
-    void ImgProdCons::Detect()
-    {
-        do {
-            double st = (double)getTickCount();
-            if (produceMission && !detectMission) {
-                produceMission = false;
-                /** 计算上一次执行耗时 **/
-                if(tmp_t!=0)
-                    last_mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
-                tmp_t = getTickCount();
-                total_time = 0;
-                for(int i = 0; i<whole_time_arr.size()-1; i++){
-                    whole_time_arr[i] = whole_time_arr[i+1];
-                    total_time += whole_time_arr[i];
-                }
-                whole_time_arr.back() = last_mission_time;
-                deltat = (total_time + last_mission_time) / whole_time_arr.size();
-                //cout << "everage time = " << deltat << "ms" << endl;
-                cout << "last t = " << last_mission_time << "ms" <<endl;
-                /** ** **/
-                if (lastControlState == curControlState) {
-                    lastControlState = curControlState;
-                } else {
-                    if (curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
-                        energyPtr->init();
-                    //else
-                    /* 装甲板识别初始化，滤波器初始化啥的 */
-                    if (curControlState == AUTO_SHOOT_STATE)
-                        predictPtr->Refresh();
-                }
-                lastControlState = curControlState; //更新上一次的状态值
-                switch (curControlState) {
-                    case AUTO_SHOOT_STATE:
-                        Armor();
-                        break;
-                    case BIG_ENERGY_STATE:
-                        Energy();
-                        break;
-                    case SMALL_ENERGY_STATE:
-                        Energy();
-                        break;
-                    default:
-                        Armor();
-                }
-                detectMission = true;
-            }
-            detectTime = CalWasteTime(st,freq);
-        }while (!quitFlag);
-    }
-
     void ImgProdCons::Armor()
     {
         switch (curDetectMode)
@@ -358,25 +279,109 @@ namespace rm
 #endif
     }
 
+    /** thread function **/
+    void ImgProdCons::Produce()
+    {
+        do {
+            if(!produceMission) {
+                double st = (double) getTickCount();
+                if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH) {
+                    missCount++;
+                    //LOGW("FRAME GRAB FAILED!\n");
+                    if (missCount > 5) {
+                        driver->StopGrab();
+                        GrabFlag = false;
+                        quitFlag = true;
+                        raise(SIGINT);
+                        break;
+                    }
+                }
+                if (carName != VIDEO && saveVideo)
+                    videowriter.write(frame);
+                produceTime = CalWasteTime(st, freq);
+                produceMission = true;
+#if SHOWTIME == 1
+                cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
+#endif
+            }
+        }while(!quitFlag);
+    }
+
+    void ImgProdCons::Detect()
+    {
+        do {
+            if (!detectMission && produceMission) {
+                double st = (double)getTickCount();
+                detectFrame = frame.clone();
+                produceMission = false;
+                /** 计算上一次执行耗时 **/
+                if (tmp_t!=0)
+                    last_mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
+                tmp_t = getTickCount();
+                total_time = 0;
+                for (int i = 0; i < whole_time_arr.size() - 1; i++) {
+                    whole_time_arr[i] = whole_time_arr[i + 1];
+                    total_time += whole_time_arr[i];
+                }
+                whole_time_arr.back() = last_mission_time;
+                deltat = (total_time + last_mission_time) / whole_time_arr.size();
+                //cout << "everage time = " << deltat << "ms" << endl;
+                cout << "last t = " << last_mission_time << "ms" <<endl;
+                /** ** **/
+                if (lastControlState == curControlState) {
+                    lastControlState = curControlState;
+                } else {
+                    if (curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
+                        energyPtr->init();
+                    //else
+                    /* 装甲板识别初始化，滤波器初始化啥的 */
+                    if (curControlState == AUTO_SHOOT_STATE)
+                        predictPtr->Refresh();
+                }
+                lastControlState = curControlState; //更新上一次的状态值
+                switch (curControlState) {
+                    case AUTO_SHOOT_STATE:
+                        Armor();
+                        break;
+                    case BIG_ENERGY_STATE:
+                        Energy();
+                        break;
+                    case SMALL_ENERGY_STATE:
+                        Energy();
+                        break;
+                    default:
+                        Armor();
+                }
+                detectMission = true;
+                detectTime = CalWasteTime(st,freq);
+            }
+        }while (!quitFlag);
+    }
+
     void ImgProdCons::Feedback() {
         do {
             if (detectMission) {
+                if(showArmorBox || showEnergy){
+                    show_img = detectFrame.clone();
+                }
                 detectMission = false;
                 double st = (double) getTickCount();
+                Vector3f gimbal_ypd;
+                gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
+                receiveMission = false;
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0) {
                         /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                         solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
                                             armorDetectorPtr->targetArmor.armorType);
                         // 云台当前yaw pitch
-                        Vector3f gimbal_ypd;
 
                         if (carName == VIDEO) {
                             // 用于平时的视频测试时
                             gimbal_ypd << 0, 0, solverPtr->dist;
                             target_ypd << gimbal_ypd[0] - solverPtr->yaw,
-                                    gimbal_ypd[1] + solverPtr->pitch,
-                                    solverPtr->dist;
+                                          gimbal_ypd[1] + solverPtr->pitch,
+                                          solverPtr->dist;
                             predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
                             float pp = solverPtr->pitchCompensate(predictPtr->predict_xyz, v_bullet);
                             float temp_t;
@@ -387,11 +392,11 @@ namespace rm
 //                            RMTools::showData(data, str, "pitch");
 
                         }
-                        else if (carName = SENTRY) {
+                        else if (carName == SENTRY) {
                             gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                             target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                                    receiveData.pitchAngle - solverPtr->pitch,
-                                    solverPtr->dist;
+                                          receiveData.pitchAngle - solverPtr->pitch,
+                                          solverPtr->dist;
                             predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
                             yaw_abs = target_ypd[0];
                             pitch_abs = target_ypd[1];
@@ -399,14 +404,11 @@ namespace rm
                         else {
                             gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                             target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                                    receiveData.pitchAngle + solverPtr->pitch,
-                                    solverPtr->dist;
-//                    cout << "solverPtr->yaw: " << solverPtr->yaw << endl;
-//                    cout << "Gimbal yaw: " << gimbal_ypd[0] << endl;
-//                    cout << "Target yaw: " << target_ypd[0] << endl;
+                                          receiveData.pitchAngle + solverPtr->pitch,
+                                          solverPtr->dist;
 
-                            //predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
-                            predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
+                            predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                            //predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
                             yaw_abs = predictPtr->predict_ypd[0];
                             //pitch_abs = 3 + solverPtr->CalPitch(predictPtr->predict_xyz,target_ypd,v_bullet);
                             pitch_abs = predictPtr->predict_ypd[1];
@@ -427,15 +429,14 @@ namespace rm
                                 predictPtr->predict_ypd[0],
                                 predictPtr->predict_ypd[1],
                                 v_bullet};
-                        //RMTools::showData(data,str,"abs degree");
+                        RMTools::showData(data,str,"abs degree");
                         solverPtr->backProject2D(detectFrame, predictPtr->predict_xyz, gimbal_ypd);
 
 #if SAVE_TEST_DATA == 1
                         // **** 目标陀螺仪 x y z **** //
                         dataWrite << gimbal_ypd[1] << " " << solverPtr->yaw << endl;
 #endif
-                    } else if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt > 0 &&
-                               armorDetectorPtr->lostCnt < 3) {
+                    } else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
                         if (armorDetectorPtr->lossCnt == 1)
                             last_xyz = predictPtr->target_xyz;
                         float dt = tt / cnt1 / 1000;
@@ -512,9 +513,12 @@ namespace rm
                 cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << endl;
                 cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
                 if(showArmorBox || showEnergy || showOrigin)
-                    cout << "Show Image Cost : " << CalWasteTime(showImgTime, freq) << " ms" << endl;
+                    cout << "Show Image Cost : " << showImgTime << " ms" << endl;
                 cout << endl;
 #endif
+                if(showArmorBox || showEnergy || showOrigin){
+                    ShowImage();
+                }
             }
         }while (!quitFlag);
     }
@@ -522,94 +526,93 @@ namespace rm
     void ImgProdCons::Receive()
     {
         do{
-            double st = (double) getTickCount();
-            if (serialPtr->ReadData(receiveData)) {
-                curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
-                v_bullet = receiveData.bulletSpeed == 0 ? 14 : receiveData.bulletSpeed;
-            }
-            receiveTime = CalWasteTime(st,freq);
+            if(!produceMission) {
+                double st = (double) getTickCount();
+                if (serialPtr->ReadData(receiveData)) {
+                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                    v_bullet = receiveData.bulletSpeed == 0 ? 14 : receiveData.bulletSpeed;
+                }
+                receiveTime = CalWasteTime(st, freq);
+                receiveMission = true;
 #if SHOWTIME == 1
-            //
+                //
 #endif
-
+            }
         } while (!quitFlag);
     }
 
     void ImgProdCons::ShowImage() {
-        do{
-            double st = (double) getTickCount();
-            Mat show_img = detectFrame.clone();
-            detectMission = false;
-            if (!show_img.empty()) {
-                if (showArmorBox || showEnergy) {
-                    circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
+        double st = (double) getTickCount();
+        if (!show_img.empty()) {
+            //Mat show_img = detectFrame.clone();
+            if (showArmorBox || showEnergy) {
+                circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
 
-                    putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
-                            2,
-                            8, 0);
-                    putText(show_img, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
-                            Scalar(255, 255, 255), 2, 8, 0);
+                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
+                        2,
+                        8, 0);
+                putText(show_img, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
 
-                    putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-                            8,
-                            0);
-                    putText(show_img, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
-                            Scalar(255, 255, 255), 2, 8, 0);
+                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
+                        8,
+                        0);
+                putText(show_img, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
 
-                    putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-                            8,
-                            0);
-                    putText(show_img, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
-                            Scalar(255, 255, 255), 2, 8, 0);
+                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
+                        8,
+                        0);
+                putText(show_img, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
 
-                    putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
-                            Scalar(255, 255, 255),
-                            2, 8, 0);
-                    if (showEnergy && energyPtr->detect_flag) {
-                        circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                        for (int i = 0; i < 4; i++) {
-                            line(show_img, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
-                                 Scalar(255, 255, 255), 2, LINE_8);
-                            line(show_img, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
-                                 Scalar(0, 255, 255), 2, LINE_8);
-                        }
-                        circle(show_img, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
-                        circle(show_img, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                        circle(show_img, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
+                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
+                        Scalar(255, 255, 255),
+                        2, 8, 0);
+                if (showEnergy && energyPtr->detect_flag) {
+                    circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
+                    for (int i = 0; i < 4; i++) {
+                        line(show_img, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
+                             Scalar(255, 255, 255), 2, LINE_8);
+                        line(show_img, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                             Scalar(0, 255, 255), 2, LINE_8);
                     }
-                    if (showArmorBox && armorDetectorPtr->findState) {
-                        circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                        if (!predictPtr->predict_point.empty())
-                            circle(show_img, predictPtr->predict_point.back(), 2, Scalar(100, 240, 15), 3);
-                    }
-                    imshow("Detect Frame", show_img);
-                    waitKey(1);
+                    circle(show_img, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
+                    circle(show_img, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
+                    circle(show_img, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
                 }
-
-                if (showOrigin) {
-                    circle(frame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(255, 255, 255), -1);
-
-                    if (FRAMEHEIGHT > 1000) {
-                        //pyrDown(detectFrame,detectFrame);
-                        //pyrDown(detectFrame,detectFrame);
-                    }
-                    imshow("detect", frame);
-                    waitKey(3);
+                if (showArmorBox && armorDetectorPtr->findState) {
+                    circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
+                    if (!predictPtr->predict_point.empty())
+                        circle(show_img, predictPtr->predict_point.back(), 2, Scalar(100, 240, 15), 3);
                 }
-                /**press key 'space' to pause or continue task**/
-                if (debug) {
-                    if (!pauseFlag && waitKey(30) == 32) { pauseFlag = true; }
+                imshow("Detect Frame", show_img);
+                waitKey(1);
+            }
 
-                    if (pauseFlag) {
-                        while (waitKey() != 32) {}
-                        pauseFlag = false;
-                    }
+            if (showOrigin) {
+                circle(frame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(255, 255, 255), -1);
+
+                if (FRAMEHEIGHT > 1000) {
+                    //pyrDown(detectFrame,detectFrame);
+                    //pyrDown(detectFrame,detectFrame);
                 }
+                imshow("detect", frame);
+                waitKey(3);
+            }
+            /**press key 'space' to pause or continue task**/
+            if (debug) {
+                if (!pauseFlag && waitKey(30) == 32) { pauseFlag = true; }
+
+                if (pauseFlag) {
+                    while (waitKey() != 32) {}
+                    pauseFlag = false;
+                }
+            }
 #if SHOWTIME == 1
 
 #endif
-            }
-            showImgTime = CalWasteTime(st,freq);
-        }while(!quitFlag);
+        }
+        showImgTime = CalWasteTime(st,freq);
     }
 }

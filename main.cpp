@@ -33,13 +33,13 @@ int main(int argc, char** argv)
     std::thread frameThread(&rm::ImgProdCons::Produce, &pro);     //图像采集线程
     std::thread detectThread(&rm::ImgProdCons::Detect, &pro);     //检测线程
     std::thread feedbackThread(&rm::ImgProdCons::Feedback, &pro); //反馈线程
-    std::thread showImgThread(&rm::ImgProdCons::ShowImage,&pro);
+    //std::thread showImgThread(&rm::ImgProdCons::ShowImage,&pro);
 
     receiveThread.join();
     frameThread.join();
     detectThread.join();
     feedbackThread.join();
-    showImgThread.join();
+    //showImgThread.join();
     /**  multi thread  **/
     return 0;
 }

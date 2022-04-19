@@ -116,6 +116,7 @@ Vector3f Predictor::CommonPredict(Vector3f target_xyz, float last_dt, float pred
     predict_xyz = target_xyz + target_v_xyz*predict_t + 0.5*target_a_xyz*predict_t*predict_t;
     return predict_xyz;
 }
+
 /**
  * @brief 2022.4.15 testing version
  * */
@@ -135,12 +136,14 @@ void Predictor::test415(Vector3f target_ypd, float v_, float last_t) {
         show_data.push_back(RMKF.state_post_[len]);
 //    for(int i=0;i<3;i++)
 //        show_data.push_back(predict_ypd[i]);
+    show_data.push_back(pre_t);
     string str[] = {"m_x","m_y","m_z",
                     "kf_x","kf_y","kf_z",
                     "kf_vx","kf_vy","kf_vz",
                     "kf_ax","kf_ay","kf_az",
+                    "pre_t"
                     /*"pre_yaw","pre_pitch","pre_dist"*/};
-    //RMTools::showData(show_data, str, "data window");
+    RMTools::showData(show_data, str, "data window");
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
 }
 

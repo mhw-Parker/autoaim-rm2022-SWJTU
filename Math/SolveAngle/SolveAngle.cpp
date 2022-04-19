@@ -140,7 +140,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode) {
     cv2eigen(tvecs,p_cam_xyz);
 
     //Compensator(p_cam_xyz,v_);
-    camXYZ2YPD(  ); //直接输出目标点 yaw pitch dist
+    camXYZ2YPD(); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 
 //    if (fabs(yaw) > 1)
