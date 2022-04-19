@@ -397,7 +397,8 @@ namespace rm
                             target_ypd << receiveData.yawAngle - solverPtr->yaw,
                                           receiveData.pitchAngle - solverPtr->pitch,
                                           solverPtr->dist;
-                            predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
+                            //predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
+                            predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
                             yaw_abs = target_ypd[0];
                             pitch_abs = target_ypd[1];
                         }
@@ -439,7 +440,7 @@ namespace rm
                     } else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
                         if (armorDetectorPtr->lossCnt == 1)
                             last_xyz = predictPtr->target_xyz;
-                        float dt = tt / cnt1 / 1000;
+                        float dt = last_mission_time / 1000;
                         predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt +
                                                  0.5 * predictPtr->target_a_xyz * dt * dt;
                         Vector3f predict_xyz = predictPtr->kalmanPredict(predictPtr->target_xyz, v_bullet);
