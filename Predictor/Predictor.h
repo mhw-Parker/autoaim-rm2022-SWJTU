@@ -26,21 +26,10 @@ public:
     Predictor();
     ~Predictor();
 
-    void armorPredictor(Vector3f target_ypd, Vector3f gimbal_ypd, float v_);
-    void test415(Vector3f target_ypd, float v_, float last_t);
+    void armorPredictor(const Vector3f& target_ypd, float v_);
 
-    Vector3f kalmanPredict(Vector3f target_xyz, float v_);
-    /**
-     * @brief 一般 加速度kalman模型+时间 预测
-     * @param target_xyz
-     * @param v_ 子弹初速度  单位：m/s
-     * @param last_dt 上一次单次处理时延  单位：s
-     * @param pre_t 预测时长  单位：s
-     * */
-    Vector3f CommonPredict(Vector3f target_xyz, float last_dt, float pre_t);
-    /**
-     * @brief 获取陀螺仪下的目标坐标 xyz
-     * */
+    Vector3f kalmanPredict(Vector3f target_xyz, float v_, float t);
+
     Vector3f getGyroXYZ(Vector3f target_ypd);
 
     void Refresh();
@@ -94,7 +83,7 @@ private:
     EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);
     bool RMKF_flag = false;
     float pre_t = 0.5;
-    float delta_t = 0.033; // s
+    float delta_t = 0.015; // s
 
     SolveAngle solveAngle;
 };

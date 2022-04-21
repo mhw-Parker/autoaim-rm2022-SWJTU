@@ -2,6 +2,7 @@
 // Created by tyy on 2021/9/28.
 //
 #include "MindDriver.h"
+#include "utility.hpp"
 
 bool MindDriver::InitCam()
 {
@@ -46,16 +47,18 @@ bool MindDriver::InitCam()
 bool MindDriver::Grab(Mat& src)
 {
     //CameraGetFrameSpeed(hCamera,&fps);
+    double st = getTickCount();
     if(CameraGetImageBuffer(hCamera,&sFrameInfo,&pbyBuffer,1000) == CAMERA_STATUS_SUCCESS){
 
         CameraImageProcess(hCamera, pbyBuffer, g_pRgbBuffer,&sFrameInfo);
-
-        cv::Mat matImage(
+        //cout << "get camera buffer: " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
+        /// it takes almost 99.7% of the whole produce time !
+        src = cv::Mat (
                 cvSize(sFrameInfo.iWidth,sFrameInfo.iHeight),
                 sFrameInfo.uiMediaType == CAMERA_MEDIA_TYPE_MONO8 ? CV_8UC1 : CV_8UC3,
                 g_pRgbBuffer
         );
-        src = matImage.clone();
+        //cout << "convert to cv mat: " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
         CameraReleaseImageBuffer(hCamera,pbyBuffer);
         return true;
     }else
@@ -69,7 +72,7 @@ bool MindDriver::SetCam()
     CameraReleaseImageBuffer(hCamera,pbyBuffer); //释放缓存
 
     CameraSetAeState(hCamera, false); //设置为手动曝光
-    CameraSetExposureTime(hCamera,10000); //设置曝光时间
+    CameraSetExposureTime(hCamera,8000); //设置曝光时间
 
     //CameraSetAnalogGainX(hCamera,14); //设置增益系数
     /* 让SDK进入工作模式，开始接收来自相机发送的图像

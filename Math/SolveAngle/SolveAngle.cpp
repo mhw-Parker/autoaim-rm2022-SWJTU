@@ -22,8 +22,8 @@ SolveAngle::SolveAngle() {
             cv2eigen(cameraMatrix,cam_mat);
             //
             //静态校正值
-            yaw_static = -0.15;
-            pitch_static = -1.77;
+            //yaw_static = -0.15;
+            //pitch_static = -1.77;
             //枪口坐标系相对位置
             //fit_xyz << 0, 50, 50; //x y z
             break;
@@ -216,7 +216,7 @@ float SolveAngle::pitchCompensate(Vector3f target_xyz,float v) {
  * @param v 子弹速度
  * @return pitch相对于地面的角度
  */
-float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) {
+float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
     float x = target_xyz[0]/1000, y = target_xyz[1]/1000, z = target_xyz[2]/1000; //转换为m
     float d = sqrt(x*x+z*z);
     float a = 0.25 * g2;
@@ -230,7 +230,7 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) {
     vector<float> data(4);
     data = {d,y,t,theta};
     //RMTools::showData(data,str,"CalPitch");
-    if(y<-0.4){
+    if(y < -0.4){
         theta += 6 * -y;
     }
     return theta;

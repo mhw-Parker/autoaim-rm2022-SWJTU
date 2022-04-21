@@ -301,7 +301,7 @@ namespace rm
                 produceTime = CalWasteTime(st, freq);
                 produceMission = true;
 #if SHOWTIME == 1
-                cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
+                //cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
 #endif
             }
         }while(!quitFlag);
@@ -382,7 +382,7 @@ namespace rm
                             target_ypd << gimbal_ypd[0] - solverPtr->yaw,
                                           gimbal_ypd[1] + solverPtr->pitch,
                                           solverPtr->dist;
-                            predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                            predictPtr->armorPredictor(target_ypd, v_bullet);
                             float pp = solverPtr->pitchCompensate(predictPtr->predict_xyz, v_bullet);
                             float temp_t;
                             float cal_pitch = solverPtr->CalPitch(predictPtr->predict_xyz, v_bullet, temp_t);
@@ -397,23 +397,17 @@ namespace rm
                             target_ypd << receiveData.yawAngle - solverPtr->yaw,
                                           receiveData.pitchAngle - solverPtr->pitch,
                                           solverPtr->dist;
-                            //predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
-                            predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
+                            predictPtr->armorPredictor(target_ypd, v_bullet);
                             yaw_abs = target_ypd[0];
                             pitch_abs = target_ypd[1];
-                        }
-                        else {
+                        } else {
                             gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                             target_ypd << receiveData.yawAngle - solverPtr->yaw,
                                           receiveData.pitchAngle + solverPtr->pitch,
                                           solverPtr->dist;
-
-                            predictPtr->armorPredictor(target_ypd, gimbal_ypd, v_bullet);
-                            //predictPtr->test415(target_ypd, v_bullet, last_mission_time / 1000);
+                            predictPtr->armorPredictor(target_ypd, v_bullet);
                             yaw_abs = predictPtr->predict_ypd[0];
-                            //pitch_abs = 3 + solverPtr->CalPitch(predictPtr->predict_xyz,target_ypd,v_bullet);
                             pitch_abs = predictPtr->predict_ypd[1];
-
                         }
                         string str[] = {"re-yaw:",
                                         "re-pitch:",
@@ -443,7 +437,7 @@ namespace rm
                         float dt = last_mission_time / 1000;
                         predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt +
                                                  0.5 * predictPtr->target_a_xyz * dt * dt;
-                        Vector3f predict_xyz = predictPtr->kalmanPredict(predictPtr->target_xyz, v_bullet);
+                        Vector3f predict_xyz = predictPtr->kalmanPredict(predictPtr->target_xyz, v_bullet, dt);
                         Vector3f predict_ypd = target_ypd + GetDeltaYPD(predict_xyz, last_xyz);
                         yaw_abs = predict_ypd[0];
                         pitch_abs = predict_ypd[1];
@@ -531,7 +525,7 @@ namespace rm
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
                     curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
-                    v_bullet = receiveData.bulletSpeed == 0 ? 14 : receiveData.bulletSpeed;
+                    v_bullet = receiveData.bulletSpeed < 10 ? 15 : receiveData.bulletSpeed;
                 }
                 receiveTime = CalWasteTime(st, freq);
                 receiveMission = true;
@@ -570,6 +564,13 @@ namespace rm
                 putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
                         Scalar(255, 255, 255),
                         2, 8, 0);
+
+                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
+                        Scalar(0, 255, 0),
+                        1, 8, 0);
+                putText(show_img, to_string(last_mission_time), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(0, 255, 0), 1, 8, 0);
+
                 if (showEnergy && energyPtr->detect_flag) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
                     for (int i = 0; i < 4; i++) {
