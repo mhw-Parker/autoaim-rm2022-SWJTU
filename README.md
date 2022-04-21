@@ -8,10 +8,10 @@
 |  ----  | ----  |
 | 视觉开发板  | NVIDIA XAVIER NX |
 | 视觉开发板  | NVIDIA JETSON NANO |
-| 视觉开发板  | DJI MANIFOLD 1 |
-| 摄像头  | DAHUA A5121CU210 |
+| 视觉开发板  | Intel NUC i5|
+| 摄像头  | MV-SUA133GC-T |
+| 摄像头  | MV-SUA134GC-T |
 | 摄像头  | INTEL D435 |
-| 摄像头  | KS2A543 |
 | 摄像头  | KS1A522 |
 - 二级文件树列表
 
