@@ -200,8 +200,10 @@ namespace rm
         }
         if(saveVideo){
             path = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(1280, 1024));
+            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
         }
+        if(showEnergy)
+            curControlState = BIG_ENERGY_STATE;
         Mat curImage;
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
         {
@@ -268,7 +270,7 @@ namespace rm
     void ImgProdCons::Energy()
     {
         /* do energy detection */
-        energyPtr->EnergyTask(detectFrame, curControlState, deltat);
+        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time/1000);
 
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
@@ -332,7 +334,7 @@ namespace rm
                     lastControlState = curControlState;
                 } else {
                     if (curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
-                        energyPtr->init();
+                        energyPtr->Refresh();
                     //else
                     /* 装甲板识别初始化，滤波器初始化啥的 */
                     if (curControlState == AUTO_SHOOT_STATE)
@@ -409,22 +411,24 @@ namespace rm
                             yaw_abs = predictPtr->predict_ypd[0];
                             pitch_abs = predictPtr->predict_ypd[1];
                         }
-                        string str[] = {"re-yaw:",
-                                        "re-pitch:",
-                                        "tar-yaw:",
-                                        "tar-pit:",
-                                        "pre-yaw",
-                                        "pre-pit",
-                                        "v bullet:"};
-                        vector<float> data(7);
-                        data = {receiveData.yawAngle,
-                                receiveData.pitchAngle,
-                                target_ypd[0],
-                                target_ypd[1],
-                                predictPtr->predict_ypd[0],
-                                predictPtr->predict_ypd[1],
-                                v_bullet};
-                        RMTools::showData(data,str,"abs degree");
+                        if(showArmorBox){
+                            string str[] = {"re-yaw:",
+                                            "re-pitch:",
+                                            "tar-yaw:",
+                                            "tar-pit:",
+                                            "pre-yaw",
+                                            "pre-pit",
+                                            "v bullet:"};
+                            vector<float> data(7);
+                            data = {receiveData.yawAngle,
+                                    receiveData.pitchAngle,
+                                    target_ypd[0],
+                                    target_ypd[1],
+                                    predictPtr->predict_ypd[0],
+                                    predictPtr->predict_ypd[1],
+                                    v_bullet};
+                            RMTools::showData(data,str,"abs degree");
+                        }
                         solverPtr->backProject2D(detectFrame, predictPtr->predict_xyz, gimbal_ypd);
 
 #if SAVE_TEST_DATA == 1
@@ -443,15 +447,6 @@ namespace rm
                         pitch_abs = predict_ypd[1];
                     }
 
-
-                    /*******************************************************************************************************
-                     * when the armor-detector has not detected target armor successfully, that may be caused by the suddenly
-                     * movement of robots(myself and the opposite target  robot), but the target armor is still in the view
-                     * scoop, we still need to instruct the movement of the holder instead of releasing it to the cruise mode
-                     * ****************************************************************************************************/
-
-
-
                     /** package data and prepare for sending data to lower-machine **/
                     serialPtr->pack(yaw_abs,
                                     pitch_abs,
@@ -468,10 +463,16 @@ namespace rm
                 else {
                     solverPtr->GetPoseV(energyPtr->predict_pts, false);
                     //solverPtr->GetPoseV(energyPtr->pts,false,16);
+                    target_ypd << receiveData.yawAngle - solverPtr->yaw,
+                            receiveData.pitchAngle + solverPtr->pitch,
+                            solverPtr->dist;
+                    Vector3f pre_xyz = predictPtr->getGyroXYZ(target_ypd);
 
                     ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
                     yaw_abs = receiveData.yawAngle - solverPtr->yaw; //绝对yaw角度
                     pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
+                    float t;
+                    pitch_abs = solverPtr->CalPitch(pre_xyz,19,t);
 
                     serialPtr->pack(yaw_abs,
                                     pitch_abs,
@@ -524,7 +525,7 @@ namespace rm
             if(!produceMission) {
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
-                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                    //curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed < 10 ? 15 : receiveData.bulletSpeed;
                 }
                 receiveTime = CalWasteTime(st, freq);

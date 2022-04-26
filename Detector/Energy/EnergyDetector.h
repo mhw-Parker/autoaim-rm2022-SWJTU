@@ -13,6 +13,7 @@
 
 #include "mydefine.h"
 #include "log.h"
+#include "RMKF.hpp"
 
 #include"struct_define.h"
 
@@ -31,18 +32,38 @@ using ceres::Solver;
 #define IMGWIDTH 1024
 #define IMGHEIGHT 820
 #endif
+
 #ifdef MIND
 #define IMGWIDTH 1280
 #define IMGHEIGHT 1024
 #endif
 
+#ifndef INIT
+#define INIT 0
+#endif
+
+#ifndef STANDBY
+#define STANDBY 1
+#endif
+
+#ifndef BEGIN
+#define BEGIN 2
+#endif
+
+#ifndef ESTIMATE
+#define ESTIMATE 3
+#endif
+
+#ifndef DEFAULT_MODE
+#define DEFAULT_MODE 4
+#endif
 
 class EnergyDetector{
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
     void EnergyTask(const Mat &src, int8_t mode, const float deltaT);//接口
-    void init();
+    void Refresh();
     //void getPredictPoint();
     vector<Point2f> pts;
     vector<Point2f> predict_pts;
@@ -55,6 +76,7 @@ public:
     float cur_phi = 0;
     float cur_omega = 0;
     float predict_rad = 0;
+    Mat outline;
 
 private:
     const float R = 168;
@@ -99,11 +121,7 @@ private:
     bool isValidFlowStripFanContour(cv::Mat& src, const vector<cv::Point>& flow_strip_fan_contour) const;//流动条扇叶矩形尺寸要求
 
     static double pointDistance(const cv::Point& point_1, const cv::Point& point_2);//计算两点距离
-    static double magnitude(const cv::Point& p);
-    polarLocal toPolar(Point cart, double time_stamp);
-    Point2f toCartesian(polarLocal pol);
-    Point rotate(cv::Point target_point) const;
-    float calPreAngle(float start_time,float end_time);
+
     //void getPredictPoint(Mat src);
     void getPts(RotatedRect armor);
 
@@ -116,11 +134,8 @@ private:
 /*** *** *** *** *** ***/
 
 /*** new predict ***/
-    float spd_int(float t);
     float spdInt(float t);
-    float spd_phi(float omega, int flag);
     float spdPhi(float omega, int flag);
-    void calOmega(float deltaT);
     float startT = 0;
     vector<float> delta_theta;
     vector<float> angle;
@@ -128,10 +143,7 @@ private:
     vector<float> av_omega;
     vector<float> x_list;
     vector<float> predict_arr;
-    vector<float> filter_omega;
-    float sum_time;
-    float init_time;
-    //float predict_arr[6];
+
     int predict_cnt = 0;
     int angle_length = 4;
     int omega_length = 6;
@@ -149,15 +161,29 @@ private:
     float min_t, max_t;
 /*** *** *** *** *** ***/
 
+    void FilterOmega(const float dt);
+    void InitRotateKalman();
+    void InitRadKalman();
+    void GetPredictPoint();
+    EigenKalmanFilter energy_kf = EigenKalmanFilter(3, 2, 0);
+    EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
+    double freq;
+    float current_theta = 0;
+    float current_omega = 0;
+    float total_theta = 0;
+    vector<float> filter_omega;
+    u_int8_t mode = INIT;
+    int st = 0;
+
     /***/
     bool judgeRotation();
-    void estimateParam(vector<float>omega_, vector<float>t_, int times);
+    void estimateParam(vector<float>omega_, vector<float>t_);
     vector<float> time_series; //记录每次的时间
     vector<float> omega_series; //记录omega的值
     ceres::Problem problem;
     float t_flog;
     int cnt_t = 0, cnt_i = 0;
-    double a_ = 0.780, w_ = 1.884, phi_ = 0; //参数初值
+    double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值
     /***/
 
     std::vector<Blade> target_blades;//可能的目标装甲板

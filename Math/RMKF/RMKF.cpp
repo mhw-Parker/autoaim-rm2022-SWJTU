@@ -50,3 +50,9 @@ MatrixXf EigenKalmanFilter::correct(const VectorXf& measurement) {
     error_post_ = error_pre_ - gain_ * measure_mat_ * error_pre_;
     return state_post_;
 }
+
+void EigenKalmanFilter::Update(VectorXf& measurement){
+    predict();
+    correct(measurement);
+}
+

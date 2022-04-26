@@ -463,8 +463,10 @@ namespace rm
         cv::subtract(channels[2],channels[0],rSubB);
         sub = rSubB - bSubR;
         //imshow ("rSubB - bSubR",sub);
-        //imshow ("r - b",rSubB);
+        //imshow ("r - b",bSubR);
         threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
+        imshow("svm",svmBinaryImage);
+        waitKey(1);
         GaussianBlur(bright,bright,Size(5,5),5);
         threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
         //Mat adaptive;

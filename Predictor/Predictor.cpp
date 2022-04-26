@@ -32,19 +32,22 @@ void Predictor::armorPredictor(const Vector3f& target_ypd, float v_) {
     pre_t = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
 
     // 以下为debug显示数据
-    vector<float> show_data;
-    for(int len = 0;len<target_xyz.size();len++)
-        show_data.push_back(target_xyz[len]);
-    for(int len = 0;len<RMKF.state_post_.rows();len++)
-        show_data.push_back(RMKF.state_post_[len]);
-    for(int i=0;i<3;i++)
-        show_data.push_back(predict_ypd[i]);
-    string str[] = {"m_x","m_y","m_z",
-                    "kf_x","kf_y","kf_z",
-                    "kf_vx","kf_vy","kf_vz",
-                    "kf_ax","kf_ay","kf_az",
-                    "pre_yaw","pre_pitch","pre_dist"};
-    RMTools::showData(show_data, str, "data window");
+
+    if(showArmorBox){
+        vector<float> show_data;
+        for(int len = 0;len<target_xyz.size();len++)
+            show_data.push_back(target_xyz[len]);
+        for(int len = 0;len<RMKF.state_post_.rows();len++)
+            show_data.push_back(RMKF.state_post_[len]);
+        for(int i=0;i<3;i++)
+            show_data.push_back(predict_ypd[i]);
+        string str[] = {"m_x","m_y","m_z",
+                        "kf_x","kf_y","kf_z",
+                        "kf_vx","kf_vy","kf_vz",
+                        "kf_ax","kf_ay","kf_az",
+                        "pre_yaw","pre_pitch","pre_dist"};
+        RMTools::showData(show_data, str, "data window");
+    }
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
 }
 

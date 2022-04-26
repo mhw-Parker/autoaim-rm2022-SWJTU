@@ -230,9 +230,9 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
     vector<float> data(4);
     data = {d,y,t,theta};
     //RMTools::showData(data,str,"CalPitch");
-    if(y < -0.4){
-        theta += 6 * -y;
-    }
+//    if(y < -0.4){
+//        theta += 6 * -y;
+//    }
     return theta;
 }
 
