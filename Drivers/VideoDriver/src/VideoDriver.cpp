@@ -30,7 +30,7 @@ bool VideoDriver::Grab(Mat& src)
     if(src.empty()) printf("grab failed !");
 //    capture.set(CAP_PROP_FRAME_WIDTH, 1024);			//设置相机采样宽度
 //    capture.set(CAP_PROP_FRAME_HEIGHT, 820);		//设置相机采样高度
-    waitKey(3); //加入 delay 模拟相机读图时间
+    waitKey(10); //加入 delay 模拟相机读图时间
     return !src.empty();
 }
 

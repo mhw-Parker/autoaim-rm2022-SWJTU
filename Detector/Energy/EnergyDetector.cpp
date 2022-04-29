@@ -179,7 +179,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
     Mat binary;
     BIG_MODE = mode;
 
-    double st = getTickCount();
+    double mission_start = getTickCount();
     roi = preprocess(img); //预处理
     //cout << "--until preprocess : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
     //binary = preprocess(img);
@@ -188,7 +188,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
     //imshow("roi",roi);
 
     if (detectArmor(roi) && detectFlowStripFan(roi) && getTargetPoint(roi)) {
-        //cout << "--until detect : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
+        //cout << "--until detect : " << RMTools::CalWasteTime(mission_start,getTickFrequency()) << endl;
         getPts(target_armor); //获得的装甲板4点
         detectCircleCenter(roi); //识别旋转圆心
         //calOmega(deltaT); //计算当前的角速度 cur_omega 为当前三阶差分计算的角速度 av_omega.back() 为 4 次角速度平滑均值
@@ -288,7 +288,6 @@ bool EnergyDetector::judgeRotation() {
  * @param times 用于曲线拟合的数据点数量
  * */
 void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_) {
-    vector<float> t_vec;
     for(int i = st; i < omega_.size(); i++){
         ceres::CostFunction* cost_func =
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
@@ -299,7 +298,6 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_) {
 #endif
         //problem.AddResidualBlock(cost_func, NULL, &a_, &phi_ );
         //cout << t_[i]-t_[st] << " " << omega_[i] << endl;
-        t_vec.push_back(t_[i]-t_[st]);
         waveClass.displayWave(omega_[i], -1,"curve fitting");
     }
     Solver::Options options;
@@ -317,17 +315,19 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_) {
 #if SAVE_LOG == 1
     write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
 #endif
+    float sim_omega;
+    for(int i=st;i < omega_.size(); i++){
+        sim_omega = a_*sin(w_*(t_[i]-t_[st])+phi_) + 2.09-a_;
+        waveClass.displayWave(omega_[i],sim_omega,"curve fitting");
+    }
+
     if(a_ < 0.780) a_ = 0.785;
     else if(a_ > 1.045 ) a_ = 1.045;
     if(w_ < 0) w_ = abs(w_);
     if(w_ < 1.884) w_ = 1.884;
     else if(w_ > 2) w_ = 2;
 
-    vector<float> sim_omega;
-    for(int i=st;i < omega_.size(); i++){
-        sim_omega.push_back(a_*sin(w_*(t_[i]-t_[st])+phi_)+2.09-a_);
-        waveClass.displayWave(omega_[i],sim_omega.back(),"curve fitting");
-    }
+
 
     waitKey(0);
 
