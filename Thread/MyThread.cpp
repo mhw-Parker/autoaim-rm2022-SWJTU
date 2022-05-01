@@ -369,18 +369,22 @@ namespace rm
                 detectMission = false;
                 double st = (double) getTickCount();
                 Vector3f gimbal_ypd;
-                gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
+                if(carName == VIDEO)
+                    gimbal_ypd << 10, 20, 0;
+                else
+                    gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                 receiveMission = false;
+
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0) {
                         /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
                         solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
-                                            armorDetectorPtr->targetArmor.armorType);
+                                            armorDetectorPtr->targetArmor.armorType,
+                                            gimbal_ypd);
                         // 云台当前yaw pitch
 
                         if (carName == VIDEO) {
                             // 用于平时的视频测试时
-                            gimbal_ypd << 0, 0, solverPtr->dist;
                             target_ypd << gimbal_ypd[0] - solverPtr->yaw,
                                           gimbal_ypd[1] + solverPtr->pitch,
                                           solverPtr->dist;
@@ -429,7 +433,7 @@ namespace rm
                                     v_bullet};
                             RMTools::showData(data,str,"abs degree");
                         }
-                        solverPtr->backProject2D(detectFrame, predictPtr->predict_xyz, gimbal_ypd);
+                        solverPtr->backProject2D(detectFrame, predictPtr->predict_xyz);
 
 #if SAVE_TEST_DATA == 1
                         // **** 目标陀螺仪 x y z **** //
@@ -461,7 +465,7 @@ namespace rm
 #endif
                 }
                 else {
-                    solverPtr->GetPoseV(energyPtr->predict_pts, false);
+                    solverPtr->GetPoseV(energyPtr->predict_pts, false,gimbal_ypd);
                     //solverPtr->GetPoseV(energyPtr->pts,false,16);
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,
                             receiveData.pitchAngle + solverPtr->pitch,
@@ -469,8 +473,8 @@ namespace rm
                     Vector3f pre_xyz = predictPtr->getGyroXYZ(target_ypd);
 
                     ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
-                    yaw_abs = receiveData.yawAngle - solverPtr->yaw; //绝对yaw角度
-                    pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
+                    yaw_abs = target_ypd[0]; //绝对yaw角度
+                    //pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
                     float t;
                     pitch_abs = solverPtr->CalPitch(pre_xyz,19,t);
 

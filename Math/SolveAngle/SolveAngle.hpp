@@ -26,7 +26,7 @@ public:
      * @param pts 装甲板 4 点坐标
      * @param v_ 弹速
      * */
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode); //Pnp模型
+    void GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vector3f gimbal_ypd); //Pnp模型
 
     /**
      * @brief 弹道补偿函数
@@ -43,7 +43,7 @@ public:
      * @param target_xyz 目标的陀螺仪绝对坐标
      * @param gimbal_ypd 旋转矩阵
      * */
-    void backProject2D(Mat &src, Vector3f target_xyz, Vector3f gimbal_ypd);
+    void backProject2D(Mat &src, Vector3f target_xyz);
 
     float scale = 0.99f;
     float f_ = 1500;
@@ -53,12 +53,19 @@ public:
     float dist{};
     vector<Point2f> rectPoint2D;
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
+    Vector3f world_xyz;
     bool shoot;
 
 private:
     void Generate3DPoints(bool mode);
     void camXYZ2YPD();
     void GunXYZ2YPD(Vector3f cam_xyz);
+
+    Vector3f Cam2World(Vector3f cam_xyz);
+    Vector3f World2Cam(Vector3f world_xyz);
+    Vector3f Cam2Pixel(Vector3f cam_xyz);
+
+    Matrix3f Ry, Rp, cam2world_mat;
 
     float g = 9.8; //
     float g2 = 9.8*9.8;

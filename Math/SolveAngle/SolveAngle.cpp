@@ -119,7 +119,7 @@ void SolveAngle::Generate3DPoints(bool mode) {
  * @param pts 装甲板 4 点坐标
  * @param v_ 弹速
  * */
-void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode) {
+void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vector3f gimbal_ypd) {
     cv::Mat Rvec;
     cv::Mat_<float> Tvec;
     Generate3DPoints(armor_mode);
@@ -136,31 +136,28 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode) {
              tvecs,
              false,
              SOLVEPNP_ITERATIVE);
-
     cv2eigen(tvecs,p_cam_xyz);
-
-    //Compensator(p_cam_xyz,v_);
     camXYZ2YPD(); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 
-//    if (fabs(yaw) > 1)
-//        yaw = yaw + (-0.05626 * yaw + 0.204);
+    float sin_y = sin(gimbal_ypd[0] * degree2rad);
+    float cos_y = cos(gimbal_ypd[0] * degree2rad);
+    float sin_p = sin(gimbal_ypd[1] * degree2rad);
+    float cos_p = cos(gimbal_ypd[1] * degree2rad);
+    Ry <<   cos_y , 0     , -sin_y ,
+            0     , 1     , 0     ,
+            sin_y, 0     , cos_y ;
+    Rp <<   1     , 0     , 0     ,
+            0     , cos_p , -sin_p,
+            0     , sin_p , cos_p ;
+    cam2world_mat = Ry * Rp;
+    world_xyz = Cam2World(p_cam_xyz);
 
-/**********************************************************************************************************************
- *                                            Shoot Logic                                                             *
- *********************************************************************************************************************/
-    averageX = 0;
-    averageY = 0;
-
-    for(auto &p:pts)
-    {
-        averageX += 1.0/4*p.x;
-        averageY += 1.0/4*p.y;
-    }
-
-    shootPriority += SHOOTFORMULA(averageX,averageY);
-    shootPriority = (shootPriority<0)?(0):((shootPriority > 1000)?(1000):(shootPriority));
-    shoot = (shootPriority > 0);
+    string str[] = {"x","y","z"};
+    vector<float> xyz;
+    for(int i=0; i<3; i++)
+        xyz.push_back(world_xyz[i]);
+    RMTools::showData(xyz,str,"xyz");
 
     rectPoint2D.clear();
     targetPoints3D.clear();
@@ -238,44 +235,32 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
 
 /**
  * @brief 将预测点反投影到图像上
- * @param src 预测点的（ yaw, pitch, dist ）坐标
+ * @param src 图片
  * @param target_xyz 目标的陀螺仪绝对坐标
  * @param gimbal_ypd 旋转矩阵
  * */
-void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz, Vector3f gimbal_ypd) {
+void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz) {
     Vector3f temp_xyz, cam_xyz, pix_uv1;
-    Vector3f rotate_ypd;
-    rotate_ypd << gimbal_ypd[0],
-            gimbal_ypd[1],
-            gimbal_ypd[2];
 
-    //cout << rotate_ypd << endl;
-    //cout << target_xyz << endl;
-    //cout << gim_d_ypd << endl;
-    Matrix3f vec_degree2rad;
-    vec_degree2rad << degree2rad, 0, 0,
-            0, degree2rad, 0,
-            0,     0,      1;
-    rotate_ypd = vec_degree2rad * rotate_ypd;
-
-    float sin_y = sin(rotate_ypd[0]);
-    float cos_y = cos(rotate_ypd[0]);
-    float sin_p = sin(rotate_ypd[1]);
-    float cos_p = cos(rotate_ypd[1]);
-
-    Matrix3f Ry, Rp;
-    Ry <<   cos_y , 0     , sin_y ,
-            0     , 1     , 0     ,
-            -sin_y, 0     , cos_y ;
-
-    Rp <<   1     , 0     , 0     ,
-            0     , cos_p , -sin_p,
-            0     , sin_p , cos_p ;
-
-    cam_xyz = Ry * Rp * target_xyz;
-    pix_uv1 = cam_mat * cam_xyz / cam_xyz[2];
+    cam_xyz = World2Cam(target_xyz);
+    pix_uv1 = Cam2Pixel(cam_xyz);
     //cout << "--- target location :" << endl << target_xyz << endl;
     //cout << "--- camera location :" << endl << cam_xyz << endl;
     //cout << "--- pixel location : " << endl << pix_uv1 << endl;
-    circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 2, Scalar(100, 240, 15), 3);
+    circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 5, Scalar(100, 240, 15), 3);
+}
+Vector3f SolveAngle::Cam2World(Vector3f cam_xyz) {
+    Vector3f world_xyz;
+    world_xyz = cam2world_mat * cam_xyz;
+    return world_xyz;
+}
+Vector3f SolveAngle::World2Cam(Vector3f world_xyz) {
+    Vector3f cam_xyz;
+    cam_xyz = cam2world_mat.inverse() * world_xyz;
+    return cam_xyz;
+}
+Vector3f SolveAngle::Cam2Pixel(Vector3f cam_xyz) {
+    Vector3f pix_uv1;
+    pix_uv1 = cam_mat/cam_xyz[2] * cam_xyz;
+    return pix_uv1;
 }

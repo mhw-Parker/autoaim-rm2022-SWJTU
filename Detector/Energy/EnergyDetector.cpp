@@ -29,7 +29,7 @@ using namespace std;
  * @return null
  * @remark Energy类构造函数，初始化有关参数
  */
-EnergyDetector::EnergyDetector() : waveClass(3.5,600,1000){
+EnergyDetector::EnergyDetector() : waveClass(3,600,1000){
     initEnergy();
     initEnergyPartParam();//对能量机关参数进行初始化
     freq = getTickFrequency();
@@ -279,6 +279,11 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_) {
 #if SAVE_LOG == 1
     write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
 #endif
+    /**  定参数  **/
+    a_ = 0.8655;
+    w_ = 1.9204;
+    /**  定参数  **/
+
     float sim_omega;
     for(int i=st;i < omega_.size(); i++){
         sim_omega = a_ * sin(w_*(t_[i]-t_[st])+phi_) + 2.09-a_;
@@ -734,7 +739,7 @@ void EnergyDetector::getPredictPointBig() {
     rad_kf.Update(rad_vec);
     predict_rad = rad_kf.state_post_[0];
     if(showEnergy){
-        waveClass.displayWave(0,filter_omega.back(),"filter omega");
+        //waveClass.displayWave(0,filter_omega.back(),"filter omega");
     }
 
     predict_point = calPredict(target_point,circle_center_point,predict_rad); //逆时针为负的预测弧度，顺时针为正的预测弧度
@@ -746,11 +751,16 @@ void EnergyDetector::getPredictPointBig() {
  * @brief 计算当前差角及角速度
  * */
 void EnergyDetector::FilterOmega(const float dt) {
-    if(ctrl_mode != INIT) //确认启动大幅预测
-        time_series.push_back(RMTools::CalWasteTime(startT,freq)/1000); //记录下当前的时间戳
+    //确认启动大幅预测
+    time_series.push_back(RMTools::CalWasteTime(startT,freq)/1000); //记录下当前的时间戳
     energy_kf.trans_mat_ << 1, dt,0.5*dt*dt,
-                            0, 1, dt,
-                            0, 0, 1;
+            0, 1, dt,
+            0, 0, 1;
+    energy_kf.control_mat_ << 1.0/6 * dt*dt*dt,
+            0.5 * dt*dt,
+            dt;
+    MatrixXf u_k(1,1);
+    u_k << -a_ * w_*w_ * sin(w_*time_series.back() + phi_);
     rad_kf.trans_mat_ = energy_kf.trans_mat_;
     Point2f p = target_point - circle_center_point; //圆心指向目标的向量
     current_theta = atan2(p.y,p.x);     //当前角度 弧度制
@@ -770,18 +780,20 @@ void EnergyDetector::FilterOmega(const float dt) {
         if(d_theta < -6)
             d_theta += 2*CV_PI;
 
-        float omega_ = d_theta / dt;
+        float omega_ = d_theta / (time_series.back()-time_series[time_series.size()-2]);
         omega.push_back(omega_);
         total_theta += d_theta; //累积角度
         VectorXf measure_vec(2,1);
         measure_vec << total_theta,
-                            omega_;
-        energy_kf.Update(measure_vec);
+                omega_;
+
+        energy_kf.predict(u_k);
+        energy_kf.correct(measure_vec);
 
         filter_omega.push_back(energy_rotation_direction*energy_kf.state_post_[1]);
         //cout << total_theta << endl << energy_kf.state_post_ << endl;
         //waveClass.displayWave(d_theta,0,"delta_theta");
-        //waveClass.displayWave(total_theta, energy_kf.state_post_[0], "theta");
+        waveClass.displayWave(energy_kf.state_post_[1], omega_, "theta");
         //waveClass.displayWave(0,energy_kf.state_post_[1],"filter omega");
     }
 }

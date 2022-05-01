@@ -120,8 +120,6 @@ namespace rm
         static bool quitFlag;
         static void SignalHandler(int);
         static void InitSignals(void);
-        //double calFPS(double BeginTime, double freq);
-
 
         double taskTime;
         double produceTime, detectTime, feedbackTime, receiveTime, showImgTime;
@@ -186,7 +184,7 @@ namespace rm
         int armorType;
 
         int missCount;
-
+        int direction_flag = 1;
     };
 
 }

@@ -150,7 +150,7 @@ private:
     void initRotateKalman();
     void initRadKalman();
     void getPredictPointBig();
-    EigenKalmanFilter energy_kf = EigenKalmanFilter(3, 2, 0);
+    EigenKalmanFilter energy_kf = EigenKalmanFilter(3, 2, 1);
     EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
     double freq;
     float current_theta = 0;
@@ -161,14 +161,12 @@ private:
     int st = 0; //estimate init flag
 
 private:
-    /***/
     bool judgeRotation();
     void estimateParam(vector<float>omega_, vector<float>t_);
     vector<float> time_series; //记录每次的时间
     ceres::Problem problem;
     int counter = 0; //拟合数据计数器
     double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值
-    /***/
 
     Blade target_blade;//目标扇叶
     cv::RotatedRect target_armor;//目标装甲板
