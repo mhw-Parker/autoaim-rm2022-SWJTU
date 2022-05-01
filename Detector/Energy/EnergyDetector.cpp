@@ -221,24 +221,25 @@ bool EnergyDetector::judgeRotation() {
     switch (ctrl_mode) {
         case INIT:
             startT = getTickCount();
-            if(clockwise_rotation_init_cnt++ > 12){
+            if(clockwise_rotation_init_cnt++ > 20){
                 clockwise_rotation_init_cnt = 0;
                 for(auto &i : filter_omega){
                     if(i>0) clockwise_rotation_init_cnt++;
                 }
-                energy_rotation_direction = clockwise_rotation_init_cnt>6 ? 1 : -1;
+                energy_rotation_direction = clockwise_rotation_init_cnt>10 ? 1 : -1;
+                energy_rotation_direction = 1;
                 ctrl_mode = STANDBY;
             }
             return false;
         case STANDBY :
-            if(fabs(filter_omega.back())>2.13){
+            if(fabs(filter_omega.back())>2.09){
                 st = filter_omega.size() - 1;
                 phi_ = CV_PI / 2;
                 ctrl_mode = BEGIN;
             }
             return false;
         case BEGIN:
-            if(counter++ > 400)
+            if(counter++ > 300)
                 ctrl_mode = ESTIMATE;
             return false;
         case ESTIMATE:
@@ -280,8 +281,8 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_) {
     write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
 #endif
     /**  定参数  **/
-    a_ = 0.8655;
-    w_ = 1.9204;
+//    a_ = 0.8655;
+//    w_ = 1.9204;
     /**  定参数  **/
 
     float sim_omega;

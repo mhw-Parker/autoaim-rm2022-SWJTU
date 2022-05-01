@@ -446,9 +446,9 @@ namespace rm
                     yaw_abs = target_ypd[0]; //绝对yaw角度
                     //pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
                     float t;
-                    pitch_abs = solverPtr->CalPitch(pre_xyz,19,t);
+                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-3.5,t);
 
-                    serialPtr->pack(yaw_abs,
+                    serialPtr->pack(yaw_abs-1,
                                     pitch_abs,
                                     solverPtr->dist,
                                     solverPtr->shoot,
