@@ -184,6 +184,7 @@ namespace rm
 #ifdef MIND
                 driver = &mindCapture;
 #endif
+                direction_flag = -1;
 #ifdef DAHUA
                 driver = &dahuaCapture;
 #endif
@@ -382,46 +383,16 @@ namespace rm
                                             armorDetectorPtr->targetArmor.armorType,
                                             gimbal_ypd);
                         // 云台当前yaw pitch
+                        target_ypd << gimbal_ypd[0] - solverPtr->yaw,
+                                gimbal_ypd[1] + direction_flag * solverPtr->pitch,
+                                solverPtr->dist;
+                        predictPtr->armorPredictor(target_ypd, v_bullet);
+                        yaw_abs = target_ypd[0];
+                        pitch_abs = target_ypd[1];
 
-                        if (carName == VIDEO) {
-                            // 用于平时的视频测试时
-                            target_ypd << gimbal_ypd[0] - solverPtr->yaw,
-                                          gimbal_ypd[1] + solverPtr->pitch,
-                                          solverPtr->dist;
-                            predictPtr->armorPredictor(target_ypd, v_bullet);
-                            float pp = solverPtr->pitchCompensate(predictPtr->predict_xyz, v_bullet);
-                            float temp_t;
-                            float cal_pitch = solverPtr->CalPitch(predictPtr->predict_xyz, v_bullet, temp_t);
-//                            string str[] = {"old", "new"};
-//                            vector<float> data(2);
-//                            data = {solverPtr->pitch + pp, cal_pitch};
-//                            RMTools::showData(data, str, "pitch");
-
-                        }
-                        else if (carName == SENTRY) {
-                            gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
-                            target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                                          receiveData.pitchAngle - solverPtr->pitch,
-                                          solverPtr->dist;
-                            predictPtr->armorPredictor(target_ypd, v_bullet);
-                            yaw_abs = target_ypd[0];
-                            pitch_abs = target_ypd[1];
-                        } else {
-                            gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
-                            target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                                          receiveData.pitchAngle + solverPtr->pitch,
-                                          solverPtr->dist;
-                            predictPtr->armorPredictor(target_ypd, v_bullet);
-                            yaw_abs = predictPtr->predict_ypd[0];
-                            pitch_abs = predictPtr->predict_ypd[1];
-                        }
                         if(showArmorBox){
-                            string str[] = {"re-yaw:",
-                                            "re-pitch:",
-                                            "tar-yaw:",
-                                            "tar-pit:",
-                                            "pre-yaw",
-                                            "pre-pit",
+                            string str[] = {"re-yaw:","re-pitch:","tar-yaw:",
+                                            "tar-pit:","pre-yaw","pre-pit",
                                             "v bullet:"};
                             vector<float> data(7);
                             data = {receiveData.yawAngle,
@@ -466,7 +437,6 @@ namespace rm
                 }
                 else {
                     solverPtr->GetPoseV(energyPtr->predict_pts, false,gimbal_ypd);
-                    //solverPtr->GetPoseV(energyPtr->pts,false,16);
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,
                             receiveData.pitchAngle + solverPtr->pitch,
                             solverPtr->dist;

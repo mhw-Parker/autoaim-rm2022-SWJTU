@@ -142,8 +142,14 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vec
 
     float sin_y = sin(gimbal_ypd[0] * degree2rad);
     float cos_y = cos(gimbal_ypd[0] * degree2rad);
-    float sin_p = sin(gimbal_ypd[1] * degree2rad);
-    float cos_p = cos(gimbal_ypd[1] * degree2rad);
+    float sin_p, cos_p;
+    if(carName == SENTRY){
+        sin_p = sin(-gimbal_ypd[1] * degree2rad);
+        cos_p = cos(-gimbal_ypd[1] * degree2rad);
+    } else {
+        sin_p = sin(gimbal_ypd[1] * degree2rad);
+        cos_p = cos(gimbal_ypd[1] * degree2rad);
+    }
     Ry <<   cos_y , 0     , -sin_y ,
             0     , 1     , 0     ,
             sin_y, 0     , cos_y ;
@@ -153,11 +159,11 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vec
     cam2world_mat = Ry * Rp;
     world_xyz = Cam2World(p_cam_xyz);
 
-    string str[] = {"x","y","z"};
-    vector<float> xyz;
-    for(int i=0; i<3; i++)
-        xyz.push_back(world_xyz[i]);
-    RMTools::showData(xyz,str,"xyz");
+//    string str[] = {"x","y","z"};
+//    vector<float> xyz;
+//    for(int i=0; i<3; i++)
+//        xyz.push_back(world_xyz[i]);
+//    RMTools::showData(xyz,str,"xyz");
 
     rectPoint2D.clear();
     targetPoints3D.clear();
