@@ -185,6 +185,7 @@ namespace rm
 
         int missCount;
         int direction_flag = 1;
+        float fly_t = 0.3;
     };
 
 }

@@ -50,11 +50,11 @@ EnergyDetector::~EnergyDetector() = default;
  * @remark 初始化成员变量
  */
 void EnergyDetector::initEnergy() {
-
     predict_rad = 0;//预测提前角
     predict_point = Point(0, 0);//预测打击点初始化
     pts.resize(4);
     predict_pts.resize(4);
+    //startT = getTickCount();
 }
 
 /**
@@ -149,32 +149,35 @@ void EnergyDetector::clearAll() {
  * @brief EnergyDetector::EnergyTask
  * @param src 摄像头读入的图片
  * @param mode 大小幅模式选择
- * @param deltaT 目前用的三阶差分求 omega 所以 deltaT 为三帧平均时间
+ * @param dt 两帧时间差  单位：s
+ * @param fly_t 子弹计算飞行时间  单位：s
  * @remark 能量机关任务执行接口
  */
-void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT) {
+void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float dt, const float fly_t) {
     clearAll();
     Mat img = src.clone();
     Mat binary;
 
-    //double mission_start = getTickCount();
-    roi = preprocess(img); //预处理
+    double mission_start = getTickCount();
+    //roi = preprocess(img); //预处理
     //cout << "--until preprocess : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
-    //binary = preprocess(img);
+    binary = preprocess(img);
     //roi = binary;
     //findROI(binary,roi); //设定roi
     //imshow("roi",roi);
 
-    if (detectArmor(roi) && detectFlowStripFan(roi) && getTargetPoint(roi)) {
-        //cout << "--until detect : " << RMTools::CalWasteTime(mission_start,getTickFrequency()) << endl;
+    if (detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)) {
         getPts(target_armor); //获得的装甲板4点
-        getCircleCenter(roi); //识别旋转圆心
-        FilterOmega(deltaT);
-        if(judgeRotation()) {
-            if (mode == SMALL_ENERGY_STATE) getPredictPointSmall();
+        getCircleCenter(binary); //识别旋转圆心
+        //cout << "--until detect : " << RMTools::CalWasteTime(mission_start,getTickFrequency()) << endl;
+        FilterOmega(dt);
+        //cout << "--until cal omega : " << RMTools::CalWasteTime(mission_start,getTickFrequency()) << endl;
+        if(judgeRotation(mode)) {
+            if (mode == SMALL_ENERGY_STATE)
+                getPredictPointSmall();
             else if (mode == BIG_ENERGY_STATE) {
                 //getPredictPoint();
-                getPredictPointBig();
+                getPredictPointBig(fly_t);
                 //waveClass.displayWave(av_omega.back(), predict_rad,"energy rad");
             }
         }else {
@@ -182,6 +185,8 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
         }
         //waveClass.displayWave(omega.back(), av_omega.back());
         detect_flag = true;
+        if(ctrl_mode != DEFAULT_MODE)
+            detect_flag = false;
         misscount = 0;
     }else{
         misscount++;
@@ -193,8 +198,9 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
     if(showEnergy){
         //imshow("binary", roi);
         //circle(outline, Point(IMGWIDTH/2, IMGHEIGHT/2), 2, Scalar(255, 255, 255), 3); //画出图像中心
-        imshow("outline", outline);
+        //imshow("outline", outline);
         //waitKey(1);
+        waveClass.displayWave(energy_kf.state_post_[1], current_omega, "theta");
     }
 }
 /**
@@ -202,44 +208,48 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float deltaT)
  * */
 void EnergyDetector::Refresh() {
     clearAll(); //清除容器
-    counter = 0;
+    //counter = 0;
     ctrl_mode = INIT;
+    //startT = getTickCount();
 
-    angle.clear();
+    angle.clear();       //clear angle vector
     omega.clear();
-    time_series.clear();
+    filter_omega.clear();//clear filter_omega
+    time_series.clear(); //clear time series
     delta_theta.clear();
-
 }
 
 /**
  * @brief 初始化判断大幅旋转旋方向，迭代计算大幅速度正弦变化函数参数 a w phi
- * @param src 摄像头读入图像
- * @param startT 任务起始时间
+ * @param mode 打幅状态
  * */
-bool EnergyDetector::judgeRotation() {
+bool EnergyDetector::judgeRotation(int8_t mode) {
     switch (ctrl_mode) {
         case INIT:
-            startT = getTickCount();
-            if(clockwise_rotation_init_cnt++ > 20){
+            if(filter_omega.size() > 12){
                 clockwise_rotation_init_cnt = 0;
                 for(auto &i : filter_omega){
                     if(i>0) clockwise_rotation_init_cnt++;
                 }
-                energy_rotation_direction = clockwise_rotation_init_cnt>10 ? 1 : -1;
-                energy_rotation_direction = 1;
-                ctrl_mode = STANDBY;
+                energy_rotation_direction = clockwise_rotation_init_cnt>6 ? 1 : -1;
+                clockwise_rotation_init_cnt = 0;
+                //startT = getTickCount(); //重新初始化起始时间
+                total_t = 0;
+                if(mode == BIG_ENERGY_STATE)
+                    ctrl_mode = STANDBY;
+                else
+                    ctrl_mode = DEFAULT_MODE;
             }
             return false;
         case STANDBY :
-            if(fabs(filter_omega.back())>2.09){
+            if(fabs(filter_omega.back())>2.05){
                 st = filter_omega.size() - 1;
                 phi_ = CV_PI / 2;
                 ctrl_mode = BEGIN;
             }
             return false;
         case BEGIN:
-            if(counter++ > 300)
+            if(time_series.back() - time_series[st] > 3)
                 ctrl_mode = ESTIMATE;
             return false;
         case ESTIMATE:
@@ -296,8 +306,7 @@ void EnergyDetector::estimateParam(vector<float> omega_, vector<float> t_) {
     if(w_ < 0) w_ = abs(w_);
     if(w_ < 1.884) w_ = 1.884;
     else if(w_ > 2) w_ = 2;
-
-    waitKey(0);
+    //waitKey(0);
 }
 /**
  * @brief EnergyDetector::preprocess
@@ -374,7 +383,27 @@ void EnergyDetector::roiPoint2src() {
         predict_pts[i] += roi_sp;
     }
 }
+bool EnergyDetector::DetectAll(Mat &src) {
+    Mat dilate_mat = src.clone();
+    vector<vector<Point> > all_contours;
+    vector<vector<Point> > external_contours;
+    findContours(dilate_mat,all_contours,RETR_LIST,CHAIN_APPROX_NONE);
+    findContours(dilate_mat,external_contours,RETR_EXTERNAL,CHAIN_APPROX_NONE);
 
+    std::vector<vector<Point> > armor_contours;
+    for (auto &i : external_contours)//去除外轮廓
+    {
+        auto external_size = i.size();
+        for (auto &j : all_contours) {
+            auto all_size = j.size();
+            if (external_size == all_size) {
+                swap(j, armor_contours[armor_contours.size() - 1]);
+                armor_contours.pop_back();//清除掉流动条
+                break;
+            }
+        }
+    }
+}
 /**
  * @brief EnergyDetector::detectArmor
  * @param Mat& src
@@ -408,7 +437,6 @@ bool EnergyDetector::detectArmor(Mat &src) {
             }
         }
     }
-
     for (auto &armor_contour : armor_contours) {
         if (!isValidArmorContour(armor_contour)) {
             continue;
@@ -654,7 +682,6 @@ Point2f EnergyDetector::calR3P() {
             (B.y+C.y)/2 + 1/k_bc * (B.x+C.x)/2;
     MatrixXf result(2,1);
     result = mat_right.inverse() * mat_left;
-    cout << result << endl;
     circle(outline,Point2f (result(1,0),result(0,0)),3,Scalar(200,200,50),2);
     return Point2f (result(1,0),result(0,0));
 }
@@ -693,7 +720,7 @@ void EnergyDetector::getPredictPointSmall() {
     LOGM("Theta: %.3f", theta);
     LOGM("Delta_t: %.3lf", delta_t);
     LOGM("Omega: %.3lf", omega);
-    predict_rad = -1.4 * 0.3;
+    predict_rad = -energy_rotation_direction * 1.4 * 0.3;
     predict_point = calPredict(target_point,circle_center_point,predict_rad);
     getPredictRect(predict_rad,predict_pts);
     circle(outline, predict_point, 4, Scalar(0, 0, 255), -1);
@@ -704,8 +731,9 @@ void EnergyDetector::getPredictPointSmall() {
 
 /**
  * @brief 大能量机关运动预测
+ * @param fly_t 计算飞行时间  单位：s
  * */
-void EnergyDetector::getPredictPointBig() {
+void EnergyDetector::getPredictPointBig(const float fly_t) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
     vector<float> cut_time_series(time_series.end()-6,time_series.end());
     Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //对上面数据用最小二乘
@@ -734,14 +762,11 @@ void EnergyDetector::getPredictPointBig() {
     double t = cur_phi / w_;
 
     //predict_rad = spd_int(t + 0.5) - spd_int(t);
-    predict_rad = energy_rotation_direction * (spdInt(t + 0.5) - spdInt(t));
+    predict_rad = energy_rotation_direction * (spdInt(t + fly_t) - spdInt(t));
     VectorXf rad_vec(1,1);
     rad_vec << predict_rad;
     rad_kf.Update(rad_vec);
     predict_rad = rad_kf.state_post_[0];
-    if(showEnergy){
-        //waveClass.displayWave(0,filter_omega.back(),"filter omega");
-    }
 
     predict_point = calPredict(target_point,circle_center_point,predict_rad); //逆时针为负的预测弧度，顺时针为正的预测弧度
     circle(outline,predict_point,2,Scalar(0,0,255),3);
@@ -753,49 +778,45 @@ void EnergyDetector::getPredictPointBig() {
  * */
 void EnergyDetector::FilterOmega(const float dt) {
     //确认启动大幅预测
-    time_series.push_back(RMTools::CalWasteTime(startT,freq)/1000); //记录下当前的时间戳
+    total_t += dt;
+    time_series.push_back(total_t); //记录下当前的时间戳
     energy_kf.trans_mat_ << 1, dt,0.5*dt*dt,
-            0, 1, dt,
-            0, 0, 1;
+                            0, 1, dt,
+                            0, 0, 1;
     energy_kf.control_mat_ << 1.0/6 * dt*dt*dt,
-            0.5 * dt*dt,
-            dt;
+                              0.5 * dt*dt,
+                              dt;
     MatrixXf u_k(1,1);
     u_k << -a_ * w_*w_ * sin(w_*time_series.back() + phi_);
     rad_kf.trans_mat_ = energy_kf.trans_mat_;
     Point2f p = target_point - circle_center_point; //圆心指向目标的向量
     current_theta = atan2(p.y,p.x);     //当前角度 弧度制
     angle.push_back(current_theta);
-    if(angle.size() <= 2) {
-        if(angle.size() == 2) {
-            current_omega = (angle.back() - angle[angle.size()-2]) / dt;
+    if(angle.size() <= 4) {
+        if(angle.size() == 4) {
+            current_omega = calOmega(angle,time_series,3);
             initRotateKalman();
             initRadKalman();
             total_theta = current_theta;
         }
     } else {
-        float d_theta = current_theta - angle[angle.size()-2];
+        float d_theta = current_theta - angle[angle.size()-4];
 
         if(d_theta > 6)
             d_theta -= 2*CV_PI;
         if(d_theta < -6)
             d_theta += 2*CV_PI;
-
-        float omega_ = d_theta / (time_series.back()-time_series[time_series.size()-2]);
-        omega.push_back(omega_);
+//        current_omega = d_theta / (time_series.back()-time_series[time_series.size()-4]);
+        current_omega = calOmega(angle,time_series,3);
+        omega.push_back(current_omega);
         total_theta += d_theta; //累积角度
         VectorXf measure_vec(2,1);
         measure_vec << total_theta,
-                omega_;
+                current_omega;
 
         energy_kf.predict(u_k);
         energy_kf.correct(measure_vec);
-
         filter_omega.push_back(energy_rotation_direction*energy_kf.state_post_[1]);
-        //cout << total_theta << endl << energy_kf.state_post_ << endl;
-        //waveClass.displayWave(d_theta,0,"delta_theta");
-        waveClass.displayWave(energy_kf.state_post_[1], omega_, "theta");
-        //waveClass.displayWave(0,energy_kf.state_post_[1],"filter omega");
     }
 }
 
@@ -1017,4 +1038,14 @@ bool EnergyDetector::isValidCenterRContour(const vector<cv::Point> &center_R_con
         return false;
     }
     return true;
+}
+float EnergyDetector::calOmega(vector<float> &angle_vec, vector<float> &time_vec, int step) {
+    int step_ = step + 1;
+    float d_theta = angle_vec.back() - angle_vec[angle_vec.size()-step_];
+    float dt = time_vec.back() - time_vec[time_vec.size()-step_];
+    if(d_theta > 6)
+        d_theta -= 2*CV_PI;
+    if(d_theta < -6)
+        d_theta += 2*CV_PI;
+    return d_theta / dt;
 }

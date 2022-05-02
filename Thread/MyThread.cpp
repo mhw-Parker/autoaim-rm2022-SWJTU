@@ -271,7 +271,7 @@ namespace rm
     void ImgProdCons::Energy()
     {
         /* do energy detection */
-        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time/1000);
+        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time/1000, 0.2+fly_t);
 
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
@@ -347,8 +347,6 @@ namespace rm
                         Armor();
                         break;
                     case BIG_ENERGY_STATE:
-                        Energy();
-                        break;
                     case SMALL_ENERGY_STATE:
                         Energy();
                         break;
@@ -445,9 +443,9 @@ namespace rm
                     ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
                     yaw_abs = target_ypd[0]; //绝对yaw角度
                     //pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
-                    float t;
-                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-3.5,t);
-
+                    v_bullet = v_bullet > 18 ? v_bullet : 18.1;
+                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-3.5,fly_t);
+                    cout << "--fly t : " << fly_t << endl;
                     serialPtr->pack(yaw_abs-1,
                                     pitch_abs,
                                     solverPtr->dist,
@@ -499,7 +497,7 @@ namespace rm
             if(!produceMission) {
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
-                    //curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed < 10 ? 15 : receiveData.bulletSpeed;
                 }
                 receiveTime = CalWasteTime(st, freq);

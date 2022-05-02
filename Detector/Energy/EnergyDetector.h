@@ -62,7 +62,7 @@ class EnergyDetector{
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyTask(const Mat &src, int8_t mode, const float deltaT);//接口
+    void EnergyTask(const Mat &src, int8_t mode, const float dt, const float fly_t);//接口
     void Refresh();
     //void getPredictPoint();
     vector<Point2f> pts;
@@ -94,6 +94,8 @@ private:
     Mat preprocess(Mat& src);
 
 private:
+    bool DetectAll(Mat &src);
+
     bool detectArmor(Mat &src);
     bool detectFlowStripFan(Mat &src);
     bool getTargetPoint(Mat &src);
@@ -136,7 +138,6 @@ private:
     vector<float> omega;
 
     int predict_cnt = 0;
-
     int flag = 0;
     int last_flag = 0;
     void getPredictPointSmall();
@@ -149,7 +150,7 @@ private:
     void FilterOmega(const float dt);
     void initRotateKalman();
     void initRadKalman();
-    void getPredictPointBig();
+    void getPredictPointBig(const float fly_t);
     EigenKalmanFilter energy_kf = EigenKalmanFilter(3, 2, 1);
     EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
     double freq;
@@ -161,8 +162,9 @@ private:
     int st = 0; //estimate init flag
 
 private:
-    bool judgeRotation();
+    bool judgeRotation(int8_t mode);
     void estimateParam(vector<float>omega_, vector<float>t_);
+    float total_t = 0;
     vector<float> time_series; //记录每次的时间
     ceres::Problem problem;
     int counter = 0; //拟合数据计数器
@@ -178,8 +180,8 @@ private:
     //预测提前角
     int64 last_frame_time;
     int64 frame_time;
-
-
+private:
+    float calOmega(vector<float> &omega_vec, vector<float> &time_vec, int step);
 };
 
 #endif //ENERGY_H
