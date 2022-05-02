@@ -271,7 +271,7 @@ namespace rm
     void ImgProdCons::Energy()
     {
         /* do energy detection */
-        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time/1000, 0.2+fly_t);
+        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time/1000, 0.15+fly_t);
 
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
