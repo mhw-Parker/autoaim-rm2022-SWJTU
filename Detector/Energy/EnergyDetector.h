@@ -140,7 +140,7 @@ private:
     int predict_cnt = 0;
     int flag = 0;
     int last_flag = 0;
-    void getPredictPointSmall();
+    void getPredictPointSmall(const float fly_t);
     void getPredictPoint();
     void getPredictRect(float theta, vector<Point2f> pts);
     RMTools::DisPlayWaveCLASS waveClass;

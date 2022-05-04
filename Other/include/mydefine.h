@@ -116,6 +116,10 @@
 #define OUTPUT_PATH  "../Output/"
 #endif
 
+#ifndef SAVE_SVM_PIC
+#define SAVE_SVM_PIC "../Output/SVM/"
+#endif
+
 extern bool showArmorBox;
 extern bool showOrigin;
 extern bool showLamps;
@@ -123,6 +127,7 @@ extern bool showBinaryImg;
 extern bool showEnergy;
 extern bool blueTarget;
 extern bool saveVideo;
+extern bool saveSVM;
 extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;

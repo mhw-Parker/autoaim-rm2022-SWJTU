@@ -8,6 +8,9 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "MyThread.hpp"
 
 using namespace std;
@@ -144,6 +147,7 @@ namespace rm
             missCount(0),
             showWave(100,300,500)
     {
+
 //#if SAVE_LOG == 1
 //        logWrite<<"Find    "<<"TARGET X    "<<"TARGET Y    "<<"TARGET HEIGHT    "<<"TARGET WIDTH    "<<"YAW    "<<"PITCH    "\
 //    <<"SHOOT    "<<endl;
@@ -154,7 +158,6 @@ namespace rm
     {
         /*initialize signal*/
         InitSignals();
-        freq = getTickFrequency();
         whole_time_arr.resize(3);
         /*initialize camera*/
 #if SAVE_TEST_DATA == 1
@@ -200,14 +203,20 @@ namespace rm
                 break;
         }
         if(saveVideo){
-            path = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
+            videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
+            videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
+        }
+        if(saveSVM){
+            SVMPath = string(SAVE_SVM_PIC) + now_time;
+            int creat = mkdir(SVMPath.c_str(),00007);
         }
         if(showEnergy)
             curControlState = BIG_ENERGY_STATE;
         Mat curImage;
-        if((driver->InitCam() && driver->SetCam() && driver->StartGrab()))
-        {
+        if((driver->InitCam() && driver->SetCam() && driver->StartGrab())){
+            freq = getTickFrequency();
+            startT = getTickCount();
+            time_stamp.assign(6000,0);
             /// log
         }
         else
@@ -245,6 +254,10 @@ namespace rm
             case MODEL_MODE:
             {
                 if (armorDetectorPtr->ModelDetectTask(detectFrame)){
+                    if(saveSVM){
+                        string save_svm_path = (SVMPath + to_string(pic_num++)).append("png");
+                        imwrite(save_svm_path,armorDetectorPtr->warpPerspective_dst);
+                    }
                     curDetectMode = TRADITION_MODE;
                 }
                 else{
@@ -255,6 +268,10 @@ namespace rm
             case TRADITION_MODE:
             {
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)){
+                    if(saveSVM){
+                        SVMPath = (string(SAVE_SVM_PIC) + to_string(pic_num++)).append(".png");
+                        imwrite(SVMPath,armorDetectorPtr->warpPerspective_dst);
+                    }
                     curDetectMode = TRADITION_MODE;
                 }
                 else{
@@ -271,8 +288,7 @@ namespace rm
     void ImgProdCons::Energy()
     {
         /* do energy detection */
-        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time/1000, 0.15+fly_t);
-
+        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time, 0.15+fly_t);
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
         dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
@@ -298,6 +314,8 @@ namespace rm
                         raise(SIGINT);
                         break;
                     }
+                } else {
+                    time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
                 }
                 if (carName != VIDEO && saveVideo)
                     videowriter.write(frame);
@@ -315,21 +333,12 @@ namespace rm
         do {
             if (!detectMission && produceMission) {
                 double st = (double)getTickCount();
+                last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000];
+                last_cnt = cnt;
                 detectFrame = frame.clone();
                 produceMission = false;
                 /** 计算上一次执行耗时 **/
-                if (tmp_t!=0)
-                    last_mission_time = CalWasteTime(tmp_t,freq); //记录上一次任务运行的时间
-                tmp_t = getTickCount();
-                total_time = 0;
-                for (int i = 0; i < whole_time_arr.size() - 1; i++) {
-                    whole_time_arr[i] = whole_time_arr[i + 1];
-                    total_time += whole_time_arr[i];
-                }
-                whole_time_arr.back() = last_mission_time;
-                deltat = (total_time + last_mission_time) / whole_time_arr.size();
-                //cout << "everage time = " << deltat << "ms" << endl;
-                cout << "last t = " << last_mission_time << "ms" <<endl;
+                cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
                 /** ** **/
                 if (lastControlState == curControlState) {
                     lastControlState = curControlState;
@@ -411,7 +420,7 @@ namespace rm
                     } else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
                         if (armorDetectorPtr->lossCnt == 1)
                             last_xyz = predictPtr->target_xyz;
-                        float dt = last_mission_time / 1000;
+                        float dt = last_mission_time;
                         predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt +
                                                  0.5 * predictPtr->target_a_xyz * dt * dt;
                         Vector3f predict_xyz = predictPtr->kalmanPredict(predictPtr->target_xyz, v_bullet, dt);
@@ -444,10 +453,10 @@ namespace rm
                     yaw_abs = target_ypd[0]; //绝对yaw角度
                     //pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
                     v_bullet = v_bullet > 18 ? v_bullet : 18.1;
-                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-3.5,fly_t);
+                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-4,fly_t);
                     cout << "--fly t : " << fly_t << endl;
                     serialPtr->pack(yaw_abs-1,
-                                    pitch_abs,
+                                    1+pitch_abs,
                                     solverPtr->dist,
                                     solverPtr->shoot,
                                     energyPtr->detect_flag,
@@ -541,7 +550,7 @@ namespace rm
                 putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
                         Scalar(0, 255, 0),
                         1, 8, 0);
-                putText(show_img, to_string(last_mission_time), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
                         Scalar(0, 255, 0), 1, 8, 0);
 
                 if (showEnergy && energyPtr->detect_flag) {

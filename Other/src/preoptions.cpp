@@ -46,6 +46,12 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                 LOGM("Enable save video");
             }
     }},
+    {"-saveSVM", {
+                      "save SVM picture", []() {
+                saveSVM = true;
+                LOGM("Enable save SVM");
+            }
+              }},
     {"-debug", {
                       "debug mode", []() {
                 debug = true;

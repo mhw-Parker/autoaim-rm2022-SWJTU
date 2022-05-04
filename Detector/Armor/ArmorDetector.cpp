@@ -331,7 +331,8 @@ namespace rm
 
                 /*the difference ratio of the two lights' height 灯条长度 */
                 contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) / max(lights[i].rect.size.height, lights[j].rect.size.height);
-                if(contourLen1 > param.maxLengthError)continue;
+                if(contourLen1 > param.maxLengthError)
+                    continue;
 
                 /*the difference ratio of the two lights' width 灯条宽度比 */
                 contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) / max(lights[i].rect.size.width, lights[j].rect.size.width);
@@ -344,20 +345,24 @@ namespace rm
 
                 /*the ratio of the width and the height, must larger than 1 */
                 ratio = nL / nW;
-                if(ratio > param.maxRatio || ratio < param.minRatio)continue;
+                if(ratio > param.maxRatio || ratio < param.minRatio)
+                    continue;
 
                 /*anyway, the difference of the lights' angle is tiny,so anyone of them can be the angle of the armor*/
                 nAngle = fabs((lights[i].lightAngle + lights[j].lightAngle)/2);
-                if(nAngle > param.maxArmorAngle)continue;
+                if(nAngle > param.maxArmorAngle)
+                    continue;
 
                 /*the deviation angle of two lamps*/
                 deviationAngle = fabs(atan((lights[i].rect.center.y - lights[j].rect.center.y)
                                            / (lights[i].rect.center.x - lights[j].rect.center.x))) * 180 / CV_PI;
-                if(deviationAngle > param.maxDeviationAngle)continue;
+                if(deviationAngle > param.maxDeviationAngle)
+                    continue;
 
                 /*the difference of the y coordinate of the two center points*/
                 yDiff = abs(lights[i].rect.center.y - lights[j].rect.center.y) / nW;
-                if(yDiff > param.maxYDiff)continue;
+                if(yDiff > param.maxYDiff)
+                    continue;
 
                 /*difference of average brightness*/
                 dAvgB = abs(lights[i].avgRSubBVal - lights[j].avgRSubBVal);
@@ -405,6 +410,10 @@ namespace rm
 
                 armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
                 cout << "SVM model detect : " << armorNumber << endl;
+                if(showArmorBox){
+                    putText(img,"id:",Point(roiRect.x, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+                    putText(img, to_string(armorNumber),Point(roiRect.x+35, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+                }
 
                 if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
                 {
@@ -465,7 +474,6 @@ namespace rm
         //imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",bSubR);
         threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
-        imshow("svm",svmBinaryImage);
         waitKey(1);
         GaussianBlur(bright,bright,Size(5,5),5);
         threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
@@ -760,7 +768,7 @@ namespace rm
         pyrDown(warpPerspective_dst,warpPerspective_dst);
         // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
-        //imshow("svm",warpPerspective_dst);
+        imshow("svm",warpPerspective_dst);
 
         svmParamMatrix = warpPerspective_dst.reshape(1, 1);
         svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);

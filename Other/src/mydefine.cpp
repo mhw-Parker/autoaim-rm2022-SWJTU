@@ -11,6 +11,7 @@ bool showEnergy = false;
 bool showBinaryImg = false;
 bool blueTarget = false;
 bool saveVideo = false;
+bool saveSVM = false;
 bool debug = false;
 
 int FRAMEWIDTH;

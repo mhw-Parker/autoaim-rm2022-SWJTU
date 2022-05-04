@@ -47,11 +47,11 @@ namespace rm
     {
         float maxArmorAngle = 45;
         float maxAngleError = 6;
-        float maxLengthError = 0.50;
+        float maxLengthError = 0.5;
         float maxDeviationAngle = 45;
         float maxYDiff = 2;
         float maxRatio = 3;
-        float minRatio = 1;
+        float minRatio = 0.8;
 
         float minLightArea = 10;
         float maxLightArea = 8000;
@@ -281,10 +281,12 @@ namespace rm
         Size svmArmorSize;
         Mat svmBinaryImage;
         Mat svmParamMatrix;		//preRecoginze matrix for svm 载入到SVM中识别的矩阵
-        Mat warpPerspective_dst;//warpPerspective dstImage   透射变换生成的目标图
         Mat warpPerspective_mat; //warpPerspective transform matrix 透射变换的变换矩阵
         Point2f srcPoints[4];   //warpPerspective srcPoints		透射变换的原图上的目标点 tl->tr->br->bl  左上 右上 右下 左下
         Point2f dstPoints[4];	//warpPerspective dstPoints     透射变换的目标图中的点   tl->tr->br->bl  左上 右上 右下 左下
+    public:
+        Mat warpPerspective_dst;//warpPerspective dstImage   透射变换生成的目标图
+
 
         //deep learning
     private:

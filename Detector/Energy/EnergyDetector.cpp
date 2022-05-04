@@ -174,7 +174,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float dt, con
         //cout << "--until cal omega : " << RMTools::CalWasteTime(mission_start,getTickFrequency()) << endl;
         if(judgeRotation(mode)) {
             if (mode == SMALL_ENERGY_STATE)
-                getPredictPointSmall();
+                getPredictPointSmall(fly_t-0.15);
             else if (mode == BIG_ENERGY_STATE) {
                 //getPredictPoint();
                 getPredictPointBig(fly_t);
@@ -200,7 +200,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float dt, con
         //circle(outline, Point(IMGWIDTH/2, IMGHEIGHT/2), 2, Scalar(255, 255, 255), 3); //画出图像中心
         //imshow("outline", outline);
         //waitKey(1);
-        waveClass.displayWave(energy_kf.state_post_[1], current_omega, "theta");
+        waveClass.displayWave(energy_kf.state_post_[1], energy_rotation_direction, "theta");
     }
 }
 /**
@@ -209,6 +209,7 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float dt, con
 void EnergyDetector::Refresh() {
     clearAll(); //清除容器
     //counter = 0;
+    energy_rotation_direction = 1;
     ctrl_mode = INIT;
     //startT = getTickCount();
 
@@ -226,12 +227,12 @@ void EnergyDetector::Refresh() {
 bool EnergyDetector::judgeRotation(int8_t mode) {
     switch (ctrl_mode) {
         case INIT:
-            if(filter_omega.size() > 12){
+            if(filter_omega.size() > 16){
                 clockwise_rotation_init_cnt = 0;
                 for(auto &i : filter_omega){
                     if(i>0) clockwise_rotation_init_cnt++;
                 }
-                energy_rotation_direction = clockwise_rotation_init_cnt>6 ? 1 : -1;
+                energy_rotation_direction = clockwise_rotation_init_cnt>8 ? 1 : -1;
                 clockwise_rotation_init_cnt = 0;
                 //startT = getTickCount(); //重新初始化起始时间
                 total_t = 0;
@@ -709,20 +710,20 @@ Point2f EnergyDetector::calPredict(Point2f p, Point2f center, float theta) const
  * @brief 通过相邻帧的圆心指向目标的向量叉乘来达到既能判断方向，又可以通过叉乘求角度相邻帧转过的角度（因为已知R在图像中为168）
  * @remark 给出预测射击点位置predict_point
  */
-void EnergyDetector::getPredictPointSmall() {
-    cv::Point3i last_target_vector = Point3i(last_target_point - last_circle_center_point);
-    cv::Point3i target_vector = Point3i(target_point - circle_center_point);
-    cv::Point3i last_cross_cur = last_target_vector.cross(target_vector);
-    double theta = asin(last_cross_cur.z / pow(R, 2));
-    double delta_t = (frame_time - last_frame_time) / getTickFrequency();
-    double omega = theta / delta_t;
-    LOGM("----------------------");
-    LOGM("Theta: %.3f", theta);
-    LOGM("Delta_t: %.3lf", delta_t);
-    LOGM("Omega: %.3lf", omega);
-    predict_rad = -energy_rotation_direction * 1.4 * 0.3;
+void EnergyDetector::getPredictPointSmall(const float fly_t) {
+//    cv::Point3i last_target_vector = Point3i(last_target_point - last_circle_center_point);
+//    cv::Point3i target_vector = Point3i(target_point - circle_center_point);
+//    cv::Point3i last_cross_cur = last_target_vector.cross(target_vector);
+//    double theta = asin(last_cross_cur.z / pow(R, 2));
+//    double delta_t = (frame_time - last_frame_time) / getTickFrequency();
+//    double omega = theta / delta_t;
+//    LOGM("----------------------");
+//    LOGM("Theta: %.3f", theta);
+//    LOGM("Delta_t: %.3lf", delta_t);
+//    LOGM("Omega: %.3lf", omega);
+    predict_rad = energy_rotation_direction * 1.4 * fly_t;
     predict_point = calPredict(target_point,circle_center_point,predict_rad);
-    getPredictRect(predict_rad,predict_pts);
+    getPredictRect(predict_rad,pts);
     circle(outline, predict_point, 4, Scalar(0, 0, 255), -1);
     updateLastValues();
 }

@@ -135,7 +135,9 @@ namespace rm
         /***/
 
         /**/
-        string path;
+        string videoPath;
+        string SVMPath;
+        int pic_num = 0;
         VideoWriter videowriter;
         /**/
         int cnt1 = 0;
@@ -186,6 +188,15 @@ namespace rm
         int missCount;
         int direction_flag = 1;
         float fly_t = 0.3;
+    private:
+        double startT;
+        vector<float> time_stamp;
+        long int cnt = 0, last_cnt = 0;
+        struct timeStampMat{
+            Mat frame;
+            float stamp;
+        }timeStampMat;
+        struct timeStampMat time_stamp_mat;
     };
 
 }
