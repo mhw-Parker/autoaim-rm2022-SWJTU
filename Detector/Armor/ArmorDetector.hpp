@@ -180,23 +180,21 @@ namespace rm
         void MaxMatch(vector<Lamp> &lights);
 
         vector<Lamp> LightDetection(Mat& img);
-        vector<Lamp> LampDetection(Mat& img);
 
         void LoadSvmModel(const char *model_path, const Size& armorImgSize = Size(40, 40));
 
         void SetSVMRectPoints(Point2f& lt, Point2f& rt, Point2f& lb, Point2f& rb);
         void SetSVMRectPoints(Point2f&& lt, Rect& rectArea);
 
-
         int GetArmorNumber();
+
+        int getArmorNumber(Armor &armor);
 
         /**tool functions**/
 
         Rect GetArmorRect() const;
 
         bool IsSmall() const;
-
-        void JudgeSize();
 
         static void saveMatchParam(FILE* fileP,int selectedIndex1,int selectedIndex2);
 

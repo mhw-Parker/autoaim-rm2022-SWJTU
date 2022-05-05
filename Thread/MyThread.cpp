@@ -206,10 +206,12 @@ namespace rm
             videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
             videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
         }
-        if(saveSVM){
-            SVMPath = string(SAVE_SVM_PIC) + now_time;
-            int creat = mkdir(SVMPath.c_str(),00007);
-        }
+//        if(saveSVM){
+//            SVMPath = string(SAVE_SVM_PIC) + now_time;
+//            int creatFolder = mkdir(SVMPath.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+//            if(!creatFolder)
+//                perror("Unable to create a new folder under the /Output/SVM");
+//        }
         if(showEnergy)
             curControlState = BIG_ENERGY_STATE;
         Mat curImage;
@@ -255,8 +257,10 @@ namespace rm
             {
                 if (armorDetectorPtr->ModelDetectTask(detectFrame)){
                     if(saveSVM){
-                        string save_svm_path = (SVMPath + to_string(pic_num++)).append("png");
-                        imwrite(save_svm_path,armorDetectorPtr->warpPerspective_dst);
+                        if(waitKey(30) == 32){
+                            string save_svm_path = (SVMPath + to_string(pic_num++)).append("png");
+                            imwrite(save_svm_path,armorDetectorPtr->warpPerspective_dst);
+                        }
                     }
                     curDetectMode = TRADITION_MODE;
                 }
@@ -269,8 +273,13 @@ namespace rm
             {
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)){
                     if(saveSVM){
-                        SVMPath = (string(SAVE_SVM_PIC) + to_string(pic_num++)).append(".png");
-                        imwrite(SVMPath,armorDetectorPtr->warpPerspective_dst);
+                        if(waitKey(30) == 32){
+                            if(!armorDetectorPtr->armorNumber)
+                                SVMPath = (string(SAVE_SVM_PIC) + "/"+ to_string(armorDetectorPtr->armorNumber)+"/"+to_string(pic_num++)).append(".png");
+                            else
+                                SVMPath = (string(SAVE_SVM_PIC) + "/none/"+to_string(pic_num++)).append(".png");
+                            imwrite(SVMPath,armorDetectorPtr->warpPerspective_dst);
+                        }
                     }
                     curDetectMode = TRADITION_MODE;
                 }
@@ -333,8 +342,8 @@ namespace rm
         do {
             if (!detectMission && produceMission) {
                 double st = (double)getTickCount();
-                last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000];
-                last_cnt = cnt;
+                last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //用当次时间序列值 - 上次时间序列值
+                last_cnt = cnt; //更新当次时间序列序号
                 detectFrame = frame.clone();
                 produceMission = false;
                 /** 计算上一次执行耗时 **/
