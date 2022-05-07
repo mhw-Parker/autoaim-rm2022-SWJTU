@@ -408,9 +408,10 @@ namespace rm
 
                 SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]); //设置用于svm识别的4点区域
 
-                //armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
-                armorNumber = getArmorNumber(targetArmor);
+                armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
+                //armorNumber = getArmorNumber(targetArmor);
                 cout << "SVM model detect : " << armorNumber << endl;
+
                 if(showArmorBox){
                     putText(img,"id:",Point(roiRect.x, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
                     putText(img, to_string(armorNumber),Point(roiRect.x+35, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);

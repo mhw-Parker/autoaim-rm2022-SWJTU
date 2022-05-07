@@ -206,12 +206,6 @@ namespace rm
             videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
             videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
         }
-//        if(saveSVM){
-//            SVMPath = string(SAVE_SVM_PIC) + now_time;
-//            int creatFolder = mkdir(SVMPath.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-//            if(!creatFolder)
-//                perror("Unable to create a new folder under the /Output/SVM");
-//        }
         if(showEnergy)
             curControlState = BIG_ENERGY_STATE;
         Mat curImage;
@@ -249,42 +243,43 @@ namespace rm
         return true;
     }
 
-    void ImgProdCons::Armor()
-    {
-        switch (curDetectMode)
-        {
-            case MODEL_MODE:
-            {
-                if (armorDetectorPtr->ModelDetectTask(detectFrame)){
-                    if(saveSVM){
-                        if(waitKey(30) == 32){
+    void ImgProdCons::Armor() {
+        switch (curDetectMode) {
+            case MODEL_MODE: {
+                if (armorDetectorPtr->ModelDetectTask(detectFrame)) {
+                    if (saveSVM) {
+                        if (waitKey(30) == 32) {
                             string save_svm_path = (SVMPath + to_string(pic_num++)).append("png");
-                            imwrite(save_svm_path,armorDetectorPtr->warpPerspective_dst);
+                            imwrite(save_svm_path, armorDetectorPtr->warpPerspective_dst);
                         }
                     }
                     curDetectMode = TRADITION_MODE;
-                }
-                else{
+                } else {
                     curDetectMode = MODEL_MODE;
                 }
                 break;
             }
-            case TRADITION_MODE:
-            {
-                if (armorDetectorPtr->ArmorDetectTask(detectFrame)){
-                    if(saveSVM){
-                        if(waitKey(30) == 32){
-                            if(!armorDetectorPtr->armorNumber)
-                                SVMPath = (string(SAVE_SVM_PIC) + "/"+ to_string(armorDetectorPtr->armorNumber)+"/"+to_string(pic_num++)).append(".png");
-                            else
-                                SVMPath = (string(SAVE_SVM_PIC) + "/none/"+to_string(pic_num++)).append(".png");
-                            imwrite(SVMPath,armorDetectorPtr->warpPerspective_dst);
+            case TRADITION_MODE: {
+                if (armorDetectorPtr->ArmorDetectTask(detectFrame)) {
+                    if (saveSVM) {
+                        cout << "armor number:" << armorDetectorPtr->armorNumber << '\n';
+                        SVMPath = (string(SAVE_SVM_PIC) + to_string(armorDetectorPtr->armorNumber) + "/" +
+                                   to_string(pic_num)).append(".png");
+                        cout << SVMPath << endl;
+                        if (waitKey(30) == 32) {
+                            if (armorDetectorPtr->armorNumber) {
+                                SVMPath = (string(SAVE_SVM_PIC) + to_string(armorDetectorPtr->armorNumber) + "/" +
+                                           to_string(pic_num)).append(".png");
+                            } else {
+                                SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(pic_num)).append(".png");
+                            }
+                            imwrite(SVMPath, armorDetectorPtr->warpPerspective_dst);
+                            pic_num++;
                         }
                     }
                     curDetectMode = TRADITION_MODE;
-                }
-                else{
-                    if(++armorDetectorPtr->lossCnt >= 2) {
+                } else {
+                    if (++armorDetectorPtr->lossCnt >= 2) {
                         //curDetectMode = MODEL_MODE;
                     }
                 }
