@@ -134,10 +134,11 @@ namespace rm
         float deltat;
         /***/
 
-        /**/
+        /* 保存图像相关 */
         string videoPath;
         string SVMPath;
-        int pic_num = 0;
+        int svm_img_num = 8;
+        int save_img_cnt = 0;
         VideoWriter videowriter;
         /**/
         int cnt1 = 0;

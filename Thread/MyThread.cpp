@@ -247,12 +247,6 @@ namespace rm
         switch (curDetectMode) {
             case MODEL_MODE: {
                 if (armorDetectorPtr->ModelDetectTask(detectFrame)) {
-                    if (saveSVM) {
-                        if (waitKey(30) == 32) {
-                            string save_svm_path = (SVMPath + to_string(pic_num++)).append("png");
-                            imwrite(save_svm_path, armorDetectorPtr->warpPerspective_dst);
-                        }
-                    }
                     curDetectMode = TRADITION_MODE;
                 } else {
                     curDetectMode = MODEL_MODE;
@@ -262,19 +256,17 @@ namespace rm
             case TRADITION_MODE: {
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)) {
                     if (saveSVM) {
-                        cout << "armor number:" << armorDetectorPtr->armorNumber << '\n';
-                        SVMPath = (string(SAVE_SVM_PIC) + to_string(armorDetectorPtr->armorNumber) + "/" +
-                                   to_string(pic_num)).append(".png");
-                        cout << SVMPath << endl;
-                        if (waitKey(30) == 32) {
+                        save_img_cnt++;
+                        if (save_img_cnt == 400) {
+                            save_img_cnt = 0;
                             if (armorDetectorPtr->armorNumber) {
-                                SVMPath = (string(SAVE_SVM_PIC) + to_string(armorDetectorPtr->armorNumber) + "/" +
-                                           to_string(pic_num)).append(".png");
+                                SVMPath = (string(SAVE_SVM_PIC) + to_string(3) + "/" +
+                                           to_string(svm_img_num)).append(".png");
                             } else {
-                                SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(pic_num)).append(".png");
+                                SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(svm_img_num)).append(".png");
                             }
                             imwrite(SVMPath, armorDetectorPtr->warpPerspective_dst);
-                            pic_num++;
+                            svm_img_num++;
                         }
                     }
                     curDetectMode = TRADITION_MODE;

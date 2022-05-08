@@ -275,7 +275,7 @@ namespace rm
 
         /*armor number recogniztion*/
     private:
-        Ptr<SVM>svm;  //svm model svm模型
+        Ptr<SVM> svm;  //svm model svm模型
         Size svmArmorSize;
         Mat svmBinaryImage;
         Mat svmParamMatrix;		//preRecoginze matrix for svm 载入到SVM中识别的矩阵
