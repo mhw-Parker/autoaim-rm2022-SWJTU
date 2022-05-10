@@ -78,8 +78,8 @@
     <cols>3</cols>
     <dt>d</dt>
     <data>
-      1567.7 0 644
-      0 1568.1 510
+      1567.4 0 645.5262
+      0 1568.1 554.8260
       0 0 1
     </data>
   </Intrinsic_Matrix_MIND133GC-0>
@@ -87,7 +87,7 @@
     <rows>4</rows>
     <cols>1</cols>
     <dt>d</dt>
-    <data>-0.08513044486934102 0.215 0 0
+    <data>-0.0853 0.2234 0 0
     </data>
   </Distortion_Coefficients5_MIND133GC-0>
 

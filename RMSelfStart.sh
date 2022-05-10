@@ -18,12 +18,12 @@
 
 sec=1
 cnt=0
-PROC_NAME= "run -sentry" #进程名字，取决于你自己make后的名称，也可以在终端输入top来查找
+PROC_NAME= "run -sentry -blue" #进程名字，取决于你自己make后的名称，也可以在终端输入top来查找
 Thread=`ps -ef | grep "$PROC_NAME"` #判断用到，具体用法自行百度
-cd /home/leonxu/文档/master/build/ #进入文件里面
+cd /home/sentry/Robomaster/Debug/HeliosCV-2022-SWJTU/cmake-build-debug #进入文件里面
 make clean && make -j        #清除并重新make一下，防止文件损坏（-j提高效率）
 echo "24796" | sudo -S sudo chmod +777 /dev/ttyUSB0 #用自动输入密码并开启ttyusb权限
-echo "24796" | sudo ./run -sentry -red #运行
+echo "24796" | sudo ./run -sentry -blue #运行
 
 while [ 1 ] #循环，记得大括号里面的1两边都要空格
 do
@@ -38,7 +38,7 @@ else  #进程被杀害
 	echo "24796" | sudo -S sudo chmod +777 /dev/ttyUSB0 #12345678是我minipc上的密码
 	echo "24796" | sudo -S sudo chmod +777 /dev/ttyUSB1
 	cd /home/leonxu/文档/master/build/  #移动到你要编译运行的文件夹里面
-	echo "24796" | sudo ./run -sentry -red
+	echo "24796" | sudo ./run -sentry -blue
 	echo ""$PROC_NAME "has started!"
 	sleep $sec
 fi  
