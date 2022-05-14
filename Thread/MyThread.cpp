@@ -257,10 +257,10 @@ namespace rm
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)) {
                     if (saveSVM) {
                         save_img_cnt++;
-                        if (save_img_cnt == 400) {
+                        if (save_img_cnt == 8) {
                             save_img_cnt = 0;
                             if (armorDetectorPtr->armorNumber) {
-                                SVMPath = (string(SAVE_SVM_PIC) + to_string(3) + "/" +
+                                SVMPath = (string(SAVE_SVM_PIC) + to_string(armorDetectorPtr->armorNumber) + "/" +
                                            to_string(svm_img_num)).append(".png");
                             } else {
                                 SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(svm_img_num)).append(".png");
@@ -284,7 +284,8 @@ namespace rm
     void ImgProdCons::Energy()
     {
         /* do energy detection */
-        energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time, 0.15+fly_t);
+        //energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time, 0.15+fly_t);
+        energyPtr->EnergyDetectTask(detectFrame);
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
         dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
@@ -354,6 +355,8 @@ namespace rm
                     case BIG_ENERGY_STATE:
                     case SMALL_ENERGY_STATE:
                         Energy();
+                        target_pts = energyPtr->pts;
+                        rotate_center = energyPtr->circle_center_point;
                         break;
                     default:
                         Armor();
@@ -369,6 +372,7 @@ namespace rm
             if (detectMission) {
                 if(showArmorBox || showEnergy){
                     show_img = detectFrame.clone();
+                    tmp_t = last_mission_time; //同步时间
                 }
                 detectMission = false;
                 double st = (double) getTickCount();
@@ -439,7 +443,11 @@ namespace rm
 #endif
                 }
                 else {
-                    solverPtr->GetPoseV(energyPtr->predict_pts, false,gimbal_ypd);
+                    predictPtr->BigEnergyPredictor(target_pts,rotate_center,0.15+fly_t,tmp_t);
+                    solverPtr->GetPoseV(predictPtr->predict_pts,false,gimbal_ypd);
+
+
+                    //solverPtr->GetPoseV(energyPtr->predict_pts, false,gimbal_ypd);
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,
                             receiveData.pitchAngle + solverPtr->pitch,
                             solverPtr->dist;
@@ -549,22 +557,20 @@ namespace rm
                 putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
                         Scalar(0, 255, 0), 1, 8, 0);
 
-                if (showEnergy && energyPtr->detect_flag) {
+                if (showEnergy) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
                     for (int i = 0; i < 4; i++) {
                         line(show_img, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
                              Scalar(255, 255, 255), 2, LINE_8);
-                        line(show_img, energyPtr->predict_pts[i], energyPtr->predict_pts[(i + 1) % (4)],
+                        line(show_img, predictPtr->predict_pts[i], predictPtr->predict_pts[(i + 1) % (4)],
                              Scalar(0, 255, 255), 2, LINE_8);
                     }
                     circle(show_img, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
                     circle(show_img, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                    circle(show_img, energyPtr->predict_point, 2, Scalar(100, 10, 255), 3);
+                    circle(show_img, predictPtr->predict_point, 2, Scalar(100, 10, 255), 3);
                 }
                 if (showArmorBox && armorDetectorPtr->findState) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                    if (!predictPtr->predict_point.empty())
-                        circle(show_img, predictPtr->predict_point.back(), 2, Scalar(100, 240, 15), 3);
                 }
                 imshow("Detect Frame", show_img);
                 waitKey(1);

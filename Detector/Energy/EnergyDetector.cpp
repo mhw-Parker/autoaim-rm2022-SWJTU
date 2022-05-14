@@ -203,6 +203,22 @@ void EnergyDetector::EnergyTask(const Mat &src, int8_t mode, const float dt, con
         waveClass.displayWave(energy_kf.state_post_[1], energy_rotation_direction, "theta");
     }
 }
+void EnergyDetector::EnergyDetectTask(const Mat &src) {
+    clearAll();
+    Mat img = src.clone();
+    Mat binary;
+    binary = preprocess(img);
+    if(detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)){
+        getPts(target_armor);
+        getCircleCenter(binary);
+    } else {
+        misscount++;
+        if(misscount>5){ //连续5帧丢目标
+            misscount = 0;
+            detect_flag = false;
+        }
+    }
+}
 /**
  * @brief 每次切换状态清空
  * */

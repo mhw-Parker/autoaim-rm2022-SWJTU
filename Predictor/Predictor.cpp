@@ -3,13 +3,25 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(90,300,500){
-    for (int i = 0; i < 7; i++) {
-        frame_list.push_back(i);
-    }
+Predictor::Predictor() : waveClass(90,300,500),
+                         omegaWave(3,600,1000)
+{
+    predict_pts.assign(4,Point2f(0,0));
 }
 
 Predictor::~Predictor() = default;
+
+/**
+ * @brief 变更目标时更新预测器
+ * */
+void Predictor::Refresh() {
+    RMKF_flag = false;
+    target_a_xyz << 0, 0, 0;
+    target_v_xyz << 0, 0, 0;
+    latency = 0.5;
+    /**--------- 能量机关预测部分清空 ---------**/
+    omega.clear();
+}
 
 
 /**
@@ -20,7 +32,7 @@ void Predictor::armorPredictor(const Vector3f& target_ypd, float v_) {
     target_xyz = getGyroXYZ(target_ypd);
 
     // kalman预测要击打位置的xyz
-    predict_xyz = kalmanPredict(target_xyz, v_, pre_t);
+    predict_xyz = kalmanPredict(target_xyz, v_, latency);
 
     // 计算要转过的角度
     Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
@@ -29,7 +41,7 @@ void Predictor::armorPredictor(const Vector3f& target_ypd, float v_) {
     // 计算这一次的预测时间pre_t
     float fly_t = 0;
     predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
-    pre_t = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+    latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
 
     // 以下为debug显示数据
 
@@ -82,8 +94,8 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
  * @param t 预测时间
  * */
 Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
-    int step = t / delta_t + 15;
-    cout << "step: " << step << endl;
+//    int step = t / delta_t + 15;
+//    cout << "step: " << step << endl;
     if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -97,8 +109,8 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
         InitKfAcceleration(delta_t);
     }
     Vector3f pre_xyz;
-    pre_xyz = PredictKF(RMKF, step);
-    //pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
+    //pre_xyz = PredictKF(RMKF, step);
+    pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
     return pre_xyz;
 }
 
@@ -108,7 +120,16 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
  */
 void Predictor::InitKfAcceleration(const float dt) {
     // 转移矩阵
-    InitTransMat(dt);
+    float t0 = 0.5f * dt * dt;
+    RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
+                        0, 1, 0, 0, dt, 0, 0, t0, 0,
+                        0, 0, 1, 0, 0, dt, 0, 0, t0,
+                        0, 0, 0, 1, 0, 0, dt, 0, 0,
+                        0, 0, 0, 0, 1, 0, 0, dt, 0,
+                        0, 0, 0, 0, 0, 1, 0, 0, dt,
+                        0, 0, 0, 0, 0, 0, 1, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 1, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 1;
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
@@ -129,20 +150,6 @@ void Predictor::InitKfAcceleration(const float dt) {
                         0,
                         0;
 }
-
-void Predictor::InitTransMat(const float dt) {
-    float t0 = 0.5f * dt * dt;
-    RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
-                        0, 1, 0, 0, dt, 0, 0, t0, 0,
-                        0, 0, 1, 0, 0, dt, 0, 0, t0,
-                        0, 0, 0, 1, 0, 0, dt, 0, 0,
-                        0, 0, 0, 0, 1, 0, 0, dt, 0,
-                        0, 0, 0, 0, 0, 1, 0, 0, dt,
-                        0, 0, 0, 0, 0, 0, 1, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 1, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 1;
-}
-
 /**
  * @brief RMKF更新，包括预测部分和更正部分
  */
@@ -175,14 +182,240 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
     return temp_target_xyz;
 }
 
+
+/******************************************************************************************/
+
+/**----------------------- Helios 2022赛季能量机关预测部分 ---------------------------------**/
+
+/******************************************************************************************/
 /**
- * @brief 变更目标时更新预测器
+ * @brief 大能量机关预测
  * */
-void Predictor::Refresh() {
-    RMKF_flag = false;
-    target_a_xyz << 0, 0, 0;
-    target_v_xyz << 0, 0, 0;
-    pre_t = 0.5;
+void Predictor::BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency, float dt) {
+    total_t += dt;  ///时序更新方式最好变成全局变量
+    time_series.push_back(total_t);    //存放时间序列
+    Point2f target_point;
+    if(target_pts.size() == 4)
+        target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
+    else
+        return;
+    Point2f p = target_point - center; //圆心指向目标的向量
+    current_theta = atan2(p.y,p.x);     //当前角度 弧度制
+    angle.push_back(current_theta);    //存放对应的角度序列
+    if(JudgeFanRotation()){
+        FilterOmega(dt);
+        if(EnergyStateSwitch()) {
+            FilterRad(latency);
+            predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
+            getPredictRect(center, target_pts, predict_rad); //获得预测矩形
+        }
+    }
 }
 
+bool Predictor::EnergyStateSwitch() {
+    switch(ctrl_mode){
+        case STANDBY:
+            if(fabs(filter_omega.back()) > 2.05) {
+                st = filter_omega.size() - 1;
+                phi_ = CV_PI / 2;
+                ctrl_mode = BEGIN;
+            }
+            return false;
+        case BEGIN:
+            if(time_series.back() - time_series[st] > 2)
+                ctrl_mode = ESTIMATE;
+            return false;
+        case ESTIMATE:
+            estimateParam(filter_omega,time_series);
+            ctrl_mode = PREDICT;
+            return true;
+        case PREDICT:
+            return true;
+        default: return true;
+    }
+}
 
+bool Predictor::JudgeFanRotation() {
+    if(angle.size() > 3 && angle.size() < 19){
+        current_omega = calOmega(3,total_theta);
+        omega.push_back(current_omega);
+        if(angle.size() == 18){
+            int clockwise_cnt = 0; //顺时针旋转计数器
+            for(auto &i : omega)
+                if(i>0) clockwise_cnt++;
+            energy_rotation_direction = clockwise_cnt > omega.size()/2 ? 1 : -1;
+            total_theta = current_theta; //将当前累积角度更新为当前角度
+            initFanRotateKalman();
+            initFanRadKalman();
+            return true;
+        }
+        else
+            return false;
+    }
+    else
+        return true;
+}
+/**
+ * @brief 计算能量机关旋转角速度
+ * @param step 逐差步长
+ * @param total_theta 累积角度
+ * */
+float Predictor::calOmega(int step, float &total_theta) {
+    int step_ = step + 1;
+    float d_theta = angle.back() - angle[angle.size()-step_];
+    float dt = time_series.back() - time_series[time_series.size()-step_];
+    if(d_theta > 6)
+        d_theta -= 2*CV_PI;
+    if(d_theta < -6)
+        d_theta += 2*CV_PI;
+    total_theta += d_theta;
+    return d_theta / dt;
+}
+/**
+ * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
+ * */
+void Predictor::FilterOmega(const float dt) {
+    omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
+                            0, 1, dt,
+                            0, 0, 1;
+    current_omega = calOmega(3,total_theta);
+    VectorXf measure_vec(2,1);
+    measure_vec <<  total_theta,
+                    current_omega;
+
+    omega_kf.predict();
+    omega_kf.correct(measure_vec);
+    filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
+    omegaWave.displayWave(energy_rotation_direction*current_omega,filter_omega.back(),"omega");
+}
+void Predictor::FilterRad(const float latency) {
+    vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
+    vector<float> cut_time_series(time_series.end()-6,time_series.end());
+    Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //对上面数据用最小二乘
+
+    // Five consecutive same judge can change the current state.
+    int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘法判断斜率
+    change_cnt = (cur_flag != last_flag) ? 0 : (change_cnt+1);
+
+    if (change_cnt == 3) {
+        flag = cur_flag;
+        change_cnt = 0;
+    }
+    last_flag = cur_flag;
+    float cur_phi;
+    if (filter_omega.back() > 0.52 && filter_omega.back() < 2.09)
+        cur_phi = spdPhi(filter_omega.back(), flag);
+    else if(filter_omega.back() > 2.09)
+        cur_phi = CV_PI / 2;
+    else
+        cur_phi = - CV_PI / 2;
+    double t = cur_phi / w_;
+    predict_rad = energy_rotation_direction * (spdInt(t + latency) - spdInt(t));
+    VectorXf rad_vec(1,1);
+    rad_vec << predict_rad;
+    rad_kf.Update(rad_vec);
+    predict_rad = rad_kf.state_post_[0];
+}
+/**
+ * @brief 初始化角速度 omega 的 kalman 滤波器
+ * */
+void Predictor::initFanRotateKalman() {
+    omega_kf.measure_mat_.setIdentity();
+    omega_kf.process_noise_.setIdentity();
+    // 测量噪声协方差矩阵R
+    omega_kf.measure_noise_.setIdentity();
+    omega_kf.measure_noise_ <<  10, 0,
+                                0, 110;
+    // 误差估计协方差矩阵P
+    omega_kf.error_post_.setIdentity();
+    omega_kf.state_post_ << current_theta,
+                            current_omega,
+                            0;
+}
+/**
+ * @brief 初始化预测弧度 rad 的 kalman 滤波器  ---有无必要？
+ * */
+void Predictor::initFanRadKalman() {
+    rad_kf.measure_mat_.setIdentity();
+    rad_kf.process_noise_.setIdentity();
+    // 测量噪声协方差矩阵R
+    rad_kf.measure_noise_.setIdentity();
+    rad_kf.measure_noise_ << 10;
+    // 误差估计协方差矩阵P
+    rad_kf.error_post_.setIdentity();
+    rad_kf.state_post_ <<   1,
+                            0,
+                            0;
+}
+/**
+ * @brief 利用 ceres-solver 对目标 sin 函数进行参数估计
+ * @param omega_ 用于参数估计的 omega 数组
+ * @param t_ 与 omega 相对应的时间戳
+ * @param times 用于曲线拟合的数据点数量
+ * */
+void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
+    for(int i = st; i < omega_.size(); i++){
+        ceres::CostFunction* cost_func =
+                new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
+                        new SinResidual(t_[i]-t_[st],omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
+        problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
+#if SAVE_LOG == 1
+        write_energy_data << t_[i]-t_[st] << " " << omega_[i] << " " << endl;
+#endif
+    }
+    ceres::Solver::Options options;
+    options.max_num_iterations = 25;
+    options.linear_solver_type = ceres::DENSE_QR;
+    options.minimizer_progress_to_stdout = true;
+
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+
+    std::cout << summary.BriefReport() << "\n";
+    std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
+    std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
+    //cout << "拟合数据下标起点：" << st << " " << omega_[st] << " 拟合数据点数 ： " << omega.size() - st << " 函数中值：" << (2.09-min_w)/2 << endl;
+#if SAVE_LOG == 1
+    write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
+#endif
+    /**  定参数  **/
+//    a_ = 0.8655;
+//    w_ = 1.9204;
+    /**  定参数  **/
+
+    float sim_omega;
+    for(int i=st;i < omega_.size(); i++){
+        sim_omega = a_ * sin(w_*(t_[i]-t_[st])+phi_) + 2.09-a_;
+        omegaWave.displayWave(omega_[i],sim_omega,"curve fitting");
+    }
+
+    if(a_ < 0.780) a_ = 0.785;
+    else if(a_ > 1.045 ) a_ = 1.045;
+    if(w_ < 0) w_ = abs(w_);
+    if(w_ < 1.884) w_ = 1.884;
+    else if(w_ > 2) w_ = 2;
+    //waitKey(0);
+}
+
+Point2f Predictor::calPredict(Point2f &p, Point2f &center, float theta) const {
+    Eigen::Matrix2f rotate_matrix;
+    Eigen::Vector2f cur_vec, pre_vec;
+    float c = cos(theta), s = sin(theta);
+    rotate_matrix << c, -s,
+            s,  c; //旋转矩阵
+    cur_vec << (p.x-center.x), (p.y-center.y);
+    pre_vec = rotate_matrix * cur_vec;
+    return Point2f (center.x + pre_vec[0], center.y + pre_vec[1]);
+}
+float Predictor::spdInt(float t) {
+    return -(a_ * cos(w_ * t) / w_) - (a_ - 2.09) * t;
+}
+float Predictor::spdPhi(float omega, int flag) {
+    float sin_phi = (omega - (2.09-a_))/a_;
+    float  phi = asin(sin_phi);
+    return flag ? phi : CV_PI - phi;
+}
+void Predictor::getPredictRect(Point2f &center, vector<Point2f> &pts, float theta) {
+    for(int i = 0;i<4;i++)
+        predict_pts[i] = calPredict(pts[i],center, theta);
+}

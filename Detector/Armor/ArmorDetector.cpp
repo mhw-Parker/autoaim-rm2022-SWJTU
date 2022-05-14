@@ -408,8 +408,8 @@ namespace rm
 
                 SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]); //设置用于svm识别的4点区域
 
-                armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
-                //armorNumber = getArmorNumber(targetArmor);
+                //armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
+                armorNumber = getArmorNumber(targetArmor);
                 cout << "SVM model detect : " << armorNumber << endl;
 
                 if(showArmorBox){
@@ -731,7 +731,6 @@ namespace rm
             warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
             warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat,Size(2*SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //warpPerspective to get armorImage
             warpPerspective_dst = warpPerspective_dst.colRange(12,68).clone();
-
         } else {
             dstPoints[0] = Point2f(0, 0);
             dstPoints[1] = Point2f(SVM_IMAGE_SIZE, 0);
@@ -739,11 +738,17 @@ namespace rm
             dstPoints[3] = Point2f(0, SVM_IMAGE_SIZE);
             warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
             warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat, Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE), INTER_NEAREST, BORDER_CONSTANT, Scalar(0)); //warpPerspective to get armorImage
-            warpPerspective_dst = warpPerspective_dst.colRange(6,34).clone();
+            warpPerspective_dst = warpPerspective_dst.colRange(8,32).clone();
         }
-        resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
+        resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //把svm图像缩放到 40 * 40
+        pyrDown(warpPerspective_dst,warpPerspective_dst,Size(20,20)); //下采样为20*20
         imshow("svm",warpPerspective_dst);
-        return 7;
+        svmParamMatrix = warpPerspective_dst.reshape(1, 1);
+        svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
+
+        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
+
+        return number;
     }
     /**
      * @brief this function shall to serve for building our own database, unfortunately the database built by this way is

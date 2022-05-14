@@ -63,6 +63,7 @@ public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
     void EnergyTask(const Mat &src, int8_t mode, const float dt, const float fly_t);//接口
+    void EnergyDetectTask(const Mat &src);
     void Refresh();
     //void getPredictPoint();
     vector<Point2f> pts;

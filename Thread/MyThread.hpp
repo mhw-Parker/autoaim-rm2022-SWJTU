@@ -137,7 +137,7 @@ namespace rm
         /* 保存图像相关 */
         string videoPath;
         string SVMPath;
-        int svm_img_num = 8;
+        int svm_img_num = 0;
         int save_img_cnt = 0;
         VideoWriter videowriter;
         /**/
@@ -198,6 +198,8 @@ namespace rm
             float stamp;
         }timeStampMat;
         struct timeStampMat time_stamp_mat;
+        vector<Point2f> target_pts;
+        Point2f rotate_center;
     };
 
 }

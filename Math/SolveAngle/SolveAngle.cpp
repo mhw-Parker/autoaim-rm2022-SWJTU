@@ -250,9 +250,6 @@ void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz) {
 
     cam_xyz = World2Cam(target_xyz);
     pix_uv1 = Cam2Pixel(cam_xyz);
-    //cout << "--- target location :" << endl << target_xyz << endl;
-    //cout << "--- camera location :" << endl << cam_xyz << endl;
-    //cout << "--- pixel location : " << endl << pix_uv1 << endl;
     circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 5, Scalar(100, 240, 15), 3);
 }
 Vector3f SolveAngle::Cam2World(Vector3f cam_xyz) {
