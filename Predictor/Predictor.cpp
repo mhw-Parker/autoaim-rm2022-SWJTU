@@ -211,6 +211,22 @@ void Predictor::BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, f
         }
     }
 }
+void Predictor::SmallEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency) {
+    time_series.push_back(0.015);
+    Point2f target_point;
+    if(target_pts.size() == 4)
+        target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
+    else
+        return;
+    Point2f p = target_point - center; //圆心指向目标的向量
+    current_theta = atan2(p.y,p.x);     //当前角度 弧度制
+    angle.push_back(current_theta);    //存放对应的角度序列
+    if(JudgeFanRotation()){
+        predict_rad = energy_rotation_direction * 1.4 * latency;
+        predict_point = calPredict(target_point,center,predict_rad);
+        getPredictRect(center, target_pts, predict_rad);
+    }
+}
 
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
@@ -396,7 +412,13 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     else if(w_ > 2) w_ = 2;
     //waitKey(0);
 }
-
+/**
+ * @brief 通过预测的弧度增量值获得目标点的对应预测点
+ * @param p 待预测点
+ * @param center 圆心
+ * @param theta 弧度增量值
+ * @return Point2f 的预测点
+ * */
 Point2f Predictor::calPredict(Point2f &p, Point2f &center, float theta) const {
     Eigen::Matrix2f rotate_matrix;
     Eigen::Vector2f cur_vec, pre_vec;
@@ -407,9 +429,15 @@ Point2f Predictor::calPredict(Point2f &p, Point2f &center, float theta) const {
     pre_vec = rotate_matrix * cur_vec;
     return Point2f (center.x + pre_vec[0], center.y + pre_vec[1]);
 }
+/**
+ * @brief 反解角速度
+ * */
 float Predictor::spdInt(float t) {
     return -(a_ * cos(w_ * t) / w_) - (a_ - 2.09) * t;
 }
+/**
+ * @brief 获取当前相位
+ * */
 float Predictor::spdPhi(float omega, int flag) {
     float sin_phi = (omega - (2.09-a_))/a_;
     float  phi = asin(sin_phi);

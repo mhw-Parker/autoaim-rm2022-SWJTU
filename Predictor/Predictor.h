@@ -108,6 +108,7 @@ private:
 
 public:
     void BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency, float dt);
+    void SmallEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency);
     vector<Point2f> predict_pts;
 
 private:

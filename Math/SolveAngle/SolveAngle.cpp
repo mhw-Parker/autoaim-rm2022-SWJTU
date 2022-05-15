@@ -118,7 +118,7 @@ void SolveAngle::Generate3DPoints(bool mode) {
  * @param pts 装甲板 4 点坐标
  * @param v_ 弹速
  * */
-void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vector3f gimbal_ypd) {
+void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd) {
     cv::Mat Rvec;
     cv::Mat_<float> Tvec;
     Generate3DPoints(armor_mode);
@@ -139,16 +139,16 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vec
     camXYZ2YPD(); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 
+//    if(carName == SENTRY)
+//        gimbal_ypd += Vector3f {-90,0,0};
+
     float sin_y = sin(gimbal_ypd[0] * degree2rad);
     float cos_y = cos(gimbal_ypd[0] * degree2rad);
     float sin_p, cos_p;
-    if(carName == SENTRY){
-        sin_p = sin(-gimbal_ypd[1] * degree2rad);
-        cos_p = cos(-gimbal_ypd[1] * degree2rad);
-    } else {
-        sin_p = sin(gimbal_ypd[1] * degree2rad);
-        cos_p = cos(gimbal_ypd[1] * degree2rad);
-    }
+    sin_p = sin(gimbal_ypd[1] * degree2rad);
+    cos_p = cos(gimbal_ypd[1] * degree2rad);
+
+
     Ry <<   cos_y , 0     , -sin_y ,
             0     , 1     , 0     ,
             sin_y, 0     , cos_y ;

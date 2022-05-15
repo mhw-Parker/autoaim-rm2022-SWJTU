@@ -187,7 +187,6 @@ namespace rm
 #ifdef MIND
                 driver = &mindCapture;
 #endif
-                direction_flag = -1;
 #ifdef DAHUA
                 driver = &dahuaCapture;
 #endif
@@ -391,33 +390,23 @@ namespace rm
                                             gimbal_ypd);
                         // 云台当前yaw pitch
                         target_ypd << gimbal_ypd[0] - solverPtr->yaw,
-                                gimbal_ypd[1] + direction_flag * solverPtr->pitch,
+                                gimbal_ypd[1] + solverPtr->pitch,
                                 solverPtr->dist;
                         predictPtr->armorPredictor(target_ypd, v_bullet);
                         yaw_abs = target_ypd[0];
                         pitch_abs = target_ypd[1];
+//                        yaw_abs = predictPtr->predict_ypd[0];
+//                        pitch_abs = predictPtr->predict_ypd[1];
 
-                        if(showArmorBox){
-                            string str[] = {"re-yaw:","re-pitch:","tar-yaw:",
-                                            "tar-pit:","pre-yaw","pre-pit",
-                                            "v bullet:"};
-                            vector<float> data(7);
-                            data = {receiveData.yawAngle,
-                                    receiveData.pitchAngle,
-                                    target_ypd[0],
-                                    target_ypd[1],
-                                    predictPtr->predict_ypd[0],
-                                    predictPtr->predict_ypd[1],
-                                    v_bullet};
-                            RMTools::showData(data,str,"abs degree");
-                        }
-                        solverPtr->backProject2D(detectFrame, predictPtr->predict_xyz);
+
+                        solverPtr->backProject2D(show_img, predictPtr->predict_xyz);
 
 #if SAVE_TEST_DATA == 1
                         // **** 目标陀螺仪 x y z **** //
                         dataWrite << gimbal_ypd[1] << " " << solverPtr->yaw << endl;
 #endif
-                    } else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
+                    }
+                    else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
                         if (armorDetectorPtr->lossCnt == 1)
                             last_xyz = predictPtr->target_xyz;
                         float dt = last_mission_time;
@@ -428,7 +417,20 @@ namespace rm
                         yaw_abs = predict_ypd[0];
                         pitch_abs = predict_ypd[1];
                     }
+                    else
+                        predictPtr->Refresh();
 
+                    if(showArmorBox){
+                        string str[] = {"re-yaw:","re-pitch:","tar-yaw:",
+                                        "tar-pit:","pre-yaw","pre-pit",
+                                        "v bullet:"};
+                        vector<float> data(7);
+                        data = {receiveData.yawAngle,receiveData.pitchAngle,
+                                target_ypd[0],target_ypd[1],
+                                predictPtr->predict_ypd[0],predictPtr->predict_ypd[1],
+                                v_bullet};
+                        RMTools::showData(data,str,"abs degree");
+                    }
                     /** package data and prepare for sending data to lower-machine **/
                     serialPtr->pack(yaw_abs,
                                     pitch_abs,
@@ -443,9 +445,12 @@ namespace rm
 #endif
                 }
                 else {
-                    predictPtr->BigEnergyPredictor(target_pts,rotate_center,0.15+fly_t,tmp_t);
-                    solverPtr->GetPoseV(predictPtr->predict_pts,false,gimbal_ypd);
+                    if(curControlState == BIG_ENERGY_STATE)
+                        predictPtr->BigEnergyPredictor(target_pts,rotate_center,0.15+fly_t,tmp_t);
+                    else
+                        predictPtr->SmallEnergyPredictor(target_pts,rotate_center,0.15+fly_t);
 
+                    solverPtr->GetPoseV(predictPtr->predict_pts,false,gimbal_ypd);
 
                     //solverPtr->GetPoseV(energyPtr->predict_pts, false,gimbal_ypd);
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,

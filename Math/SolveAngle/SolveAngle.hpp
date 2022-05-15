@@ -26,7 +26,7 @@ public:
      * @param pts 装甲板 4 点坐标
      * @param v_ 弹速
      * */
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode, const Vector3f gimbal_ypd); //Pnp模型
+    void GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd); //Pnp模型
 
     /**
      * @brief 弹道补偿函数
