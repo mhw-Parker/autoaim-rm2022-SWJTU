@@ -5,17 +5,15 @@
 #ifndef KALMAN_RMKF_HPP
 #define KALMAN_RMKF_HPP
 
-#endif //KALMAN_RMKF_HPP
-
 #include <Eigen/Core>
 #include <Eigen/Dense>
-
 using namespace Eigen;
 
 class EigenKalmanFilter{
 public:
     EigenKalmanFilter(int state_param, int measure_param, int control_param = 0);
     void Init(int state_param, int measure_param, int control_param = 0);
+    void Update(VectorXf& measurement);
     MatrixXf predict(const MatrixXf& control = MatrixXf());
     MatrixXf correct(const VectorXf& measurement);
 
@@ -38,3 +36,8 @@ private:
     MatrixXf temp4;
     MatrixXf temp5;
 };
+
+#endif KALMAN_RMKF_HPP
+
+
+

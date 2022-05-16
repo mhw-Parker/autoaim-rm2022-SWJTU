@@ -16,6 +16,8 @@
 
 #include <Eigen/Dense>
 
+#include "mydefine.h"
+
 using namespace cv;
 using namespace std;
 
@@ -140,7 +142,7 @@ namespace RMTools {
 
         /** 2021-12-9 tyy **/
         //因为没看懂上面的波形显示调用方法，决定重写一个
-        void displayWave(const float input1, const float input2) {
+        void displayWave(const float input1, const float input2, string win_name) {
             int amplitude1 = mid_h - ratio * input1;
             int amplitude2 = mid_h - ratio * input2;
             if (amplitude1 < 0 || amplitude2 < 0) {
@@ -154,15 +156,13 @@ namespace RMTools {
 
             Point2f cur_p1 = Point2f(cnt, amplitude1);
             Point2f cur_p2 = Point2f(cnt, amplitude2);
-            circle(copy, cur_p1, 1, Scalar(0, 0, 255));
-            circle(copy, cur_p2, 1, Scalar(255, 0, 0));
 
             if (last_p1 != Point2f(0, 0)) {
-                line(copy, cur_p1, last_p1, Scalar(0, 255, 0));
-                line(copy, cur_p2, last_p2, Scalar(0, 255, 255));
+                line(copy, cur_p1, last_p1, Scalar(0, 255, 0));     // line input 1
+                line(copy, cur_p2, last_p2, Scalar(0, 255, 255));   // line input 2
             }
 
-            imshow("WaveForm", copy);
+            imshow(win_name, copy);
             waitKey(1);
 
             cnt += 2;
@@ -218,6 +218,7 @@ namespace RMTools {
             putText(background, to_string(data[i]), Point(150, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
         }
         imshow(win_name,background);
+        waitKey(1);
         return true;
     }
 
@@ -307,16 +308,39 @@ namespace RMTools {
         float theta = z > 0 ? -asin(sin_theta) : CV_PI - asin(sin_theta);
         return {rho, theta};
     }
+    /**
+     * @brief 获取
+     * */
+    inline Eigen::Vector3f GetDeltaYPD(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
+        float lx = last_xyz[0], ly = last_xyz[1], lz = last_xyz[2];
+        float ldist = sqrt(lx*lx + ly*ly + lz*lz);
+        float x = cur_xyz[0], y = cur_xyz[1], z = cur_xyz[2];
+        float dist = sqrt(x*x + y*y + z*z);
 
-    inline float GetDeltaTheta(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
-        float target_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
-        float predict_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
+        // 计算delta_yaw
+        float predict_theta = RMTools::XZ2RhoTheta({cur_xyz[0],cur_xyz[2]}).y();
+        float target_theta = RMTools::XZ2RhoTheta({last_xyz[0], last_xyz[2]}).y();
         float delta_yaw = predict_theta - target_theta;
         if (delta_yaw > CV_PI)
             delta_yaw -= CV_PI;
         if (delta_yaw < -CV_PI)
             delta_yaw += CV_PI;
-        return delta_yaw / CV_PI * 180;
+
+        // 计算delta_pitch
+        if (carName == SENTRY) {
+            target_theta = asin(ly / ldist);
+            predict_theta = asin(y / dist);
+        } else {
+            target_theta = -asin(ly / ldist);
+            predict_theta = -asin(y / dist);
+        }
+
+        float delta_pitch = predict_theta - target_theta;
+
+        Eigen::Vector3f result(delta_yaw, delta_pitch, dist - ldist);
+        for (int i = 0; i < 2; i++)
+            result[i] = result[i] / CV_PI * 180;
+        return result;
     }
 
 /**

@@ -6,6 +6,7 @@
 #define ROBOMASTER_MYDEFINE_H
 
 #include <string>
+#include <vector>
 
 #ifndef AUTO_SHOOT_STATE
 #define  AUTO_SHOOT_STATE 0
@@ -69,8 +70,8 @@
 #endif
 
 #ifndef CARNAME_
-    #define CARNAME_
-    enum CARNAME {HERO, INFANTRY_MELEE0, INFANTRY_MELEE1, INFANTRY_TRACK, SENTRY, UAV, VIDEO, NOTDEFINED};
+#define CARNAME_
+enum CARNAME {HERO, INFANTRY_MELEE0, INFANTRY_MELEE1, INFANTRY_TRACK, SENTRY, UAV, VIDEO, NOTDEFINED};
 #endif
 
 #ifndef DEBUG
@@ -95,7 +96,6 @@
 
 #ifndef SAVE_TEST_DATA
 #define SAVE_TEST_DATA 0
-
 #endif
 
 #ifndef GPUMODE
@@ -116,6 +116,10 @@
 #define OUTPUT_PATH  "../Output/"
 #endif
 
+#ifndef SAVE_SVM_PIC
+#define SAVE_SVM_PIC "../Output/SVM/"
+#endif
+
 extern bool showArmorBox;
 extern bool showOrigin;
 extern bool showLamps;
@@ -123,6 +127,7 @@ extern bool showBinaryImg;
 extern bool showEnergy;
 extern bool blueTarget;
 extern bool saveVideo;
+extern bool saveSVM;
 extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;

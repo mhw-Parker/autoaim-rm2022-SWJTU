@@ -141,7 +141,7 @@ namespace rm
         roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         findState = false;
         detectCnt = 0;
-        lostCnt = 120;
+        lostCnt = 10;
         armorNumber = 0;
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
         lossCnt = 0;
@@ -232,6 +232,12 @@ namespace rm
             targetArmor.rect  = targetArmor.rect + Point(roiRect.x, roiRect.y);
             targetArmor.center +=  Point(roiRect.x, roiRect.y);
 
+            Armor(targetArmor.rect);
+            if(targetArmor.armorType==SMALL_ARMOR)
+                cout << "--small target !" << endl;
+            else if(targetArmor.armorType==BIG_ARMOR)
+                cout << "--big target !" << endl;
+
             for(int i = 0; i< 4;i++){
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
@@ -264,7 +270,6 @@ namespace rm
         {
             detectCnt = 0;
             lostCnt++;
-
             return false;
         }
     }
@@ -326,7 +331,8 @@ namespace rm
 
                 /*the difference ratio of the two lights' height 灯条长度 */
                 contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) / max(lights[i].rect.size.height, lights[j].rect.size.height);
-                if(contourLen1 > param.maxLengthError)continue;
+                if(contourLen1 > param.maxLengthError)
+                    continue;
 
                 /*the difference ratio of the two lights' width 灯条宽度比 */
                 contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) / max(lights[i].rect.size.width, lights[j].rect.size.width);
@@ -339,20 +345,24 @@ namespace rm
 
                 /*the ratio of the width and the height, must larger than 1 */
                 ratio = nL / nW;
-                if(ratio > param.maxRatio || ratio < param.minRatio)continue;
+                if(ratio > param.maxRatio || ratio < param.minRatio)
+                    continue;
 
                 /*anyway, the difference of the lights' angle is tiny,so anyone of them can be the angle of the armor*/
                 nAngle = fabs((lights[i].lightAngle + lights[j].lightAngle)/2);
-                if(nAngle > param.maxArmorAngle)continue;
+                if(nAngle > param.maxArmorAngle)
+                    continue;
 
                 /*the deviation angle of two lamps*/
                 deviationAngle = fabs(atan((lights[i].rect.center.y - lights[j].rect.center.y)
                                            / (lights[i].rect.center.x - lights[j].rect.center.x))) * 180 / CV_PI;
-                if(deviationAngle > param.maxDeviationAngle)continue;
+                if(deviationAngle > param.maxDeviationAngle)
+                    continue;
 
                 /*the difference of the y coordinate of the two center points*/
                 yDiff = abs(lights[i].rect.center.y - lights[j].rect.center.y) / nW;
-                if(yDiff > param.maxYDiff)continue;
+                if(yDiff > param.maxYDiff)
+                    continue;
 
                 /*difference of average brightness*/
                 dAvgB = abs(lights[i].avgRSubBVal - lights[j].avgRSubBVal);
@@ -398,8 +408,14 @@ namespace rm
 
                 SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]); //设置用于svm识别的4点区域
 
-                armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
+                //armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
+                armorNumber = getArmorNumber(targetArmor);
                 cout << "SVM model detect : " << armorNumber << endl;
+
+                if(showArmorBox){
+                    putText(img,"id:",Point(roiRect.x, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+                    putText(img, to_string(armorNumber),Point(roiRect.x+35, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+                }
 
                 if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
                 {
@@ -425,13 +441,14 @@ namespace rm
 #endif
         MakeRectSafe(targetArmor.rect,roiRect.size());
 #if NUM_RECOGNIZE == 1
-        if(armorNumber == 0)
-        {
-            SetSVMRectPoints(targetArmor.pts[0],targetArmor.pts[1],targetArmor.pts[2],targetArmor.pts[3]);
-            armorNumber = GetArmorNumber();
-        }
+//        if(armorNumber == 0)
+//        {
+//            SetSVMRectPoints(targetArmor.pts[0],targetArmor.pts[1],targetArmor.pts[2],targetArmor.pts[3]);
+//            armorNumber = GetArmorNumber();
+//        }
 #endif
     }
+
 
     /**
     * @brief pre-procession of an image captured
@@ -458,8 +475,9 @@ namespace rm
         cv::subtract(channels[2],channels[0],rSubB);
         sub = rSubB - bSubR;
         //imshow ("rSubB - bSubR",sub);
-        //imshow ("r - b",rSubB);
-        threshold(bright, svmBinaryImage, 20, 255, NORM_MINMAX);
+        //imshow ("r - b",bSubR);
+        threshold(bright, svmBinaryImage, 10, 200, NORM_MINMAX);
+        waitKey(1);
         GaussianBlur(bright,bright,Size(5,5),5);
         threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
         //Mat adaptive;
@@ -523,7 +541,6 @@ namespace rm
                 avgBrightness = mean(lampImage, mask); //求两者均值
 
                 avg = Scalar_<float>(avgBrightness);
-
                 //cout<<avg<<endl;
 
                 if((blueTarget && avg[0] < -10) || (!blueTarget && avg[0] > 10)) //灯条和数字的重叠面积有较大差别
@@ -538,67 +555,6 @@ namespace rm
 
         return lampVector;
     }
-
-    /**
-     * @brief 新的灯条识别，田翊扬 2022/1/7
-     * */
-     vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
-        float angle_ = 0;
-        Scalar_<double> avg,avgBrightness;
-        Mat_<int> lampImage;
-        float lamp_area;
-
-        RotatedRect possibleLamp;
-        Rect rectLamp;
-        vector<Lamp> lampVector;
-
-        vector<vector<Point>> contoursLight;
-        findContours(img,contoursLight,RETR_EXTERNAL,CHAIN_APPROX_NONE);
-        Mat background = Mat(img.size(), CV_8UC3, Scalar(0, 0, 0));
-        for(auto &lamp_contour:contoursLight){ //遍历所有点集
-            if(lamp_contour.size() < 10)
-                continue;
-            RotatedRect min_rect, ellipse_rect;
-            std::vector<cv::Point2f> intersection;
-            min_rect = minAreaRect(lamp_contour);
-            ellipse_rect = fitEllipse(lamp_contour);
-
-            ///灯条角度筛选
-            float angle_ = (ellipse_rect.angle > 90) ? (ellipse_rect.angle - 180) : ellipse_rect.angle;
-            if(fabs(angle_) > param.maxLightAngle) continue;
-            ///灯条颜色筛选
-            rectLamp = ellipse_rect.boundingRect(); //最小正矩形
-            MakeRectSafe(rectLamp,sub.size());
-            lampImage = blueTarget ? bSubR(rectLamp) - rSubB(rectLamp) : rSubB(rectLamp) - bSubR(rectLamp);
-            double percent = lampImage.dot(Mat_<int>::ones(rectLamp.height,rectLamp.width)) / (255 * rectLamp.width * rectLamp.height / 2);
-            cout << "count : " << percent << endl;
-            if(percent < 0.12) continue;
-            ///灯条长宽比
-            float lamp_ratio = min_rect.size.height / min_rect.size.width;
-            //cout << "----lamp ratio : " << lamp_ratio << endl;
-            //if(lamp_ratio < param.minLightW2H || lamp_ratio > param.maxLightW2H) continue; //灯条长宽比
-
-            lamp_area = min_rect.size.height * min_rect.size.width; //椭圆拟合的灯条矩形面积
-            //if((lamp_area > param.maxLightArea) || (lamp_area < param.minLightArea)) continue; //灯条面积筛选
-            possibleLamp = min_rect;
-
-
-            Lamp buildLampInfo(possibleLamp, angle_, 0);
-            lampVector.emplace_back(buildLampInfo);
-
-            Point2f pts[4];
-            min_rect.points(pts);
-            for (int i = 0; i < 4; i++) {
-                line(background, pts[i], pts[(i + 1) % (4)],
-                     Scalar(0, 255, 0), 1, LINE_8);
-            }
-            //possibleLamp = fitEllipse(lamp_contour);
-            ellipse(background,ellipse_rect,Scalar(240,10,10));
-
-        }
-        imshow("test",background);
-        return lampVector;
-     }
 
     /**
     * @brief get he region of interest
@@ -752,7 +708,7 @@ namespace rm
         resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
 
         pyrDown(warpPerspective_dst,warpPerspective_dst);
-       // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
+        // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
 
         imshow("svm",warpPerspective_dst);
 
@@ -765,6 +721,34 @@ namespace rm
 #else
         return 0;
 #endif
+    }
+    int ArmorDetector::getArmorNumber(Armor &armor) {
+        if(armor.armorType == BIG_ARMOR) {
+            dstPoints[0] = Point2f(0, 0);
+            dstPoints[1] = Point2f(2*SVM_IMAGE_SIZE, 0);
+            dstPoints[2] = Point2f(2*SVM_IMAGE_SIZE, SVM_IMAGE_SIZE);
+            dstPoints[3] = Point2f(0, SVM_IMAGE_SIZE);
+            warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
+            warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat,Size(2*SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //warpPerspective to get armorImage
+            warpPerspective_dst = warpPerspective_dst.colRange(12,68).clone();
+        } else {
+            dstPoints[0] = Point2f(0, 0);
+            dstPoints[1] = Point2f(SVM_IMAGE_SIZE, 0);
+            dstPoints[2] = Point2f(SVM_IMAGE_SIZE, SVM_IMAGE_SIZE);
+            dstPoints[3] = Point2f(0, SVM_IMAGE_SIZE);
+            warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
+            warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat, Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE), INTER_NEAREST, BORDER_CONSTANT, Scalar(0)); //warpPerspective to get armorImage
+            warpPerspective_dst = warpPerspective_dst.colRange(8,32).clone();
+        }
+        resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //把svm图像缩放到 40 * 40
+        pyrDown(warpPerspective_dst,warpPerspective_dst,Size(20,20)); //下采样为20*20
+        imshow("svm",warpPerspective_dst);
+        svmParamMatrix = warpPerspective_dst.reshape(1, 1);
+        svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
+
+        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
+
+        return number;
     }
     /**
      * @brief this function shall to serve for building our own database, unfortunately the database built by this way is

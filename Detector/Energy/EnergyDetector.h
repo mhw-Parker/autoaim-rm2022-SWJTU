@@ -13,6 +13,7 @@
 
 #include "mydefine.h"
 #include "log.h"
+#include "RMKF.hpp"
 
 #include"struct_define.h"
 
@@ -31,18 +32,39 @@ using ceres::Solver;
 #define IMGWIDTH 1024
 #define IMGHEIGHT 820
 #endif
+
 #ifdef MIND
 #define IMGWIDTH 1280
 #define IMGHEIGHT 1024
 #endif
 
+#ifndef INIT
+#define INIT 0
+#endif
+
+#ifndef STANDBY
+#define STANDBY 1
+#endif
+
+#ifndef BEGIN
+#define BEGIN 2
+#endif
+
+#ifndef ESTIMATE
+#define ESTIMATE 3
+#endif
+
+#ifndef DEFAULT_MODE
+#define DEFAULT_MODE 4
+#endif
 
 class EnergyDetector{
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyTask(const Mat &src, int8_t mode, const float deltaT);//接口
-    void init();
+    void EnergyTask(const Mat &src, int8_t mode, const float dt, const float fly_t);//接口
+    void EnergyDetectTask(const Mat &src);
+    void Refresh();
     //void getPredictPoint();
     vector<Point2f> pts;
     vector<Point2f> predict_pts;
@@ -55,40 +77,33 @@ public:
     float cur_phi = 0;
     float cur_omega = 0;
     float predict_rad = 0;
+    Mat outline;
 
 private:
     const float R = 168;
-    const float PI = 3.14;
     const float K = 10; //半径倍数
 
-    polarLocal polar_t;
-    bool show_armors; //是否显示所有装甲
-    bool show_target_armor; //是否显示目标装甲
-    bool show_strip_fan;//是否显示有流动条的扇叶
-    bool show_center_R;//是否显示中心点R
-    bool show_target_point;//是否显示目标点
-    bool show_predict_point;//是否显示预测点
-    bool BIG_MODE = true;//是否为大符模式
-    bool inter_flag = false;//是否contour有交集
-    bool start_flag = false;//是否开始预测
     cv::Point2f last_circle_center_point;//上一次风车圆心坐标
     cv::Point2f last_target_point;//上一次目标装甲板坐标
 
     WindmillParamFlow _flow;
-    McuData mcu_data;
 
+private:
     void clearAll();//清空所有容器vector
     void initEnergy();//能量机关初始化
     void initEnergyPartParam();//能量机关参数初始化
     Mat preprocess(Mat& src);
 
+private:
+    bool DetectAll(Mat &src);
+
     bool detectArmor(Mat &src);
     bool detectFlowStripFan(Mat &src);
-    bool detectR(Mat &src, Mat &show);
     bool getTargetPoint(Mat &src);
+    bool getCircleCenter(Mat &src);
 
-    Point2f calR();
-	bool detectCircleCenter(Mat &src);
+    Point2f calR1P();
+    Point2f calR3P();
 
     void findROI(Mat &src, Mat &dst);
     void roiPoint2src();
@@ -99,107 +114,75 @@ private:
     bool isValidFlowStripFanContour(cv::Mat& src, const vector<cv::Point>& flow_strip_fan_contour) const;//流动条扇叶矩形尺寸要求
 
     static double pointDistance(const cv::Point& point_1, const cv::Point& point_2);//计算两点距离
-    static double magnitude(const cv::Point& p);
-    polarLocal toPolar(Point cart, double time_stamp);
-    Point2f toCartesian(polarLocal pol);
-    Point rotate(cv::Point target_point) const;
-    float calPreAngle(float start_time,float end_time);
+
     //void getPredictPoint(Mat src);
     void getPts(RotatedRect armor);
-
 
     //Point2f calPredict(float theta) const;
     Point2f calPredict(Point2f p, Point2f center, float theta) const;
 
+    std::vector<Blade> target_blades;//可能的目标装甲板
+    std::vector<cv::RotatedRect> armors;//图像中所有可能装甲板
+    std::vector<cv::RotatedRect> valid_fan_strip;//可能的流动扇叶
+    std::vector<cv::Point2f> armor_centers;//用来做最小二乘拟合
+
     Mat roi;
-
+    int misscount = 10;
 /*** *** *** *** *** ***/
-
+private:
 /*** new predict ***/
-    float spd_int(float t);
     float spdInt(float t);
-    float spd_phi(float omega, int flag);
     float spdPhi(float omega, int flag);
-    void calOmega(float deltaT);
     float startT = 0;
     vector<float> delta_theta;
     vector<float> angle;
     vector<float> omega;
-    vector<float> av_omega;
-    vector<float> x_list;
-    vector<float> predict_arr;
-    vector<float> filter_omega;
-    float sum_time;
-    float init_time;
-    //float predict_arr[6];
-    int predict_cnt = 0;
-    int angle_length = 4;
-    int omega_length = 6;
 
+    int predict_cnt = 0;
     int flag = 0;
     int last_flag = 0;
-    void getPredictPointSmall();
+    void getPredictPointSmall(const float fly_t);
     void getPredictPoint();
     void getPredictRect(float theta, vector<Point2f> pts);
-    void testModule();
     RMTools::DisPlayWaveCLASS waveClass;
 
-    void em();
-    float min_omega = 5 , max_omega = 0;
-    float min_t, max_t;
 /*** *** *** *** *** ***/
+private:
+    void FilterOmega(const float dt);
+    void initRotateKalman();
+    void initRadKalman();
+    void getPredictPointBig(const float fly_t);
+    EigenKalmanFilter energy_kf = EigenKalmanFilter(3, 2, 1);
+    EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
+    double freq;
+    float current_theta = 0;
+    float current_omega = 0;
+    float total_theta = 0;
+    vector<float> filter_omega; //kalman filter omega
+    u_int8_t ctrl_mode = INIT;  //控制当前打幅模式状态
+    int st = 0; //estimate init flag
 
-    /***/
-    bool judgeRotation();
-    void estimateParam(vector<float>omega_, vector<float>t_, int times);
+private:
+    bool judgeRotation(int8_t mode);
+    void estimateParam(vector<float>omega_, vector<float>t_);
+    float total_t = 0;
     vector<float> time_series; //记录每次的时间
-    vector<float> omega_series; //记录omega的值
     ceres::Problem problem;
-    float t_flog;
-    int cnt_t = 0, cnt_i = 0;
-    double a_ = 0.780, w_ = 1.884, phi_ = 0; //参数初值
-    /***/
-
-    std::vector<Blade> target_blades;//可能的目标装甲板
-    std::vector<cv::RotatedRect> armors;//图像中所有可能装甲板
-    std::vector<cv::RotatedRect> valid_fan_strip;//可能的流动扇叶
-    std::vector<cv::RotatedRect> centerRs;//可能的中心
-    std::vector<cv::Point2f> armor_centers;//用来做最小二乘拟合
-    std::vector<RotatedRect> valid_armors;//合法的裝甲板
-    RMTools::MedianFilter<double> median_filter;//处理中位数
-
-    cv::Rect center_r_area;
-    cv::RotatedRect centerR;//风车中心字母R
-    cv::RotatedRect pre_centerR;//风车中心字母R
+    int counter = 0; //拟合数据计数器
+    double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值
 
     Blade target_blade;//目标扇叶
     cv::RotatedRect target_armor;//目标装甲板
     cv::RotatedRect last_target_armor;//上一次目标装甲板
 
-    int energy_rotation_direction = 1;//风车旋转方向
-    int clockwise_rotation_init_cnt;//装甲板顺时针旋转次数
-    int anticlockwise_rotation_init_cnt;//装甲板逆时针旋转次数
-    bool energy_rotation_init;//若仍在判断风车旋转方向，则为true
-    void initRotation();//对能量机关旋转方向进行初始化
+    int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
+    int clockwise_rotation_init_cnt = 0;//装甲板顺时针旋转次数
     void updateLastValues();//更新上一次的各种值
-
     //预测提前角
-    float predict_rad_norm;//预测提前角的绝对值
-
-    int misscount = 0;
-
-    float target_polar_angle;//待击打装甲板的极坐标角度
-    float last_target_polar_angle_judge_rotation;//上一帧待击打装甲板的极坐标角度（用于判断旋向）
-
-    list<polarLocal> history_target_armor_polar;
-    polarLocal predict_polar;
-    polarLocal target_polar;
-    //todo predict task
-
     int64 last_frame_time;
     int64 frame_time;
-
-
+private:
+    float calOmega(vector<float> &omega_vec, vector<float> &time_vec, int step);
 };
 
 #endif //ENERGY_H

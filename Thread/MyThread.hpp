@@ -90,51 +90,55 @@ namespace rm
         void Detect();
 
         /**
+         * @Brief: receive data from lower machine
+         */
+        void Receive();
+
+        /**
+         * @brief show debug images
+         * */
+        void ShowImage();
+
+        bool GrabFlag = true;
+
+    public:
+        /* Camera */
+        Driver *driver;
+    private:
+        /**
          * @Brief: detect armor
          */
         void Armor();
 
         /**
-         * @Brief: energy
+         * @Brief: detect fan
          */
         void Energy();
-
-        /**
-         * @Brief: derivation
-         */
-        void Receive();
-
-        bool GrabFlag = true;
-
-    public:
-            /* Camera */
-            Driver *driver;
-    private:
         /*
         * To prevent camera from dying!
         */
         static bool quitFlag;
         static void SignalHandler(int);
         static void InitSignals(void);
-        //double calFPS(double BeginTime, double freq);
-
-        int direct_y = 1; //不同兵种的 yaw 参考不
-        int direct_p = 1;
 
         double taskTime;
+        double produceTime, detectTime, feedbackTime, receiveTime, showImgTime;
         double freq;
 
         /***/
         double tmp_t = 0;
-        double last_mission_time; //上一次任务总体耗时
+        double last_mission_time = 0.025; //上一次任务总体耗时
         vector<double> whole_time_arr;
         int time_cnt;
         float total_time;
         float deltat;
         /***/
 
-        /**/
-        string path;
+        /* 保存图像相关 */
+        string videoPath;
+        string SVMPath;
+        int svm_img_num = 0;
+        int save_img_cnt = 0;
         VideoWriter videowriter;
         /**/
         int cnt1 = 0;
@@ -170,18 +174,33 @@ namespace rm
         Mat frame;
         Mat detectFrame;
         Mat energyFrame;
+        Mat show_img;
 
         float yaw_abs;
         float pitch_abs;
         Vector3f target_ypd;
         Vector3f last_xyz; //用于存储丢目标前最后一帧的目标位置
-        float v_bullet = 10;
+        float v_bullet = 15;
+        RMTools::DisPlayWaveCLASS showWave;
 
         struct ReceiveData receiveData;
         int armorType;
 
         int missCount;
+        int direction_flag = 1;
+        float fly_t = 0.3;
 
+    private:
+        double startT;
+        vector<float> time_stamp;
+        long int cnt = 0, last_cnt = 0;
+        struct timeStampMat{
+            Mat frame;
+            float stamp;
+        }timeStampMat;
+        struct timeStampMat time_stamp_mat;
+        vector<Point2f> target_pts;
+        Point2f rotate_center;
     };
 
 }
