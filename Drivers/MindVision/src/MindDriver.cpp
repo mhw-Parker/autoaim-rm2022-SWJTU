@@ -72,10 +72,10 @@ bool MindDriver::SetCam() {
     CameraSetAeState(hCamera, false); //设置为手动曝光
     // 134
     if (carName == SENTRY) {
-        CameraSetExposureTime(hCamera, 6000); //设置曝光时间
+        CameraSetExposureTime(hCamera, 5000); //设置曝光时间
         //CameraSetAnalogGainX(hCamera,2); //设置增益系数
     } else { // 133
-        CameraSetExposureTime(hCamera, 8000); //设置曝光时间
+        CameraSetExposureTime(hCamera, 5500); //设置曝光时间
     }
 
     //CameraSetAnalogGainX(hCamera,14); //设置增益系数

@@ -256,10 +256,10 @@ namespace rm
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)) {
                     if (saveSVM) {
                         save_img_cnt++;
-                        if (save_img_cnt == 8) {
+                        if (save_img_cnt == 3) {
                             save_img_cnt = 0;
                             if (armorDetectorPtr->armorNumber) {
-                                SVMPath = (string(SAVE_SVM_PIC) + to_string(armorDetectorPtr->armorNumber) + "/" +
+                                SVMPath = (string(SAVE_SVM_PIC) + to_string(3) + "/" +
                                            to_string(svm_img_num)).append(".png");
                             } else {
                                 SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(svm_img_num)).append(".png");
@@ -339,12 +339,8 @@ namespace rm
                 if (lastControlState == curControlState) {
                     lastControlState = curControlState;
                 } else {
-                    if (curControlState == BIG_ENERGY_STATE || curControlState == SMALL_ENERGY_STATE)
-                        energyPtr->Refresh();
-                    //else
-                    /* 装甲板识别初始化，滤波器初始化啥的 */
-                    if (curControlState == AUTO_SHOOT_STATE)
-                        predictPtr->Refresh();
+                    energyPtr->Refresh();
+                    predictPtr->Refresh();
                 }
                 lastControlState = curControlState; //更新上一次的状态值
                 switch (curControlState) {
@@ -390,13 +386,13 @@ namespace rm
                                             gimbal_ypd);
                         // 云台当前yaw pitch
                         target_ypd << gimbal_ypd[0] - solverPtr->yaw,
-                                gimbal_ypd[1] + solverPtr->pitch,
-                                solverPtr->dist;
-                        predictPtr->armorPredictor(target_ypd, v_bullet);
+                                      gimbal_ypd[1] + solverPtr->pitch,
+                                      solverPtr->dist;
+                        predictPtr->armorPredictor(target_ypd, 14);
                         yaw_abs = target_ypd[0];
                         pitch_abs = target_ypd[1];
-//                        yaw_abs = predictPtr->predict_ypd[0];
-//                        pitch_abs = predictPtr->predict_ypd[1];
+                        yaw_abs = predictPtr->predict_ypd[0];
+                        pitch_abs = predictPtr->predict_ypd[1];
 
 
                         solverPtr->backProject2D(show_img, predictPtr->predict_xyz);
@@ -405,8 +401,7 @@ namespace rm
                         // **** 目标陀螺仪 x y z **** //
                         dataWrite << gimbal_ypd[1] << " " << solverPtr->yaw << endl;
 #endif
-                    }
-                    else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
+                    } else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
                         if (armorDetectorPtr->lossCnt == 1)
                             last_xyz = predictPtr->target_xyz;
                         float dt = last_mission_time;
@@ -451,8 +446,8 @@ namespace rm
                         predictPtr->SmallEnergyPredictor(target_pts,rotate_center,0.15+fly_t);
 
                     solverPtr->GetPoseV(predictPtr->predict_pts,false,gimbal_ypd);
+                    //solverPtr->GetPoseV(target_pts,false,gimbal_ypd);
 
-                    //solverPtr->GetPoseV(energyPtr->predict_pts, false,gimbal_ypd);
                     target_ypd << receiveData.yawAngle - solverPtr->yaw,
                             receiveData.pitchAngle + solverPtr->pitch,
                             solverPtr->dist;
@@ -462,10 +457,12 @@ namespace rm
                     yaw_abs = target_ypd[0]; //绝对yaw角度
                     //pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
                     v_bullet = v_bullet > 18 ? v_bullet : 18.1;
-                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-4,fly_t);
+                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-2,fly_t);
                     cout << "--fly t : " << fly_t << endl;
+
+                    //pitch_abs = target_ypd[1];
                     serialPtr->pack(yaw_abs-1,
-                                    1+pitch_abs,
+                                    pitch_abs,
                                     solverPtr->dist,
                                     solverPtr->shoot,
                                     energyPtr->detect_flag,
@@ -512,7 +509,7 @@ namespace rm
     void ImgProdCons::Receive()
     {
         do{
-            if(!produceMission) {
+            if(produceMission && !receiveMission){
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
                     curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
@@ -520,10 +517,11 @@ namespace rm
                 }
                 receiveTime = CalWasteTime(st, freq);
                 receiveMission = true;
-#if SHOWTIME == 1
-                //
-#endif
             }
+#if SHOWTIME == 1
+            //
+#endif
+
         } while (!quitFlag);
     }
 

@@ -20,7 +20,11 @@ void Predictor::Refresh() {
     target_v_xyz << 0, 0, 0;
     latency = 0.5;
     /**--------- 能量机关预测部分清空 ---------**/
+    angle.clear();
     omega.clear();
+    time_series.clear();
+    filter_omega.clear();
+    ctrl_mode = STANDBY;
 }
 
 
@@ -94,8 +98,8 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
  * @param t 预测时间
  * */
 Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
-//    int step = t / delta_t + 15;
-//    cout << "step: " << step << endl;
+    int step = t / 0.05 + 8;
+    cout << "step: " << step << endl;
     if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -109,8 +113,8 @@ Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
         InitKfAcceleration(delta_t);
     }
     Vector3f pre_xyz;
-    //pre_xyz = PredictKF(RMKF, step);
-    pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
+    pre_xyz = PredictKF(RMKF, step);
+    //pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
     return pre_xyz;
 }
 
@@ -171,7 +175,14 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
     temp_target_xyz <<  KF.state_post_(0),
                         KF.state_post_(1),
                         KF.state_post_(2);
-
+    // 拉长步长节省时间
+    float dt = 0.05;
+    for (int i = 0; i < 6; ++i) {
+        KF.trans_mat_(i, i + 3) = dt;
+    }
+    for (int i = 0; i < 3; ++i) {
+        KF.trans_mat_(i, i + 6) = 0.5 * dt * dt;
+    }
     for (int i = 0; i < iterate_times; ++i) {
         KF.predict();
         KF.correct(temp_target_xyz);
@@ -209,7 +220,11 @@ void Predictor::BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, f
             predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
             getPredictRect(center, target_pts, predict_rad); //获得预测矩形
         }
+        else
+            predict_pts = target_pts;
     }
+    else
+        predict_pts = target_pts;
 }
 void Predictor::SmallEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency) {
     time_series.push_back(0.015);

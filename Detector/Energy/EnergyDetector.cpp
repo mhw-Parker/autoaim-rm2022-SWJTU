@@ -211,6 +211,7 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
     if(detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)){
         getPts(target_armor);
         getCircleCenter(binary);
+        detect_flag = true;
     } else {
         misscount++;
         if(misscount>5){ //连续5帧丢目标
