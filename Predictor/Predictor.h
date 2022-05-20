@@ -48,7 +48,7 @@ public:
     SolveAngle solveAngle;
 
 public:
-    void armorPredictor(const Vector3f& target_ypd, float v_);
+    void armorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_);
 
     Vector3f kalmanPredict(Vector3f target_xyz, float v_, float t);
 
@@ -107,8 +107,8 @@ private:
     float delta_t = 0.015; // s
 
 public:
-    void BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency, float dt);
-    void SmallEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency);
+    void BigEnergyPredictor(vector<Point2f> &target_pts, Point2f center, float latency, float dt);
+    void SmallEnergyPredictor(vector<Point2f> &target_pts, Point2f center, float latency);
     vector<Point2f> predict_pts;
 
 private:

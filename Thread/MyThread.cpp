@@ -346,6 +346,7 @@ namespace rm
                 switch (curControlState) {
                     case AUTO_SHOOT_STATE:
                         Armor();
+                        target_pts = armorDetectorPtr->targetArmor.pts;
                         break;
                     case BIG_ENERGY_STATE:
                     case SMALL_ENERGY_STATE:
@@ -388,7 +389,7 @@ namespace rm
                         target_ypd << gimbal_ypd[0] - solverPtr->yaw,
                                       gimbal_ypd[1] + solverPtr->pitch,
                                       solverPtr->dist;
-                        predictPtr->armorPredictor(target_ypd, 14);
+                        predictPtr->armorPredictor(target_pts,armorDetectorPtr->targetArmor.armorType,gimbal_ypd, 14);
                         yaw_abs = target_ypd[0];
                         pitch_abs = target_ypd[1];
                         yaw_abs = predictPtr->predict_ypd[0];

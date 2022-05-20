@@ -31,21 +31,29 @@ void Predictor::Refresh() {
 /**
  * @brief 装甲板预测
  * */
-void Predictor::armorPredictor(const Vector3f& target_ypd, float v_) {
-    // 通过目标xyz坐标计算yaw pitch distance
-    target_xyz = getGyroXYZ(target_ypd);
+void Predictor::armorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_) {
+    if(target_pts.size() == 4) {
+        solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
+        Vector3f target_ypd{solveAngle.yaw, solveAngle.pitch, solveAngle.dist};
+        // 通过目标xyz坐标计算yaw pitch distance
+        target_xyz = getGyroXYZ(target_ypd);
 
-    // kalman预测要击打位置的xyz
-    predict_xyz = kalmanPredict(target_xyz, v_, latency);
+        // kalman预测要击打位置的xyz
+        predict_xyz = kalmanPredict(target_xyz, v_, latency);
 
-    // 计算要转过的角度
-    Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-    predict_ypd = target_ypd + delta_ypd;
+        // 计算要转过的角度
+        Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+        predict_ypd = target_ypd + delta_ypd;
 
-    // 计算这一次的预测时间pre_t
-    float fly_t = 0;
-    predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
-    latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+        // 计算这一次的预测时间pre_t
+        float fly_t = 0;
+        predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
+        latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+    }
+    else {
+
+    }
+
 
     // 以下为debug显示数据
 
@@ -202,7 +210,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
 /**
  * @brief 大能量机关预测
  * */
-void Predictor::BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency, float dt) {
+void Predictor::BigEnergyPredictor(vector<Point2f> &target_pts, Point2f center, float latency, float dt) {
     total_t += dt;  ///时序更新方式最好变成全局变量
     time_series.push_back(total_t);    //存放时间序列
     Point2f target_point;
@@ -226,7 +234,7 @@ void Predictor::BigEnergyPredictor(vector<Point2f> target_pts, Point2f center, f
     else
         predict_pts = target_pts;
 }
-void Predictor::SmallEnergyPredictor(vector<Point2f> target_pts, Point2f center, float latency) {
+void Predictor::SmallEnergyPredictor(vector<Point2f> &target_pts, Point2f center, float latency) {
     time_series.push_back(0.015);
     Point2f target_point;
     if(target_pts.size() == 4)
