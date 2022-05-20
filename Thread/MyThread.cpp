@@ -386,47 +386,21 @@ namespace rm
                         yaw_abs = predictPtr->predict_ypd[0];
                         pitch_abs = predictPtr->predict_ypd[1];
                     }
-#if SAVE_TEST_DATA == 1
-                        // **** 目标陀螺仪 x y z **** //
-                        dataWrite << gimbal_ypd[1] << " " << solverPtr->yaw << endl;
-#endif
-                    /** package data and prepare for sending data to lower-machine **/
-                    serialPtr->pack(yaw_abs,
-                                    pitch_abs,
-                                    solverPtr->dist,
-                                    solverPtr->shoot,
-                                    armorDetectorPtr->findState,
-                                    AUTO_SHOOT_STATE,
-                                    0);
-#if DEBUG_MSG == 1
-                    LOGM("Write Data\n");
-#endif
                 }
                 else {
                     predictPtr->EnergyPredictor(curControlState,target_pts,rotate_center,gimbal_ypd,
                                                    v_bullet,tmp_t);
-
-                    yaw_abs = predictPtr->predict_ypd[0];
+                    yaw_abs = predictPtr->predict_ypd[0] - 1;
                     pitch_abs = predictPtr->predict_ypd[1];
-                    //pitch_abs = target_ypd[1];
-                    serialPtr->pack(yaw_abs-1,
-                                    pitch_abs,
-                                    solverPtr->dist,
-                                    solverPtr->shoot,
-                                    energyPtr->detect_flag,
-                                    curControlState,
-                                    0);
-
-#if SAVE_LOG == 1
-                    //            string s = getSysTime();
-        //            logWrite <<"=========== produce mission ==========="<< endl;
-        //            logWrite << s << endl;
-        //            logWrite << "yaw angle : " << solverPtr->yaw << endl;
-        //            logWrite << "pitch angle : " << solverPtr->pitch << endl;
-        //            logWrite << "detect or not : " << energyPtr->detect_flag << endl;
-                    logWrite << solverPtr->tvecs << endl;
-#endif
                 }
+                /** package data and prepare for sending data to lower-machine **/
+                serialPtr->pack(yaw_abs,
+                                pitch_abs,
+                                solverPtr->dist,
+                                solverPtr->shoot,
+                                armorDetectorPtr->findState,
+                                curControlState,
+                                0);
 
                 /** send data from host to low-end machine to instruct holder's movement **/
                 if (serialPtr->WriteData()) {

@@ -171,9 +171,8 @@ namespace rm
     bool ArmorDetector::ArmorDetectTask(Mat &img_)
     {
         this->img = img_.clone();
-#if USEROI == 1
+
         GetRoi(); //get roi
-#endif
 
         imgRoi = img(roiRect);
 
@@ -196,6 +195,7 @@ namespace rm
     */
     bool ArmorDetector::DetectArmor()
     {
+        targetArmor.pts.clear();
         findState = false;
         armorNumber = 0;
 
