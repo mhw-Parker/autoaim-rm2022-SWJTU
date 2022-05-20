@@ -138,7 +138,7 @@ private:
     EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
     vector<float> filter_omega;
 
-    /**---- estimate rotation speed parameter ----**/
+    /**---- estimate big fan rotation speed parameters ----**/
     void estimateParam(vector<float> &omega_, vector<float> &t_);
     ceres::Problem problem;
     double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值

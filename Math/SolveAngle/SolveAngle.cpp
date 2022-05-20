@@ -22,13 +22,13 @@ SolveAngle::SolveAngle() {
             cv2eigen(cameraMatrix,cam_mat);
             //静态校正值
             //yaw_static = -0.15;
-            //pitch_static = -1.77;
+            pitch_static = -1.77;
             //枪口坐标系相对位置
             //fit_xyz << 0, 50, 50; //x y z
             break;
         case INFANTRY_MELEE0:
-            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
+            fs["Distortion_Coefficients5_MIND133GC-1"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND133GC-1"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             //静态校正值
             //yaw_static = 1.6;
