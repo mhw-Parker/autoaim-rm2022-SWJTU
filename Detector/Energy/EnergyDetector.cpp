@@ -29,10 +29,9 @@ using namespace std;
  * @return null
  * @remark Energy类构造函数，初始化有关参数
  */
-EnergyDetector::EnergyDetector() : waveClass(3,600,1000){
+EnergyDetector::EnergyDetector() {
     initEnergy();
     initEnergyPartParam();//对能量机关参数进行初始化
-    freq = getTickFrequency();
 }
 
 /**
@@ -168,16 +167,6 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
  * */
 void EnergyDetector::Refresh() {
     clearAll(); //清除容器
-    //counter = 0;
-    energy_rotation_direction = 1;
-    ctrl_mode = INIT;
-    //startT = getTickCount();
-
-    angle.clear();       //clear angle vector
-    omega.clear();
-    filter_omega.clear();//clear filter_omega
-    time_series.clear(); //clear time series
-    delta_theta.clear();
 }
 
 

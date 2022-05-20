@@ -46,7 +46,7 @@ public:
     ~Predictor();
     void Refresh();
     cv::Point2f predict_point;
-    float latency = 0.5, fly_t = 0.2;
+    float latency = 0.5, fly_t = 0.2, react_t = 0.2;
     Vector3f target_ypd, delta_ypd, predict_ypd;
     Vector3f target_xyz{}, predict_xyz{}, last_xyz{};
 
@@ -54,8 +54,9 @@ private:
     void updateTimeStamp(float &dt);
     SolveAngle solveAngle;
     vector<float> time_series;
-    int lost_cnt = 0;
+    float total_t = 0;
     float degree2rad = CV_PI / 180;
+    int lost_cnt = 0;
 
 public:
     void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt);
@@ -88,7 +89,6 @@ private:
     float calOmega(int step, float &total_theta);
     bool EnergyStateSwitch();
 
-    float total_t = 0;
     float total_theta = 0;
     float current_theta = 0;
     float current_omega = 0;
@@ -135,7 +135,6 @@ private:
 
     int change_cnt;
     bool last_flag, flag = 1;
-    float react_t = 0.2;
     float predict_rad;
 
 };

@@ -62,10 +62,9 @@ class EnergyDetector{
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyTask(const Mat &src, int8_t mode, const float dt, const float fly_t);//接口
     void EnergyDetectTask(const Mat &src);
     void Refresh();
-    //void getPredictPoint();
+
     vector<Point2f> pts;
     vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
@@ -118,9 +117,6 @@ private:
     //void getPredictPoint(Mat src);
     void getPts(RotatedRect armor);
 
-    //Point2f calPredict(float theta) const;
-    Point2f calPredict(Point2f p, Point2f center, float theta) const;
-
     std::vector<Blade> target_blades;//可能的目标装甲板
     std::vector<cv::RotatedRect> armors;//图像中所有可能装甲板
     std::vector<cv::RotatedRect> valid_fan_strip;//可能的流动扇叶
@@ -129,60 +125,14 @@ private:
     Mat roi;
     int misscount = 10;
 /*** *** *** *** *** ***/
-private:
-/*** new predict ***/
-    float spdInt(float t);
-    float spdPhi(float omega, int flag);
-    float startT = 0;
-    vector<float> delta_theta;
-    vector<float> angle;
-    vector<float> omega;
-
-    int predict_cnt = 0;
-    int flag = 0;
-    int last_flag = 0;
-    void getPredictPointSmall(const float fly_t);
-    void getPredictPoint();
-    void getPredictRect(float theta, vector<Point2f> pts);
-    RMTools::DisPlayWaveCLASS waveClass;
-
-/*** *** *** *** *** ***/
-private:
-    void FilterOmega(const float dt);
-    void initRotateKalman();
-    void initRadKalman();
-    void getPredictPointBig(const float fly_t);
-    EigenKalmanFilter energy_kf = EigenKalmanFilter(3, 2, 1);
-    EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
-    double freq;
-    float current_theta = 0;
-    float current_omega = 0;
-    float total_theta = 0;
-    vector<float> filter_omega; //kalman filter omega
-    u_int8_t ctrl_mode = INIT;  //控制当前打幅模式状态
-    int st = 0; //estimate init flag
 
 private:
-    bool judgeRotation(int8_t mode);
-    void estimateParam(vector<float>omega_, vector<float>t_);
-    float total_t = 0;
-    vector<float> time_series; //记录每次的时间
-    ceres::Problem problem;
-    int counter = 0; //拟合数据计数器
-    double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值
-
     Blade target_blade;//目标扇叶
     cv::RotatedRect target_armor;//目标装甲板
     cv::RotatedRect last_target_armor;//上一次目标装甲板
 
-    int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
-    int clockwise_rotation_init_cnt = 0;//装甲板顺时针旋转次数
     void updateLastValues();//更新上一次的各种值
-    //预测提前角
-    int64 last_frame_time;
-    int64 frame_time;
-private:
-    float calOmega(vector<float> &omega_vec, vector<float> &time_vec, int step);
+    int64 frame_time, last_frame_time;
 };
 
 #endif //ENERGY_H

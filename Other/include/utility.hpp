@@ -293,7 +293,7 @@ namespace RMTools {
     inline float total2circle(float theta){
         if(theta > 0)
             return theta - (int)(theta / 360) * 360;
-        else if(theta < 0)
+        else
             return theta - (int)(theta / 360 - 1) * 360;
     }
     /**
