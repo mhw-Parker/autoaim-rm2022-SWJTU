@@ -67,7 +67,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 5;
         latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
     }
-    else {
+    else {     /// 闪烁导致丢失目标时的处理策略，目前为运动线性插值
         if(!lost_cnt)
             last_xyz = target_xyz;
         lost_cnt++;
@@ -301,7 +301,6 @@ bool Predictor::EnergyStateSwitch() {
         default: return true;
     }
 }
-
 bool Predictor::JudgeFanRotation() {
     if(angle.size() > 3 && angle.size() < 19){
         current_omega = calOmega(3,total_theta);
@@ -316,11 +315,9 @@ bool Predictor::JudgeFanRotation() {
             initFanRadKalman();
             return true;
         }
-        else
-            return false;
+        else return false;
     }
-    else
-        return true;
+    else return true;
 }
 /**
  * @brief 计算能量机关旋转角速度
@@ -358,10 +355,9 @@ void Predictor::FilterOmega(const float dt) {
 void Predictor::FilterRad(const float latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
     vector<float> cut_time_series(time_series.end()-6,time_series.end());
-    Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //对上面数据用最小二乘
-
+    Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘
     // Five consecutive same judge can change the current state.
-    int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘法判断斜率
+    int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘判断角速度增减性
     change_cnt = (cur_flag != last_flag) ? 0 : (change_cnt+1);
 
     if (change_cnt == 3) {
