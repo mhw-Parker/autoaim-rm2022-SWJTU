@@ -380,53 +380,16 @@ namespace rm
                 receiveMission = false;
 
                 if (curControlState == AUTO_SHOOT_STATE) {
-                    if (armorDetectorPtr->findState && armorDetectorPtr->lostCnt == 0) {
-                        /**call solvePnp algorithm function to get the yaw, pitch and distance data**/
-                        solverPtr->GetPoseV(armorDetectorPtr->targetArmor.pts,
-                                            armorDetectorPtr->targetArmor.armorType,
-                                            gimbal_ypd);
-                        // 云台当前yaw pitch
-                        target_ypd << gimbal_ypd[0] - solverPtr->yaw,
-                                      gimbal_ypd[1] + solverPtr->pitch,
-                                      solverPtr->dist;
-                        predictPtr->armorPredictor(target_pts,armorDetectorPtr->targetArmor.armorType,gimbal_ypd, 14);
-                        yaw_abs = target_ypd[0];
-                        pitch_abs = target_ypd[1];
+                    if (armorDetectorPtr->findState) {
+                        predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
+                                                   v_bullet,tmp_t);
                         yaw_abs = predictPtr->predict_ypd[0];
                         pitch_abs = predictPtr->predict_ypd[1];
-
-
-                        solverPtr->backProject2D(show_img, predictPtr->predict_xyz);
-
+                    }
 #if SAVE_TEST_DATA == 1
                         // **** 目标陀螺仪 x y z **** //
                         dataWrite << gimbal_ypd[1] << " " << solverPtr->yaw << endl;
 #endif
-                    } else if (!armorDetectorPtr->findState && armorDetectorPtr->lostCnt < 3) {
-                        if (armorDetectorPtr->lossCnt == 1)
-                            last_xyz = predictPtr->target_xyz;
-                        float dt = last_mission_time;
-                        predictPtr->target_xyz = predictPtr->target_xyz + predictPtr->target_v_xyz * dt +
-                                                 0.5 * predictPtr->target_a_xyz * dt * dt;
-                        Vector3f predict_xyz = predictPtr->kalmanPredict(predictPtr->target_xyz, v_bullet, dt);
-                        Vector3f predict_ypd = target_ypd + GetDeltaYPD(predict_xyz, last_xyz);
-                        yaw_abs = predict_ypd[0];
-                        pitch_abs = predict_ypd[1];
-                    }
-                    else
-                        predictPtr->Refresh();
-
-                    if(showArmorBox){
-                        string str[] = {"re-yaw:","re-pitch:","tar-yaw:",
-                                        "tar-pit:","pre-yaw","pre-pit",
-                                        "v bullet:"};
-                        vector<float> data(7);
-                        data = {receiveData.yawAngle,receiveData.pitchAngle,
-                                target_ypd[0],target_ypd[1],
-                                predictPtr->predict_ypd[0],predictPtr->predict_ypd[1],
-                                v_bullet};
-                        RMTools::showData(data,str,"abs degree");
-                    }
                     /** package data and prepare for sending data to lower-machine **/
                     serialPtr->pack(yaw_abs,
                                     pitch_abs,
@@ -435,32 +398,16 @@ namespace rm
                                     armorDetectorPtr->findState,
                                     AUTO_SHOOT_STATE,
                                     0);
-                    feedbackDelta = 1;
 #if DEBUG_MSG == 1
                     LOGM("Write Data\n");
 #endif
                 }
                 else {
-                    if(curControlState == BIG_ENERGY_STATE)
-                        predictPtr->BigEnergyPredictor(target_pts,rotate_center,0.15+fly_t,tmp_t);
-                    else
-                        predictPtr->SmallEnergyPredictor(target_pts,rotate_center,0.15+fly_t);
+                    predictPtr->EnergyPredictor(curControlState,target_pts,rotate_center,gimbal_ypd,
+                                                   v_bullet,tmp_t);
 
-                    solverPtr->GetPoseV(predictPtr->predict_pts,false,gimbal_ypd);
-                    //solverPtr->GetPoseV(target_pts,false,gimbal_ypd);
-
-                    target_ypd << receiveData.yawAngle - solverPtr->yaw,
-                            receiveData.pitchAngle + solverPtr->pitch,
-                            solverPtr->dist;
-                    Vector3f pre_xyz = predictPtr->getGyroXYZ(target_ypd);
-
-                    ///电控云台  yaw角：向右为 -  向左为 +    pitch角：向上为 + 向下为 -
-                    yaw_abs = target_ypd[0]; //绝对yaw角度
-                    //pitch_abs = receiveData.pitchAngle + solverPtr->pitch; //绝对pitch角度
-                    v_bullet = v_bullet > 18 ? v_bullet : 18.1;
-                    pitch_abs = solverPtr->CalPitch(pre_xyz,v_bullet-2,fly_t);
-                    cout << "--fly t : " << fly_t << endl;
-
+                    yaw_abs = predictPtr->predict_ypd[0];
+                    pitch_abs = predictPtr->predict_ypd[1];
                     //pitch_abs = target_ypd[1];
                     serialPtr->pack(yaw_abs-1,
                                     pitch_abs,
@@ -536,19 +483,19 @@ namespace rm
                 putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
                         2,
                         8, 0);
-                putText(show_img, to_string(solverPtr->dist), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
                         Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
                         8,
                         0);
-                putText(show_img, to_string(solverPtr->yaw), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
+                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
                         Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
                         8,
                         0);
-                putText(show_img, to_string(solverPtr->pitch), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
+                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
                         Scalar(255, 255, 255), 2, 8, 0);
 
                 putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
@@ -569,13 +516,13 @@ namespace rm
                         line(show_img, predictPtr->predict_pts[i], predictPtr->predict_pts[(i + 1) % (4)],
                              Scalar(0, 255, 255), 2, LINE_8);
                     }
-                    circle(show_img, energyPtr->target_point, 2, Scalar(0, 255, 0), 3);
+                    circle(show_img, energyPtr->target_point, 2, Scalar(0, 0, 255), 3);
                     circle(show_img, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                    circle(show_img, predictPtr->predict_point, 2, Scalar(100, 10, 255), 3);
                 }
                 if (showArmorBox && armorDetectorPtr->findState) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
                 }
+                circle(show_img, predictPtr->predict_point, 5, Scalar(100, 240, 15), 2);
                 imshow("Detect Frame", show_img);
                 waitKey(1);
             }

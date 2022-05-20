@@ -42,56 +42,20 @@
     <cols>3</cols>
     <dt>d</dt>
     <data>
-      1351.657656385913 0.000000000000000 676.3608797375953
-      0.000000000000000 1349.760819492449 500.4147922454784
-      0.000000000000000 0.000000000000000 1.000000000000000
+      1759.6 0.0000 645.5970
+      0.0000 1761.0 482.3324
+      0.0000 0.0000 1.000000
     </data>
   </Intrinsic_Matrix_MIND134GC-0>
   <Distortion_Coefficients5_MIND134GC-0 type_id="opencv-matrix">
     <rows>5</rows>
     <cols>1</cols>
     <dt>d</dt>
-    <data>-0.02972117950492351 -0.1979342313490821 0.006255281843520727 0.006100406627488073 1.107617381613446
+    <data>-0.0744 0.3689 0 0 0
     </data>
   </Distortion_Coefficients5_MIND134GC-0>
 
-  <Intrinsic_Matrix_MIND134GC-0-matlab type_id="opencv-matrix">
-    <rows>3</rows>
-    <cols>3</cols>
-    <dt>d</dt>
-    <data>
-      1346.7 0.0000 643.2252
-      0.0000 1347.5 475.9334
-      0.0000 0.0000 1.000000
-    </data>
-  </Intrinsic_Matrix_MIND134GC-0-matlab>
-  <Distortion_Coefficients5_MIND134GC-0-matlab type_id="opencv-matrix">
-    <rows>5</rows>
-    <cols>1</cols>
-    <dt>d</dt>
-    <data>-0.0732 0.1960 0 0 0
-    </data>
-  </Distortion_Coefficients5_MIND134GC-0-matlab>
-
   <Intrinsic_Matrix_MIND133GC-0 type_id="opencv-matrix">
-    <rows>3</rows>
-    <cols>3</cols>
-    <dt>d</dt>
-    <data>
-      1567.4 0 645.5262
-      0 1568.1 554.8260
-      0 0 1
-    </data>
-  </Intrinsic_Matrix_MIND133GC-0>
-  <Distortion_Coefficients5_MIND133GC-0 type_id="opencv-matrix">
-    <rows>4</rows>
-    <cols>1</cols>
-    <dt>d</dt>
-    <data>-0.0853 0.2234 0 0
-    </data>
-  </Distortion_Coefficients5_MIND133GC-0>
-
-  <Intrinsic_Matrix_MIND133GC-1 type_id="opencv-matrix">
     <rows>3</rows>
     <cols>3</cols>
     <dt>d</dt>
@@ -100,13 +64,13 @@
       0 1585 508.6335
       0 0 1
     </data>
-  </Intrinsic_Matrix_MIND133GC-1>
-  <Distortion_Coefficients5_MIND133GC-1 type_id="opencv-matrix">
+  </Intrinsic_Matrix_MIND133GC-0>
+  <Distortion_Coefficients5_MIND133GC-0 type_id="opencv-matrix">
     <rows>4</rows>
     <cols>1</cols>
     <dt>d</dt>
     <data>-0.0770 0.2049 0 0
     </data>
-  </Distortion_Coefficients5_MIND133GC-1>
+  </Distortion_Coefficients5_MIND133GC-0>
 
 </opencv_storage>

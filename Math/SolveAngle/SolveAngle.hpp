@@ -44,6 +44,7 @@ public:
      * @param gimbal_ypd 旋转矩阵
      * */
     void backProject2D(Mat &src, Vector3f target_xyz);
+    Point2f getBackProject2DPoint(Vector3f target_xyz);
 
     float scale = 0.99f;
     float f_ = 1500;

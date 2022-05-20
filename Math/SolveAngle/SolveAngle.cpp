@@ -17,34 +17,13 @@ SolveAngle::SolveAngle() {
     }
     switch(carName) {
         case HERO:
-            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
-            cv2eigen(cameraMatrix,cam_mat);
-            //静态校正值
-            //yaw_static = -0.15;
-            pitch_static = -1.77;
-            //枪口坐标系相对位置
-            //fit_xyz << 0, 50, 50; //x y z
-            break;
         case INFANTRY_MELEE0:
-            fs["Distortion_Coefficients5_MIND133GC-1"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND133GC-1"] >> cameraMatrix;
-            cv2eigen(cameraMatrix,cam_mat);
-            //静态校正值
-            //yaw_static = 1.6;
-            //pitch_static = 0.5;
-            //枪口坐标系相对位置
-            //fit_xyz << 0, 50, 50; //x y z
-            break;
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            //静态校正值
-            yaw_static = 1.5;
-            pitch_static = -0.6;
             //枪口坐标系相对位置
-            //fit_xyz << 30, 50, 50;
+            //fit_xyz << 0, 50, 50; //x y z
             break;
         case INFANTRY_TRACK:
             break;
@@ -55,18 +34,15 @@ SolveAngle::SolveAngle() {
             yaw_static = 1.6;
             pitch_static = 0.5;
         case SENTRY:
-            fs["Distortion_Coefficients5_MIND134GC-0-matlab"] >> distortionCoefficients;
-            fs["Intrinsic_Matrix_MIND134GC-0-matlab"] >> cameraMatrix;
+            fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            //静态校正值
-            //yaw_static = 1.48;
-            //pitch_static = 0.5;
             //枪口坐标系相对位置
             //fit_xyz << 0, 50, 50; //x y z
             break;
         case UAV:
             break;
-        case NOTDEFINED:
+        default:
             break;
     }
     cv2eigen(cameraMatrix,camMat_E);
@@ -147,7 +123,6 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f 
     float sin_p, cos_p;
     sin_p = sin(gimbal_ypd[1] * degree2rad);
     cos_p = cos(gimbal_ypd[1] * degree2rad);
-
 
     Ry <<   cos_y , 0     , -sin_y ,
             0     , 1     , 0     ,
@@ -250,6 +225,12 @@ void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz) {
     cam_xyz = World2Cam(target_xyz);
     pix_uv1 = Cam2Pixel(cam_xyz);
     circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 5, Scalar(100, 240, 15), 3);
+}
+Point2f SolveAngle::getBackProject2DPoint(Vector3f target_xyz) {
+    Vector3f cam_xyz, pix_uv1;
+    cam_xyz = World2Cam(target_xyz);
+    pix_uv1 = Cam2Pixel(cam_xyz);
+    return Point2f (pix_uv1[0],pix_uv1[1]);
 }
 Vector3f SolveAngle::Cam2World(Vector3f cam_xyz) {
     Vector3f world_xyz;

@@ -15,6 +15,10 @@ Predictor::~Predictor() = default;
  * @brief 变更目标时更新预测器
  * */
 void Predictor::Refresh() {
+    /**--------- 公共享有部分清空 ---------**/
+    time_series.clear();
+    total_t = 0;
+    /**--------- 装甲板预测部分清空 ---------**/
     RMKF_flag = false;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
@@ -22,55 +26,86 @@ void Predictor::Refresh() {
     /**--------- 能量机关预测部分清空 ---------**/
     angle.clear();
     omega.clear();
-    time_series.clear();
     filter_omega.clear();
     ctrl_mode = STANDBY;
+    total_theta = 0;
+
+}
+void Predictor::updateTimeStamp(float &dt) {
+    total_t += dt;  ///时序更新方式最好变成全局变量
+    time_series.push_back(total_t);    //存放时间序列
 }
 
-
 /**
- * @brief 装甲板预测
+ * @brief 装甲板平动预测
+ * @param target_pts 目标装甲板四点
+ * @param armor_type 装甲板类型
+ * @param gimbal_ypd 云台陀螺仪角度
+ * @param v_ 弹速
+ * @param dt 两次处理源图像时间间隔
  * */
-void Predictor::armorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_) {
+void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt) {
+    updateTimeStamp(dt);
     if(target_pts.size() == 4) {
+        lost_cnt = 0; //清空丢失目标计数
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
-        Vector3f target_ypd{solveAngle.yaw, solveAngle.pitch, solveAngle.dist};
+        delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist; //因为云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
+
+        target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
         target_xyz = getGyroXYZ(target_ypd);
 
         // kalman预测要击打位置的xyz
         predict_xyz = kalmanPredict(target_xyz, v_, latency);
+        predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
 
         // 计算要转过的角度
-        Vector3f delta_ypd = RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-        predict_ypd = target_ypd + delta_ypd;
+        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
 
         // 计算这一次的预测时间pre_t
         float fly_t = 0;
-        predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
+        predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 5;
         latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
     }
     else {
-
+        if(!lost_cnt)
+            last_xyz = target_xyz;
+        lost_cnt++;
+        if(lost_cnt < 4) {
+            target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
+            predict_xyz = kalmanPredict(target_xyz,v_,latency);
+            predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
+            float fly_t = 0;
+            predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
+            latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+        } else Refresh();
     }
 
-
     // 以下为debug显示数据
-
     if(showArmorBox){
-        vector<float> show_data;
+        vector<float> data2;
         for(int len = 0;len<target_xyz.size();len++)
-            show_data.push_back(target_xyz[len]);
+            data2.push_back(target_xyz[len]);
         for(int len = 0;len<RMKF.state_post_.rows();len++)
-            show_data.push_back(RMKF.state_post_[len]);
+            data2.push_back(RMKF.state_post_[len]);
         for(int i=0;i<3;i++)
-            show_data.push_back(predict_ypd[i]);
-        string str[] = {"m_x","m_y","m_z",
+            data2.push_back(predict_ypd[i]);
+        string str2[] = {"m_x","m_y","m_z",
                         "kf_x","kf_y","kf_z",
                         "kf_vx","kf_vy","kf_vz",
                         "kf_ax","kf_ay","kf_az",
                         "pre_yaw","pre_pitch","pre_dist"};
-        RMTools::showData(show_data, str, "data window");
+        RMTools::showData(data2, str2, "data window");
+
+        string str1[] = {"re-yaw:","re-pitch:","tar-yaw:",
+                        "tar-pit:","pre-yaw","pre-pit",
+                        "v bullet:"};
+        vector<float> data1(7);
+        data1 = {gimbal_ypd[0],gimbal_ypd[1],
+                target_ypd[0],target_ypd[1],
+                predict_ypd[0],predict_ypd[1],
+                v_};
+        RMTools::showData(data1,str1,"abs degree");
     }
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
 }
@@ -106,7 +141,7 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
  * @param t 预测时间
  * */
 Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
-    int step = t / 0.05 + 8;
+    int step = t / 0.05 + 10;
     cout << "step: " << step << endl;
     if (RMKF_flag) {
         UpdateKF(target_xyz);
@@ -146,24 +181,20 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
     RMKF.process_noise_.setIdentity();
+    RMKF.process_noise_ *= 1;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 5;
+    RMKF.measure_noise_ *= 10;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     // 后验估计
-    RMKF.state_post_ << target_xyz[0],
-                        target_xyz[1],
-                        target_xyz[2],
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0;
+    RMKF.state_post_ << target_xyz[0],target_xyz[1],target_xyz[2],
+                        0,0,0,
+                        0,0,0;
 }
 /**
  * @brief RMKF更新，包括预测部分和更正部分
+ * @param z_k 观测量 默认为三维坐标 x y z
  */
 void Predictor::UpdateKF(const Vector3f& z_k) {
     // 预测
@@ -209,10 +240,15 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
 /******************************************************************************************/
 /**
  * @brief 大能量机关预测
+ * @param mode 大幅或小幅模式
+ * @param target_pts 目标装甲板四点
+ * @param center 旋转中心
+ * @param gimbal_ypd 云台陀螺仪角度
+ * @param v_ 弹速
+ * @param dt 两次处理源图像时间间隔
  * */
-void Predictor::BigEnergyPredictor(vector<Point2f> &target_pts, Point2f center, float latency, float dt) {
-    total_t += dt;  ///时序更新方式最好变成全局变量
-    time_series.push_back(total_t);    //存放时间序列
+void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
+    updateTimeStamp(dt);
     Point2f target_point;
     if(target_pts.size() == 4)
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
@@ -221,36 +257,28 @@ void Predictor::BigEnergyPredictor(vector<Point2f> &target_pts, Point2f center, 
     Point2f p = target_point - center; //圆心指向目标的向量
     current_theta = atan2(p.y,p.x);     //当前角度 弧度制
     angle.push_back(current_theta);    //存放对应的角度序列
-    if(JudgeFanRotation()){
-        FilterOmega(dt);
-        if(EnergyStateSwitch()) {
-            FilterRad(latency);
-            predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
-            getPredictRect(center, target_pts, predict_rad); //获得预测矩形
+    if(JudgeFanRotation()) {
+        if(mode == BIG_ENERGY_STATE) {
+            FilterOmega(dt);
+            if(EnergyStateSwitch())
+                FilterRad(latency);
+            else
+                predict_rad = 0;
         }
         else
-            predict_pts = target_pts;
+            predict_rad = energy_rotation_direction * 1.4 * latency;
+        predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
+        getPredictRect(center, target_pts, predict_rad); //获得预测矩形
     }
     else
         predict_pts = target_pts;
+    solveAngle.GetPoseV(predict_pts, false, gimbal_ypd);
+    delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
+    predict_ypd = gimbal_ypd + delta_ypd;
+    predict_xyz = getGyroXYZ(predict_ypd);
+    predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
+    latency = 0.2 + fly_t;
 }
-void Predictor::SmallEnergyPredictor(vector<Point2f> &target_pts, Point2f center, float latency) {
-    time_series.push_back(0.015);
-    Point2f target_point;
-    if(target_pts.size() == 4)
-        target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
-    else
-        return;
-    Point2f p = target_point - center; //圆心指向目标的向量
-    current_theta = atan2(p.y,p.x);     //当前角度 弧度制
-    angle.push_back(current_theta);    //存放对应的角度序列
-    if(JudgeFanRotation()){
-        predict_rad = energy_rotation_direction * 1.4 * latency;
-        predict_point = calPredict(target_point,center,predict_rad);
-        getPredictRect(center, target_pts, predict_rad);
-    }
-}
-
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
         case STANDBY:
@@ -278,7 +306,7 @@ bool Predictor::JudgeFanRotation() {
     if(angle.size() > 3 && angle.size() < 19){
         current_omega = calOmega(3,total_theta);
         omega.push_back(current_omega);
-        if(angle.size() == 18){
+        if(angle.size() == 18) {
             int clockwise_cnt = 0; //顺时针旋转计数器
             for(auto &i : omega)
                 if(i>0) clockwise_cnt++;
@@ -417,10 +445,6 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
 #if SAVE_LOG == 1
     write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
 #endif
-    /**  定参数  **/
-//    a_ = 0.8655;
-//    w_ = 1.9204;
-    /**  定参数  **/
 
     float sim_omega;
     for(int i=st;i < omega_.size(); i++){
