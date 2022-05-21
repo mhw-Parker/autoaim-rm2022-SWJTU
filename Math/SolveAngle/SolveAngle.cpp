@@ -187,6 +187,29 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
     return theta;
 }
 
+float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t) {
+    float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
+    float d = sqrt(x*x+z*z);
+    float h = -y;
+    float d_ = d, h_ = h, dh = 0; // temp value
+    float pitch_;
+    float v_x0, v_y0;
+    float t_;
+    //cout << "--- " << d << "\t" << h << endl;
+    for(int i = 0;i<10;i++){
+        h_ += dh;
+        pitch_ = atan2(h_,d_);
+        v_x0 = v * cos(pitch_);
+        v_y0 = v * sin(pitch_);
+        t_ = (exp(k1*d) - 1) / v_x0 / k1;
+        float temp_h = v_y0*t_ - 0.5*g*t_*t_;
+        dh = h - temp_h;
+        cout << "第 "<< i <<" 次迭代与实际高度的偏差：" << dh << "\t" << pitch_/degree2rad << "\t" << t_ << endl;
+    }
+    t = t_;
+    return pitch_ / degree2rad;
+}
+
 /**
  * @brief 将预测点反投影到图像上，世界坐标参考系参考与相机坐标系类似
  * @param src 图片

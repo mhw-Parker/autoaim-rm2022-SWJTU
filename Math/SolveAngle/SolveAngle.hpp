@@ -24,6 +24,7 @@ public:
     void GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd); //Pnp模型
 
     float CalPitch(Vector3f target_xyz, float v, float &t) const;
+    float iteratePitch(Vector3f target_xyz, float v, float &t);
 
     void backProject2D(Mat &src, Vector3f target_xyz);
     Point2f getBackProject2DPoint(Vector3f target_xyz);
@@ -76,4 +77,6 @@ private:
 
     Vector3f fit_xyz;
     Vector3f gun_xyz; //枪口坐标系下的x,y,z
+
+    float k1 = 0.01; //弹丸阻力系数
 };

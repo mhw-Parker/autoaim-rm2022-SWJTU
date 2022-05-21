@@ -374,7 +374,7 @@ namespace rm
                 double st = (double) getTickCount();
                 Vector3f gimbal_ypd;
                 if(carName == VIDEO)
-                    gimbal_ypd << 10, 20, 0;
+                    gimbal_ypd << 0, 0, 0;
                 else
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                 receiveMission = false;

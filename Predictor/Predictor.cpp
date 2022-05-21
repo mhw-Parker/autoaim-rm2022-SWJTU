@@ -54,7 +54,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
         target_xyz = getGyroXYZ(target_ypd);
-
+        float temp_t;
+        float test_cal_pitch = solveAngle.iteratePitch(target_xyz,v_,temp_t);
         // kalman预测要击打位置的xyz
         predict_xyz = kalmanPredict(target_xyz, v_, latency);
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
