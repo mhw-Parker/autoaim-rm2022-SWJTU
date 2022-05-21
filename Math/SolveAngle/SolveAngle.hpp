@@ -20,29 +20,11 @@ public:
     SolveAngle();
 
     void Generate2DPoints(Rect rect);
-    /**
-     * @brief 用 pnp 解算目标相对相机坐标系的 yaw pitch
-     * @param armor_mode 大装甲板还是小装甲
-     * @param pts 装甲板 4 点坐标
-     * @param v_ 弹速
-     * */
+
     void GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd); //Pnp模型
 
-    /**
-     * @brief 弹道补偿函数
-     * @param fitXYZ 相机相对枪口 左 上 前 为正 单位为：mm
-     * @param v 当前弹速
-     * */
-    void Compensator(Vector3f cam_xyz, float v);
     float CalPitch(Vector3f target_xyz, float v, float &t) const;
-    float pitchCompensate(Vector3f target_xyz, float v);
 
-    /**
-     * @brief 将预测点反投影到图像上
-     * @param src 预测点的（ yaw, pitch, dist ）坐标
-     * @param target_xyz 目标的陀螺仪绝对坐标
-     * @param gimbal_ypd 旋转矩阵
-     * */
     void backProject2D(Mat &src, Vector3f target_xyz);
     Point2f getBackProject2DPoint(Vector3f target_xyz);
 

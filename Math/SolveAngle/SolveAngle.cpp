@@ -133,12 +133,6 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f 
     cam2world_mat = Ry * Rp;
     world_xyz = Cam2World(p_cam_xyz);
 
-//    string str[] = {"x","y","z"};
-//    vector<float> xyz;
-//    for(int i=0; i<3; i++)
-//        xyz.push_back(world_xyz[i]);
-//    RMTools::showData(xyz,str,"xyz");
-
     rectPoint2D.clear();
     targetPoints3D.clear();
 }
@@ -164,26 +158,6 @@ void SolveAngle::GunXYZ2YPD(Vector3f cam_xyz) {
     dist = sqrt(x*x + y*y + z*z);
     yaw = yaw + yaw_static;
     pitch = pitch + pitch_static;
-}
-
-void SolveAngle::Compensator(Vector3f cam_xyz, float v) {
-    gun_xyz = cam_xyz - fit_xyz; //枪管坐标系
-    float dt = (gun_xyz[2]/1000) / v; //z轴与枪口中心重合,dt为子弹飞行时间，单位：s
-    float dy = 0.5 * 9.8 * dt * dt * 1000; //将补偿量化为 mm
-    gun_xyz[2] = gun_xyz[2] - dy;
-    ///动态补偿
-    yaw = atan2(gun_xyz[0],gun_xyz[2]) / degree2rad;
-    pitch = - atan2(gun_xyz[1], sqrt(gun_xyz[0]*gun_xyz[0] + gun_xyz[2]*gun_xyz[2])) / degree2rad;
-    dist = sqrt(pow(gun_xyz[0],2) + pow(gun_xyz[1],2) + pow(gun_xyz[2],2));
-    ///静态补偿
-    yaw = yaw + yaw_static;
-    pitch = pitch + pitch_static;
-}
-
-float SolveAngle::pitchCompensate(Vector3f target_xyz,float v) {
-    float dt = dist/1000 / v;
-    float dy = 0.5 * 9.8 * dt*dt * 1000;
-    return atan(dy/dist) / degree2rad;
 }
 
 /**
@@ -214,10 +188,11 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
 }
 
 /**
- * @brief 将预测点反投影到图像上
+ * @brief 将预测点反投影到图像上，世界坐标参考系参考与相机坐标系类似
  * @param src 图片
  * @param target_xyz 目标的陀螺仪绝对坐标
- * @param gimbal_ypd 旋转矩阵
+ * @param gimbal_ypd 云台角度
+ * @details 使用前要先调用 getPoseV 获得当前的旋转矩阵
  * */
 void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz) {
     Vector3f temp_xyz, cam_xyz, pix_uv1;
