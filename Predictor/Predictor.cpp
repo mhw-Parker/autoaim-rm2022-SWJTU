@@ -67,6 +67,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         // 计算这一次的预测时间pre_t
         float fly_t = 0;
         predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 5;
+        predict_ypd[1] = test_cal_pitch;
         latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
     }
     else {     /// 闪烁导致丢失目标时的处理策略，目前为运动线性插值

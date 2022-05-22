@@ -16,7 +16,7 @@ SolveAngle::SolveAngle() {
         return;
     }
     switch(carName) {
-        case HERO:
+        case HERO: k1 = 0.01;
         case INFANTRY_MELEE0:
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
@@ -177,24 +177,16 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
     t = sqrt(x_2);
     float s_the = (0.5*g*t*t - y) / (v*t);
     float theta = asin(s_the) / degree2rad;
-    string str[] = {"x-z","y","t","theta"};
-    vector<float> data(4);
-    data = {d,y,t,theta};
-    //RMTools::showData(data,str,"CalPitch");
-//    if(y < -0.4){
-//        theta += 6 * -y;
-//    }
     return theta;
 }
 
 float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
-    float h = -y;
-    float d_ = d, h_ = h, dh = 5; // temp value
+    float h = -y + 0.13; //
+    float d_ = d, h_ = h, dh = 1; // temp value
     float pitch_;
     float v_x0, v_y0;
-    //cout << "--- " << d << "\t" << h << endl;
     int i = 0;
     while(fabs(dh) > 1e-06){
         i++;
@@ -208,7 +200,10 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         h_ += dh;
         if(i>10) break;
     }
-    return pitch_ / degree2rad;
+    pitch_ /= degree2rad;
+    if(pitch_ > 13) pitch_ += 1.8;
+    if(pitch_ > 90) pitch_ = 0;
+    return pitch_;
 }
 
 /**

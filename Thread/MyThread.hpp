@@ -137,7 +137,7 @@ namespace rm
         /* 保存图像相关 */
         string videoPath;
         string SVMPath;
-        int svm_img_num = 0;
+        int svm_img_num = 560;
         int save_img_cnt = 0;
         VideoWriter videowriter;
         /**/
