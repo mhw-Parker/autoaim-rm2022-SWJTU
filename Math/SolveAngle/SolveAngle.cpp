@@ -187,17 +187,17 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
     return theta;
 }
 
-float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t) {
+float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
     float h = -y;
-    float d_ = d, h_ = h, dh = 0; // temp value
+    float d_ = d, h_ = h, dh = 5; // temp value
     float pitch_;
     float v_x0, v_y0;
-    float t_;
     //cout << "--- " << d << "\t" << h << endl;
-    for(int i = 0;i<10;i++){
-        h_ += dh;
+    int i = 0;
+    while(fabs(dh) > 1e-06){
+        i++;
         pitch_ = atan2(h_,d_);
         v_x0 = v * cos(pitch_);
         v_y0 = v * sin(pitch_);
@@ -205,8 +205,9 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t) {
         float temp_h = v_y0*t_ - 0.5*g*t_*t_;
         dh = h - temp_h;
         cout << "第 "<< i <<" 次迭代与实际高度的偏差：" << dh << "\t" << pitch_/degree2rad << "\t" << t_ << endl;
+        h_ += dh;
+        if(i>10) break;
     }
-    t = t_;
     return pitch_ / degree2rad;
 }
 

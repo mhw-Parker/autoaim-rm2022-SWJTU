@@ -46,6 +46,7 @@ void Predictor::updateTimeStamp(float &dt) {
  * */
 void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt) {
     updateTimeStamp(dt);
+    float temp_t, test_cal_pitch;
     if(target_pts.size() == 4) {
         lost_cnt = 0; //清空丢失目标计数
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
@@ -54,8 +55,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
         target_xyz = getGyroXYZ(target_ypd);
-        float temp_t;
-        float test_cal_pitch = solveAngle.iteratePitch(target_xyz,v_,temp_t);
+
+        test_cal_pitch = solveAngle.iteratePitch(target_xyz,v_,temp_t);
         // kalman预测要击打位置的xyz
         predict_xyz = kalmanPredict(target_xyz, v_, latency);
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
@@ -104,7 +105,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         vector<float> data1(7);
         data1 = {gimbal_ypd[0],gimbal_ypd[1],
                 target_ypd[0],target_ypd[1],
-                predict_ypd[0],predict_ypd[1],
+                predict_ypd[0],test_cal_pitch,
                 v_};
         RMTools::showData(data1,str1,"abs degree");
     }
