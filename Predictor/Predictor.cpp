@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(90,300,500),
+Predictor::Predictor() : waveClass(110,300,500),
                          omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
@@ -44,7 +44,8 @@ void Predictor::updateTimeStamp(float &dt) {
  * @param v_ 弹速
  * @param dt 两次处理源图像时间间隔
  * */
-void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt) {
+void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
+                               const Vector3f &gimbal_ypd, float v_, float dt) {
     updateTimeStamp(dt);
     float temp_t, test_cal_pitch;
     if(target_pts.size() == 4) {
@@ -69,6 +70,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 5;
         predict_ypd[1] = test_cal_pitch;
         latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+        ///
+
     }
     else {     /// 闪烁导致丢失目标时的处理策略，目前为运动线性插值
         if(!lost_cnt)
@@ -111,6 +114,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, con
         RMTools::showData(data1,str1,"abs degree");
     }
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
+    float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
+    waveClass.displayWave(solveAngle.yaw_/degree2rad,0,"cam_yaw");
 }
 
 /**

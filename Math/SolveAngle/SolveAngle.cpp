@@ -112,6 +112,12 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f 
              false,
              SOLVEPNP_ITERATIVE);
     cv2eigen(tvecs,p_cam_xyz);
+    cv2eigen(rvecs,r_vec);
+    cv::Rodrigues(rvecs,R);
+    cv2eigen(R,r_mat);
+    Vector3f w_cam_xyz = r_mat * p_cam_xyz;
+    yaw_ = atan2(w_cam_xyz[2],w_cam_xyz[0]);
+    cout << "旋转矩阵：\n" << w_cam_xyz << "\n" << yaw_/degree2rad << endl;
     camXYZ2YPD(); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 
@@ -196,12 +202,12 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         t_ = (exp(k1*d) - 1) / v_x0 / k1;
         float temp_h = v_y0*t_ - 0.5*g*t_*t_;
         dh = h - temp_h;
-        cout << "第 "<< i <<" 次迭代与实际高度的偏差：" << dh << "\t" << pitch_/degree2rad << "\t" << t_ << endl;
+        //cout << "第 "<< i <<" 次迭代与实际高度的偏差：" << dh << "\t" << pitch_/degree2rad << "\t" << t_ << endl;
         h_ += dh;
         if(i>10) break;
     }
     pitch_ /= degree2rad;
-    if(pitch_ > 13) pitch_ += 1.8;
+    if(pitch_ > 10) pitch_ += 0.6*(pitch_-10);
     if(pitch_ > 90) pitch_ = 0;
     return pitch_;
 }

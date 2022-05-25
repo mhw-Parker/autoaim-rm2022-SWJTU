@@ -38,7 +38,9 @@ public:
     vector<Point2f> rectPoint2D;
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
     Vector3f world_xyz;
+    Matrix3f r_mat;
     bool shoot;
+    float yaw_;
 
 private:
     void Generate3DPoints(bool mode);
@@ -59,6 +61,9 @@ private:
 
     Mat tvecs;
     Mat rvecs;
+    Mat R;
+
+    Vector3f r_vec;
 
     Mat_<double> cameraMatrix;
     Mat_<double> distortionCoefficients;

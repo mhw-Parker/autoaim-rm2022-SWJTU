@@ -62,12 +62,12 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
     if (name.empty()) {
         return false;
     }
-    if ((fd = open(name.data(), O_RDWR|O_APPEND|O_SYNC)) < 0) {
+    if ((fd = open(name.data(), O_RDWR | O_APPEND | O_SYNC)) < 0) {
         LOGE("fd failed!");
         //cout<<"fd failed!"<<endl;
         return false;
     }
-    return set_opt(fd, nSpeed_,nEvent_, nBits_, nStop_) >= 0;
+    return set_opt(fd, nSpeed_, nEvent_, nBits_, nStop_) >= 0;
 }
 
 /**
@@ -82,8 +82,7 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
  * @details CmdID and timeStamo not really used in current code
  * @return none
  */
-void Serial::pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t find, uint8_t CmdID, long long timeStamp)
-{
+void Serial::pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t find, uint8_t CmdID, long long timeStamp) {
     unsigned char *p;
     buff[0] = VISION_SOF;
     memcpy(buff + 1, &CmdID, 1);
@@ -102,8 +101,8 @@ void Serial::pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t fin
  */
 bool Serial::WriteData() {
     int cnt = 0, curr = 0;
-    if (fd <= 0){
-        if(wait_uart){
+    if (fd <= 0) {
+        if (wait_uart) {
             InitPort(nSpeed, nEvent, nBits, nStop);
         }
         return false;
@@ -133,54 +132,46 @@ bool Serial::WriteData() {
  * @return on finding the right data in a limited length of received data, return true, if not, return false
  */
 bool Serial::ReadData(struct ReceiveData &buffer_) {
-    memset(buffRead,0,VISION_LENGTH);
+    memset(buffRead, 0, VISION_LENGTH);
     maxReadTime = VISION_LENGTH;
     static int onceReadCount = 0;
 
     tcflush(fd, TCIFLUSH);
 
-    while(maxReadTime--)
-    {
+    while (maxReadTime--) {
         read(fd, &buffRead[0], 1);
-        if(buffRead[0] == 0xA5) break;
+        if (buffRead[0] == 0xA5) break;
     }
 
-    if(maxReadTime == 0)return false;
+    if (maxReadTime == 0)return false;
 
     readCount = 1;
-    while (readCount < VISION_LENGTH - 1)
-    {
-        try
-        {
+    while (readCount < VISION_LENGTH - 1) {
+        try {
             onceReadCount = read(fd, (buffRead + readCount), VISION_LENGTH - readCount);
         }
-        catch(exception e)
-        {
+        catch (exception e) {
             LOGE("Data Read Error!");
             //cout << e.what() << endl;
             return false;
         }
 
-        if (onceReadCount < 1)
-        {
+        if (onceReadCount < 1) {
             return false;
         }
         readCount += onceReadCount;
     }
 
-    if (buffRead[0] != VISION_SOF || buffRead[VISION_LENGTH - 1] != VISION_TOF)
-    {
+    if (buffRead[0] != VISION_SOF || buffRead[VISION_LENGTH - 1] != VISION_TOF) {
         return false;
-    }
-    else
-    {
-        memcpy(&buffer_.yawAngle,buffRead + 2,4);
-        memcpy(&buffer_.pitchAngle,buffRead + 6,4);
-        memcpy(&buffer_.bulletSpeed,buffRead + 10,4);
-        memcpy(&buffer_.pitchSpeed,buffRead + 14,4);
-        memcpy(&buffer_.targetMode,buffRead + 18,1);
-        memcpy(&buffer_.targetColor,buffRead + 19,1);
-        memcpy(&buffer_.direction,buffRead + 20,1);
+    } else {
+        memcpy(&buffer_.yawAngle, buffRead + 2, 4);
+        memcpy(&buffer_.pitchAngle, buffRead + 6, 4);
+        memcpy(&buffer_.bulletSpeed, buffRead + 10, 4);
+        memcpy(&buffer_.pitchSpeed, buffRead + 14, 4);
+        memcpy(&buffer_.targetMode, buffRead + 18, 1);
+        memcpy(&buffer_.targetColor, buffRead + 19, 1);
+        memcpy(&buffer_.direction, buffRead + 20, 1);
         return true;
     }
 
