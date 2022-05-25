@@ -33,11 +33,11 @@
 #endif
 
 #ifndef BIG_ARMOR
-#define  BIG_ARMOR 5
+#define  BIG_ARMOR 0
 #endif
 
 #ifndef SMALL_ARMOR
-#define  SMALL_ARMOR 6
+#define  SMALL_ARMOR 1
 #endif
 
 #ifndef FIND_ARMOR_YES

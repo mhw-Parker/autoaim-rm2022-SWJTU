@@ -233,10 +233,6 @@ namespace rm
             targetArmor.center +=  Point(roiRect.x, roiRect.y);
 
             Armor(targetArmor.rect);
-            if(targetArmor.armorType==SMALL_ARMOR)
-                cout << "--small target !" << endl;
-            else if(targetArmor.armorType==BIG_ARMOR)
-                cout << "--big target !" << endl;
 
             for(int i = 0; i< 4;i++){
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);

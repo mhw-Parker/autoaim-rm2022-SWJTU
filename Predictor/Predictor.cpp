@@ -115,7 +115,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     }
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
     float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
-    waveClass.displayWave(solveAngle.yaw_/degree2rad,0,"cam_yaw");
+    //waveClass.displayWave(solveAngle.yaw_/degree2rad,0,"cam_yaw");
 }
 
 /**

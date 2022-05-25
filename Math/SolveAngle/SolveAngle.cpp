@@ -16,7 +16,7 @@ SolveAngle::SolveAngle() {
         return;
     }
     switch(carName) {
-        case HERO: k1 = 0.01;
+        case HERO: k1 = 0.021;
         case INFANTRY_MELEE0:
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
@@ -95,6 +95,11 @@ void SolveAngle::Generate3DPoints(bool mode) {
  * @param v_ 弹速
  * */
 void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd) {
+    if(armor_mode==SMALL_ARMOR)
+        cout << "--small target !" << endl;
+    else if(armor_mode==BIG_ARMOR)
+        cout << "--big target !" << endl;
+
     cv::Mat Rvec;
     cv::Mat_<float> Tvec;
     Generate3DPoints(armor_mode);
@@ -207,7 +212,7 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         if(i>10) break;
     }
     pitch_ /= degree2rad;
-    if(pitch_ > 10) pitch_ += 0.6*(pitch_-10);
+    //if(pitch_ > 10) pitch_ += 0.2*(pitch_-10);
     if(pitch_ > 90) pitch_ = 0;
     return pitch_;
 }
