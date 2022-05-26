@@ -120,9 +120,9 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f 
     cv2eigen(rvecs,r_vec);
     cv::Rodrigues(rvecs,R);
     cv2eigen(R,r_mat);
-    Vector3f w_cam_xyz = r_mat * p_cam_xyz;
+    Vector3f w_cam_xyz = -r_mat.inverse() * p_cam_xyz;
     yaw_ = atan2(w_cam_xyz[2],w_cam_xyz[0]);
-    cout << "旋转矩阵：\n" << w_cam_xyz << "\n" << yaw_/degree2rad << endl;
+    //cout << "旋转矩阵：\n" << w_cam_xyz << "\n" << yaw_/degree2rad << endl;
     camXYZ2YPD(); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 

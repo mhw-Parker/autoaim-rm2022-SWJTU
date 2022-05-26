@@ -14,12 +14,6 @@
 #include <fstream>
 #include "EnergyDetector.h"
 
-#if SAVE_LOG == 1
-string now_time = getSysTime();
-string energyData = string(OUTPUT_PATH + now_time + string("_energyData")).append(".txt") );
-ofstream fout(energyData);
-ofstream write_energy_data(energyData,ios::out);
-#endif
 
 using namespace std;
 
@@ -151,11 +145,13 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
     Mat binary;
     binary = preprocess(img);
     if(detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)){
+        detectLostCnt = 0;
         getPts(target_armor);
         getCircleCenter(binary);
         detect_flag = true;
     } else {
         misscount++;
+        detectLostCnt++;
         if(misscount>5){ //连续5帧丢目标
             misscount = 0;
             detect_flag = false;

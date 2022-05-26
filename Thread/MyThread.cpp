@@ -162,7 +162,7 @@ namespace rm
         /*initialize camera*/
 #if SAVE_TEST_DATA == 1
         fout.close();
-        dataWrite.close();
+        //dataWrite.close();
 #endif
         switch (carName) {
             case HERO:
@@ -366,9 +366,11 @@ namespace rm
     void ImgProdCons::Feedback() {
         do {
             if (detectMission) {
+                int tmp_cnt;
                 if(showArmorBox || showEnergy){
                     show_img = detectFrame.clone();
                     tmp_t = last_mission_time; //同步时间
+                    tmp_cnt = cnt;
                 }
                 detectMission = false;
                 double st = (double) getTickCount();
@@ -401,7 +403,10 @@ namespace rm
                                 armorDetectorPtr->findState,
                                 curControlState,
                                 0);
-
+#if SAVE_TEST_DATA == 1
+                if(dataWrite.is_open())
+                    dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << endl;
+#endif
                 /** send data from host to low-end machine to instruct holder's movement **/
                 if (serialPtr->WriteData()) {
 #if SAVE_LOG == 1
@@ -436,6 +441,7 @@ namespace rm
                 if (serialPtr->ReadData(receiveData)) {
                     curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed < 10 ? 15 : receiveData.bulletSpeed;
+                    blueTarget = receiveData.targetColor;
                 }
                 receiveTime = CalWasteTime(st, freq);
                 receiveMission = true;

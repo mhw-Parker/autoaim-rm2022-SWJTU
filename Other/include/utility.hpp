@@ -198,7 +198,7 @@ namespace RMTools {
         time_t timep;
         time(&timep);
         char tmp[64];
-        strftime(tmp, sizeof(tmp), "%Y-%m-%d_%H:%M:%S", localtime(&timep));
+        strftime(tmp, sizeof(tmp), "%Y-%m-%d_%H_%M_%S", localtime(&timep));
         return tmp;
     }
 /**

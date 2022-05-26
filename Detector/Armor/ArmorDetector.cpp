@@ -195,7 +195,6 @@ namespace rm
     */
     bool ArmorDetector::DetectArmor()
     {
-        targetArmor.pts.clear();
         findState = false;
         armorNumber = 0;
 
@@ -226,6 +225,7 @@ namespace rm
         {
             detectCnt++;
             lostCnt = 0;
+            detectLostCnt = 0;
 
             MakeRectSafe(targetArmor.rect, img.size());
 
@@ -264,6 +264,7 @@ namespace rm
         }
         else
         {
+            detectLostCnt++;
             detectCnt = 0;
             lostCnt++;
             return false;
@@ -473,9 +474,8 @@ namespace rm
         //imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",bSubR);
         threshold(bright, svmBinaryImage, 10, 200, NORM_MINMAX);
-        waitKey(1);
         GaussianBlur(bright,bright,Size(5,5),5);
-        threshold(bright, thresholdMap, 130, 255, NORM_MINMAX);
+        threshold(bright, thresholdMap, 100, 255, NORM_MINMAX);
         //Mat adaptive;
         //adaptiveThreshold(bright,adaptive,255,)
         //imshow("grey",bright);

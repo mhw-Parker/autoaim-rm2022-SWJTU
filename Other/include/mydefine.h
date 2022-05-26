@@ -131,6 +131,7 @@ extern bool saveSVM;
 extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
+extern int detectLostCnt;
 extern CARNAME carName;
 extern std::string videoPath;
 extern int cameraIndex;

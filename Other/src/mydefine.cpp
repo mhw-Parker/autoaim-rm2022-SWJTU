@@ -16,6 +16,7 @@ bool debug = false;
 
 int FRAMEWIDTH;
 int FRAMEHEIGHT;
+int detectLostCnt = 0;
 
 CARNAME carName = VIDEO;
 int cameraIndex = 0;

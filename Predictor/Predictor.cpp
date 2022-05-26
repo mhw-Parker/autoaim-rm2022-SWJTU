@@ -48,8 +48,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
                                const Vector3f &gimbal_ypd, float v_, float dt) {
     updateTimeStamp(dt);
     float temp_t, test_cal_pitch;
-    if(target_pts.size() == 4) {
-        lost_cnt = 0; //清空丢失目标计数
+    if(!detectLostCnt) {
+        //lost_cnt = 0; //清空丢失目标计数
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist; //因为云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
 
@@ -74,10 +74,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
 
     }
     else {     /// 闪烁导致丢失目标时的处理策略，目前为运动线性插值
-        if(!lost_cnt)
+        if(detectLostCnt == 1)
             last_xyz = target_xyz;
-        lost_cnt++;
-        if(lost_cnt < 4) {
+        if(detectLostCnt < 4) {
             target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
             predict_xyz = kalmanPredict(target_xyz,v_,latency);
             predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
@@ -115,7 +114,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     }
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
     float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
-    //waveClass.displayWave(solveAngle.yaw_/degree2rad,0,"cam_yaw");
+    cam_yaw = solveAngle.yaw_/degree2rad;
+    waveClass.displayWave(cam_yaw,-90,"cam_yaw");
 }
 
 /**
@@ -430,9 +430,6 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
                         new SinResidual(t_[i]-t_[st],omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
         problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
-#if SAVE_LOG == 1
-        write_energy_data << t_[i]-t_[st] << " " << omega_[i] << " " << endl;
-#endif
     }
     ceres::Solver::Options options;
     options.max_num_iterations = 25;
@@ -446,9 +443,6 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
     std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
     //cout << "拟合数据下标起点：" << st << " " << omega_[st] << " 拟合数据点数 ： " << omega.size() - st << " 函数中值：" << (2.09-min_w)/2 << endl;
-#if SAVE_LOG == 1
-    write_energy_data << "---Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ << endl;
-#endif
 
     float sim_omega;
     for(int i=st;i < omega_.size(); i++){
