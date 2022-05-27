@@ -37,6 +37,7 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
+            fit_gun_error = 0.02;
             //枪口坐标系相对位置
             //fit_xyz << 0, 50, 50; //x y z
             break;
@@ -194,7 +195,7 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
 float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
-    float h = -y + 0.13; //
+    float h = -y + fit_gun_error; //
     float d_ = d, h_ = h, dh = 1; // temp value
     float pitch_;
     float v_x0, v_y0;

@@ -55,6 +55,7 @@ private:
 
     float g = 9.8; //
     float g2 = 9.8*9.8;
+    float fit_gun_error = 0.13;// m
 
     float degree2rad = CV_PI / 180;
     Matrix3f cam_mat;

@@ -6,6 +6,8 @@
 Predictor::Predictor() : waveClass(110,300,500),
                          omegaWave(3,600,1000)
 {
+    if(carName == SENTRY)
+        react_t = 0.4;
     predict_pts.assign(4,Point2f(0,0));
 }
 
@@ -69,7 +71,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         float fly_t = 0;
         predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 5;
         predict_ypd[1] = test_cal_pitch;
-        latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+        latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
         ///
 
     }
@@ -82,7 +84,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
             predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
             float fly_t = 0;
             predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
-            latency = 0.2 + fly_t; //预测时长组成为  响应时延+飞弹时延
+            latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
         } else Refresh();
     }
 
@@ -104,12 +106,12 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
 
         string str1[] = {"re-yaw:","re-pitch:","tar-yaw:",
                         "tar-pit:","pre-yaw","pre-pit",
-                        "v bullet:"};
+                        "v bullet:","latency"};
         vector<float> data1(7);
         data1 = {gimbal_ypd[0],gimbal_ypd[1],
                 target_ypd[0],target_ypd[1],
                 predict_ypd[0],test_cal_pitch,
-                v_};
+                v_,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
@@ -149,7 +151,7 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
  * @param t 预测时间
  * */
 Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
-    int step = t / 0.05 + 10;
+    int step = t / 0.05;
     cout << "step: " << step << endl;
     if (RMKF_flag) {
         UpdateKF(target_xyz);

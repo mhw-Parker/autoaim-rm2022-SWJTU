@@ -47,7 +47,7 @@ public:
     void Refresh();
     cv::Point2f predict_point;
     float latency = 0.5, fly_t = 0.2, react_t = 0.2;
-    Vector3f target_ypd, delta_ypd, predict_ypd;
+    Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
     Vector3f target_xyz{}, predict_xyz{}, last_xyz{};
     float cam_yaw = 0;
 
