@@ -55,6 +55,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     float temp_t, test_cal_pitch;
     if(!detectLostCnt) {
         //lost_cnt = 0; //清空丢失目标计数
+        v_vec[cnt++%4] = v_;
+        float average_v = RMTools::average(v_vec,4);
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist; //因为云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
 
@@ -62,9 +64,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         // 通过目标xyz坐标计算yaw pitch distance
         target_xyz = getGyroXYZ(target_ypd);
 
-        test_cal_pitch = solveAngle.iteratePitch(target_xyz,v_,temp_t);
+        test_cal_pitch = solveAngle.iteratePitch(target_xyz,average_v,temp_t);
         // kalman预测要击打位置的xyz
-        predict_xyz = kalmanPredict(target_xyz, v_, latency);
+        predict_xyz = kalmanPredict(target_xyz, average_v, latency);
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
 
         // 计算要转过的角度
@@ -72,7 +74,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
 
         // 计算这一次的预测时间pre_t
         float fly_t = 0;
-        predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 5;
+        predict_ypd[1] = solveAngle.CalPitch(predict_xyz,average_v,fly_t) + 5;
         predict_ypd[1] = test_cal_pitch;
         latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
         ///

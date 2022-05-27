@@ -176,6 +176,7 @@ namespace rm
         bool DetectArmor(Mat &img);
 
         void Preprocess(Mat &img);
+        void preprocess(Mat &img);
 
         void MaxMatch(vector<Lamp> &lights);
 

@@ -469,7 +469,7 @@ namespace rm
         cv::subtract(channels[0],channels[2],bSubR);
         cv::subtract(channels[2],channels[0],rSubB);
         sub = rSubB - bSubR;
-        //imshow ("rSubB - bSubR",sub);
+        imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",bSubR);
         threshold(bright, svmBinaryImage, 10, 200, NORM_MINMAX);
         GaussianBlur(bright,bright,Size(5,5),5);
@@ -478,7 +478,18 @@ namespace rm
         //adaptiveThreshold(bright,adaptive,255,)
         //imshow("grey",bright);
         colorMap = Mat_<int>(rSubB) - Mat_<int>(bSubR);
-
+        //colorMap = Mat_<int>(sub);
+    }
+    void ArmorDetector::preprocess(Mat &img) {
+        Mat gray;
+        vector<Mat> channels;
+        split(img,channels);
+        cvtColor(img,gray,COLOR_BGR2GRAY);
+        if(blueTarget)
+            subtract(channels[0],channels[1],sub);
+        else
+            subtract(channels[1],channels[0],sub);
+        threshold(gray, svmBinaryImage, 10, 200, NORM_MINMAX);
     }
 
     /**

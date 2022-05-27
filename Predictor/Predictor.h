@@ -53,13 +53,13 @@ public:
 
 private:
     void updateTimeStamp(float &dt);
-    void kalmanRefresh();
     SolveAngle solveAngle;
     vector<float> time_series;
     float total_t = 0;
     float degree2rad = CV_PI / 180;
-    int lost_cnt = 0;
+    int cnt = 0;
     float last_yaw_ = -90;
+    double v_vec[4] = {15,15,15,15};
 
 public:
     void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt);
@@ -71,7 +71,7 @@ private:
     Vector3f kalmanPredict(Vector3f target_xyz, float v_, float t);
     Vector3f getGyroXYZ(Vector3f target_ypd);
     Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
-
+    void kalmanRefresh();
     void UpdateKF(const Vector3f& z_k);
     void InitTransMat(const float dt);
     void InitKfAcceleration(const float dt);
