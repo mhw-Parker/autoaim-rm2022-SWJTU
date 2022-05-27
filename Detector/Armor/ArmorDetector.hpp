@@ -173,7 +173,7 @@ namespace rm
 
         void GetRoi();
 
-        bool DetectArmor();
+        bool DetectArmor(Mat &img);
 
         void Preprocess(Mat &img);
 
@@ -217,7 +217,7 @@ namespace rm
         int armorNumber;
 
         /*clone of image passed in*/
-        Mat img;
+        //Mat img;
 
         /*loss cnt*/
         int lostCnt = 130;

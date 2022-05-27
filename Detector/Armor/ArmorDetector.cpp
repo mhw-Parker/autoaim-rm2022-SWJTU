@@ -170,19 +170,19 @@ namespace rm
     */
     bool ArmorDetector::ArmorDetectTask(Mat &img_)
     {
-        this->img = img_.clone();
+        //this->img = img_.clone();
 
         GetRoi(); //get roi
 
-        imgRoi = img(roiRect);
+        imgRoi = img_(roiRect);
 
         Preprocess(imgRoi);
 
         /*open two threads to recognition number and finding target armor*/
 
-        DetectArmor();
+        DetectArmor(img_);
 
-        img_ = img.clone();
+        //img_ = img.clone();
 
         return findState;
     }
@@ -193,7 +193,7 @@ namespace rm
     * @return: if ever found armors in this image, return true, otherwise return false
     * @details: none
     */
-    bool ArmorDetector::DetectArmor()
+    bool ArmorDetector::DetectArmor(Mat &img)
     {
         findState = false;
         armorNumber = 0;
@@ -254,7 +254,10 @@ namespace rm
 #endif
 
             lastTarget = targetArmor;
-
+            if(showArmorBox){
+                putText(img,"id:",Point(roiRect.x, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+                putText(img, to_string(armorNumber),Point(roiRect.x+35, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+            }
 
             //averageRSubBVal = averageRSubBVal*armorFoundCounter/(armorFoundCounter + 1) + targetArmor.avgRSubBVal/(armorFoundCounter + 1);
             //armorFoundCounter++;
@@ -408,11 +411,6 @@ namespace rm
                 //armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
                 armorNumber = getArmorNumber(targetArmor);
                 cout << "SVM model detect : " << armorNumber << endl;
-
-                if(showArmorBox){
-                    putText(img,"id:",Point(roiRect.x, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
-                    putText(img, to_string(armorNumber),Point(roiRect.x+35, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
-                }
 
                 if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
                 {
@@ -611,45 +609,38 @@ namespace rm
     * @return if tracker ever found armors, return true, otherwise return false
     * @details none
     */
-    bool ArmorDetector::trackingTarget(Mat &src, Rect target)
-    {
-        findState = false;
-
-        Preprocess(src);
-
-        auto pos = target;
-        if (!tracker->update(src, target))
-        {
-            detectCnt = 0;
-            return false;
-        }
-        if ((pos & cv::Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT)) != pos)
-        {
-            detectCnt = 0;
-            return false;
-        }
-#if USEROI == 1
-        roiRect = Rect(pos.x - pos.width , pos.y - pos.height , 3*pos.width, 3*pos.height); //tracker
-
-        MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT));
-#endif
-        imgRoi = src(roiRect);
-
-        Preprocess(imgRoi);
-
-        img = src.clone();
-
-        if (DetectArmor())
-        {
-            detectCnt++;
-            src = img.clone();
-            return true;
-        }
-
-        detectCnt = 0;
-        src = img.clone();
-        return false;
-    }
+//    bool ArmorDetector::trackingTarget(Mat &src, Rect target)
+//    {
+//        findState = false;
+//
+//        Preprocess(src);
+//
+//        auto pos = target;
+//        if (!tracker->update(src, target))
+//        {
+//            detectCnt = 0;
+//            return false;
+//        }
+//        if ((pos & cv::Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT)) != pos)
+//        {
+//            detectCnt = 0;
+//            return false;
+//        }
+//#if USEROI == 1
+//        roiRect = Rect(pos.x - pos.width , pos.y - pos.height , 3*pos.width, 3*pos.height); //tracker
+//
+//        MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT));
+//#endif
+//        imgRoi = src(roiRect);
+//
+//        Preprocess(imgRoi);
+//
+//        img = src.clone();
+//
+//        detectCnt = 0;
+//        src = img.clone();
+//        return false;
+//    }
 
     /**
      * @brief load SVM parameters
@@ -845,7 +836,7 @@ namespace rm
             detectCnt++;
             lostCnt = 0;
 
-            MakeRectSafe(targetArmor.rect, img.size());
+            //MakeRectSafe(targetArmor.rect, img.size());
 
             if (showArmorBox)
             {
