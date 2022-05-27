@@ -21,9 +21,7 @@ void Predictor::Refresh() {
     time_series.clear();
     total_t = 0;
     /**--------- 装甲板预测部分清空 ---------**/
-    RMKF_flag = false;
-    target_a_xyz << 0, 0, 0;
-    target_v_xyz << 0, 0, 0;
+    kalmanRefresh();
     latency = 0.5;
     /**--------- 能量机关预测部分清空 ---------**/
     angle.clear();
@@ -32,6 +30,11 @@ void Predictor::Refresh() {
     ctrl_mode = STANDBY;
     total_theta = 0;
 
+}
+void Predictor::kalmanRefresh() {
+    RMKF_flag = false;
+    target_a_xyz << 0, 0, 0;
+    target_v_xyz << 0, 0, 0;
 }
 void Predictor::updateTimeStamp(float &dt) {
     total_t += dt;  ///时序更新方式最好变成全局变量
@@ -117,6 +120,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
     float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
     cam_yaw = solveAngle.yaw_/degree2rad;
+    if(fabs(cam_yaw - last_yaw_) > 30)
+        kalmanRefresh();
+    waitKey(0);
+    last_yaw_  = cam_yaw;
     waveClass.displayWave(cam_yaw,-90,"cam_yaw");
 }
 

@@ -53,11 +53,13 @@ public:
 
 private:
     void updateTimeStamp(float &dt);
+    void kalmanRefresh();
     SolveAngle solveAngle;
     vector<float> time_series;
     float total_t = 0;
     float degree2rad = CV_PI / 180;
     int lost_cnt = 0;
+    float last_yaw_ = -90;
 
 public:
     void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt);
