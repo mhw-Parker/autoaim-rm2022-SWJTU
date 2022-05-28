@@ -469,7 +469,7 @@ namespace rm
         cv::subtract(channels[0],channels[2],bSubR);
         cv::subtract(channels[2],channels[0],rSubB);
         sub = rSubB - bSubR;
-        imshow ("rSubB - bSubR",sub);
+        //imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",bSubR);
         threshold(bright, svmBinaryImage, 10, 200, NORM_MINMAX);
         GaussianBlur(bright,bright,Size(5,5),5);
@@ -740,12 +740,18 @@ namespace rm
         }
         resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //把svm图像缩放到 40 * 40
         pyrDown(warpPerspective_dst,warpPerspective_dst,Size(20,20)); //下采样为20*20
+
         imshow("svm",warpPerspective_dst);
-        svmParamMatrix = warpPerspective_dst.reshape(1, 1);
-        svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
 
-        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
+//        svmParamMatrix = warpPerspective_dst.reshape(1, 1);
+//        svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
+//        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
 
+        warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
+        auto svm_start = getTickCount();
+        int number = lround(svm->predict(svmParamMatrix));
+        auto svm_end = getTickCount();
+        cout << "SVM prediction cost: " <<(svm_end - svm_start) / getTickFrequency() * 1000 << "ms" <<endl;
         return number;
     }
     /**

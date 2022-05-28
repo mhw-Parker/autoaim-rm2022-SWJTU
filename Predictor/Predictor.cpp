@@ -7,7 +7,7 @@ Predictor::Predictor() : waveClass(110,300,500),
                          omegaWave(3,600,1000)
 {
     if(carName == SENTRY)
-        react_t = 0.4;
+        react_t = 0.6;
     predict_pts.assign(4,Point2f(0,0));
 }
 
@@ -63,7 +63,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
         target_xyz = getGyroXYZ(target_ypd);
-
+        //average_v = 12.5;
         test_cal_pitch = solveAngle.iteratePitch(target_xyz,average_v,temp_t);
         // kalman预测要击打位置的xyz
         predict_xyz = kalmanPredict(target_xyz, average_v, latency);
@@ -124,7 +124,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     cam_yaw = solveAngle.yaw_/degree2rad;
     if(fabs(cam_yaw - last_yaw_) > 30)
         kalmanRefresh();
-    waitKey(0);
+    //waitKey(0);
     last_yaw_  = cam_yaw;
     waveClass.displayWave(cam_yaw,-90,"cam_yaw");
 }

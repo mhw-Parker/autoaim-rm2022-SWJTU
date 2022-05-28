@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 2.9)
 
 project(MASTER)
 SET(CMAKE_BUILE_TYPE DEBUG)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g -std=c++14 -pthread -lv4l1 -lv4l2")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g -std=c++17 -pthread -lv4l1 -lv4l2")
 SET(BIN_NAME "run")
 #根据实际路径修改
-set(OpenCV_DIR "/home/tyy/opencv-4.5.4/build")
+#set(OpenCV_DIR "/home/tyy/opencv-4.5.4/build")
 
 FIND_PACKAGE(OpenCV 4.5.4 REQUIRED)
 FIND_PACKAGE(Threads)
