@@ -84,5 +84,6 @@ private:
     Vector3f fit_xyz;
     Vector3f gun_xyz; //枪口坐标系下的x,y,z
 
-    float k1 = 0.026; //弹丸阻力系数 0.027
+    float k1 = 0.025; //小弹丸阻力系数 0.027
+    float k2 = 0.035;// 大弹丸
 };

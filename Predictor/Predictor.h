@@ -46,19 +46,19 @@ public:
     ~Predictor();
     void Refresh();
     cv::Point2f predict_point;
-    float latency = 0.5, fly_t = 0.2, react_t = 0.2;
+    float latency = 0.5, fly_t = 0.2, react_t = 0.5;
     Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
     Vector3f target_xyz{}, predict_xyz{};
     Vector3f before_lost_xyz{};
     Vector3f last_xyz{};
 
 private:
-    void updateTimeStamp(float &dt);
+    void UpdateTimeStamp(float &dt);
     SolveAngle solveAngle;
     vector<float> time_series;
     float total_t = 0;
     float degree2rad = CV_PI / 180;
-    int cnt = 0;
+    int v_vec_pointer = 0;
     double v_vec[4] = {15,15,15,15};
 
 public:
@@ -68,10 +68,11 @@ public:
     Vector3f target_a_xyz{};
 
 private:
-    Vector3f kalmanPredict(Vector3f target_xyz, float v_, float t);
-    Vector3f getGyroXYZ(Vector3f target_ypd);
+    Vector3f KalmanPredict(float v_, float t);
+    Vector3f GetGyroXYZ(Vector3f target_ypd);
     Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
-    void kalmanRefresh();
+    inline void KalmanRefresh();
+    inline void KalmanShallowRefresh();
     void UpdateKF(const Vector3f& z_k);
     void InitTransMat(const float dt);
     void InitKfAcceleration(const float dt);
@@ -91,7 +92,7 @@ public:
 private:
     /** energy machine common function **/
     bool JudgeFanRotation();
-    float calOmega(int step, float &total_theta);
+    float CalOmega(int step, float &total_theta);
     bool EnergyStateSwitch();
 
     float total_theta = 0;

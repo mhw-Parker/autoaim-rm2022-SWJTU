@@ -16,7 +16,7 @@ SolveAngle::SolveAngle() {
         return;
     }
     switch(carName) {
-        case HERO: k1 = 0.021;
+        case HERO:
         case INFANTRY_MELEE0:
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
@@ -193,6 +193,7 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
 }
 
 float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
+    float k = carName == HERO ? k1 : k2;
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
     float h = -y + fit_gun_error; //
@@ -205,7 +206,7 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         pitch_ = atan2(h_,d_);
         v_x0 = v * cos(pitch_);
         v_y0 = v * sin(pitch_);
-        t_ = (exp(k1*d) - 1) / v_x0 / k1;
+        t_ = (exp(k*d) - 1) / v_x0 / k;
         float temp_h = v_y0*t_ - 0.5*g*t_*t_;
         dh = h - temp_h;
         //cout << "第 "<< i <<" 次迭代与实际高度的偏差：" << dh << "\t" << pitch_/degree2rad << "\t" << t_ << endl;

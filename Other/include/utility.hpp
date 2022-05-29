@@ -212,10 +212,10 @@ namespace RMTools {
             cout << "The vector length doesn't match !" << endl;
             return false;
         }
-        Mat background = Mat(c,400,CV_8UC3,Scalar::all(0));
+        Mat background = Mat(c,500,CV_8UC3,Scalar::all(0));
         for(int i = 0;i<data.size();i++){
             putText(background, str[i], Point(0, 30*(i+1)), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2, 8, 0);
-            putText(background, to_string(data[i]), Point(150, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
+            putText(background, to_string(data[i]), Point(200, 30*(i+1)), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 255, 255), 2, 8, 0);
         }
         imshow(win_name,background);
         waitKey(1);

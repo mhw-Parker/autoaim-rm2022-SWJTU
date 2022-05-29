@@ -21,7 +21,7 @@ void Predictor::Refresh() {
     time_series.clear();
     total_t = 0;
     /**--------- 装甲板预测部分清空 ---------**/
-    kalmanRefresh();
+    KalmanRefresh();
     latency = 0.5;
     /**--------- 能量机关预测部分清空 ---------**/
     angle.clear();
@@ -32,13 +32,26 @@ void Predictor::Refresh() {
 
 }
 
-void Predictor::kalmanRefresh() {
+/**
+ * @brief 深重置，Kalman滤波器整个重置，目标速度加速度置零
+ */
+inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
 }
 
-void Predictor::updateTimeStamp(float &dt) {
+/**
+ * @brief 浅重置，只重置目标位置，不重置速度加速度，用于小陀螺
+ */
+inline void Predictor::KalmanShallowRefresh() {
+    for (int i = 0; i < 3; i++) {
+        RMKF.state_pre_[i] = target_xyz[i];
+        RMKF.state_post_[i] = target_xyz[i];
+    }
+}
+
+void Predictor::UpdateTimeStamp(float &dt) {
     total_t += dt;  ///时序更新方式最好变成全局变量
     time_series.push_back(total_t);    //存放时间序列
 }
@@ -53,48 +66,55 @@ void Predictor::updateTimeStamp(float &dt) {
  * */
 void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
                                const Vector3f &gimbal_ypd, float v_, float dt) {
-    updateTimeStamp(dt);
-    float temp_t, test_cal_pitch;
+    UpdateTimeStamp(dt);
+    float test_cal_pitch;
+    // 取弹速平均值
+    float average_v_bullet = RMTools::average(v_vec, 4);
+    // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均
+    if (v_vec[(v_vec_pointer + 3) % 4] != v_) {
+        v_vec[v_vec_pointer++ % 4] = v_;
+    }
+    cout << "detectLostCnt: " << detectLostCnt << '\n';
     if(!detectLostCnt) {
         //lost_cnt = 0; //清空丢失目标计数
-        v_vec[cnt++%4] = v_;
-        float average_v = RMTools::average(v_vec,4);
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist; //因为云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
-
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
-        target_xyz = getGyroXYZ(target_ypd);
-        //average_v = 12.5;
-        test_cal_pitch = solveAngle.iteratePitch(target_xyz,average_v,temp_t);
+        target_xyz = GetGyroXYZ(target_ypd);
+        // 和上一次target的距离大于某个阈值，则认为更换目标
+        if (RMTools::GetDistance(last_xyz, target_xyz) > 300) {
+            if (detectLostCnt > 5) {
+                KalmanRefresh();
+            } else {
+                KalmanShallowRefresh();
+            }
+        }
         // kalman预测要击打位置的xyz
-        predict_xyz = kalmanPredict(target_xyz, average_v, latency);
+        predict_xyz = KalmanPredict(average_v_bullet, latency);
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
-
         // 计算要转过的角度
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-
-        // 计算这一次的预测时间pre_t
-        float fly_t = 0;
-        predict_ypd[1] = solveAngle.CalPitch(predict_xyz,average_v,fly_t) + 5;
+        // 计算抬枪，average_v_bullet = 12.5;
+        test_cal_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
+        //predict_ypd[1] = solveAngle.CalPitch(predict_xyz, average_v_bullet, fly_t) + 5;
         predict_ypd[1] = test_cal_pitch;
         latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
+        cout << "Latency: " << latency << "s" << endl;
         ///
-
     }
     else {     /// 闪烁导致丢失目标时的处理策略，目前为匀加速运动模型插值
         if(detectLostCnt == 1) {
             // 目标消失前位置
             before_lost_xyz = target_xyz;
-        } else if(detectLostCnt < 4) {
+        } else if(detectLostCnt <= 5) {
             // 预测目标当前位置
             target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
             // 预测目标要击打位置
-            predict_xyz = kalmanPredict(target_xyz,v_,latency);
+            predict_xyz = KalmanPredict(average_v_bullet, latency);
             // 计算要击打位置的YPD
             predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, before_lost_xyz);
-            float fly_t = 0;
-            predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
+            predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
             latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
         } else {
             // 重置预测器
@@ -105,10 +125,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
     //float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
 
-    // 距离大于某个阈值认为更换目标
-    if (RMTools::GetDistance(last_xyz, target_xyz) > 300) {
-        kalmanRefresh();
-    }
+    // 更新last值
     last_xyz = target_xyz;
 
     // 以下为debug显示数据
@@ -129,12 +146,12 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
 
         string str1[] = {"re-yaw:","re-pitch:","tar-yaw:",
                         "tar-pit:","pre-yaw","pre-pit",
-                        "v bullet:","latency"};
-        vector<float> data1(7);
+                        "v bullet","Average v","latency"};
+        vector<float> data1(8);
         data1 = {gimbal_ypd[0],gimbal_ypd[1],
                 target_ypd[0],target_ypd[1],
                 predict_ypd[0],test_cal_pitch,
-                v_,latency};
+                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
 }
@@ -143,7 +160,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
  * @brief 获得陀螺仪坐标系下的 x y z
  * @param target_ypd 目标的 yaw pitch dist
  * */
-Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
+Vector3f Predictor::GetGyroXYZ(Vector3f target_ypd) {
     pair<float, float> quadrant[4] = {{-1, 1},
                                       {-1, -1},
                                       {1, -1},
@@ -169,7 +186,7 @@ Vector3f Predictor::getGyroXYZ(Vector3f target_ypd) {
  * @param v_ 裁判系统读取的弹速
  * @param t 预测时间
  * */
-Vector3f Predictor::kalmanPredict(Vector3f target_xyz, float v_, float t) {
+Vector3f Predictor::KalmanPredict(float v_, float t) {
     int step = t / 0.05;
     cout << "step: " << step << endl;
     if (RMKF_flag) {
@@ -221,6 +238,7 @@ void Predictor::InitKfAcceleration(const float dt) {
                         0,0,0,
                         0,0,0;
 }
+
 /**
  * @brief RMKF更新，包括预测部分和更正部分
  * @param z_k 观测量 默认为三维坐标 x y z
@@ -277,7 +295,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * @param dt 两次处理源图像时间间隔
  * */
 void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
-    updateTimeStamp(dt);
+    UpdateTimeStamp(dt);
     Point2f target_point;
     if(target_pts.size() == 4)
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
@@ -304,7 +322,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     solveAngle.GetPoseV(predict_pts, false, gimbal_ypd);
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
-    predict_xyz = getGyroXYZ(predict_ypd);
+    predict_xyz = GetGyroXYZ(predict_ypd);
     predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
     latency = 0.2 + fly_t;
 }
@@ -332,7 +350,7 @@ bool Predictor::EnergyStateSwitch() {
 }
 bool Predictor::JudgeFanRotation() {
     if(angle.size() > 3 && angle.size() < 19){
-        current_omega = calOmega(3,total_theta);
+        current_omega = CalOmega(3, total_theta);
         omega.push_back(current_omega);
         if(angle.size() == 18) {
             int clockwise_cnt = 0; //顺时针旋转计数器
@@ -353,7 +371,7 @@ bool Predictor::JudgeFanRotation() {
  * @param step 逐差步长
  * @param total_theta 累积角度
  * */
-float Predictor::calOmega(int step, float &total_theta) {
+float Predictor::CalOmega(int step, float &total_theta) {
     int step_ = step + 1;
     float d_theta = angle.back() - angle[angle.size()-step_];
     float dt = time_series.back() - time_series[time_series.size()-step_];
@@ -371,7 +389,7 @@ void Predictor::FilterOmega(const float dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
                             0, 1, dt,
                             0, 0, 1;
-    current_omega = calOmega(3,total_theta);
+    current_omega = CalOmega(3, total_theta);
     VectorXf measure_vec(2,1);
     measure_vec <<  total_theta,
                     current_omega;
@@ -408,6 +426,7 @@ void Predictor::FilterRad(const float latency) {
     rad_kf.Update(rad_vec);
     predict_rad = rad_kf.state_post_[0];
 }
+
 /**
  * @brief 初始化角速度 omega 的 kalman 滤波器
  * */
