@@ -120,12 +120,9 @@ namespace rm
         exit(-1);
     }
 
-
-
     void ImgProdCons::InitSignals()
     {
         ImgProdCons::quitFlag = false;
-
         struct sigaction sigact{};
         sigact.sa_handler = SignalHandler;
         sigemptyset(&sigact.sa_mask);
@@ -259,7 +256,7 @@ namespace rm
                         if (save_img_cnt == 3) {
                             save_img_cnt = 0;
                             if (armorDetectorPtr->armorNumber) {
-                                SVMPath = (string(SAVE_SVM_PIC) + to_string(3) + "/" +
+                                SVMPath = (string(SAVE_SVM_PIC) + to_string(1) + "/" +
                                            to_string(svm_img_num)).append(".png");
                             } else {
                                 SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(svm_img_num)).append(".png");
@@ -365,15 +362,9 @@ namespace rm
 
     void ImgProdCons::Feedback() {
         do {
-            if (detectMission) {
-                int tmp_cnt;
-                if(showArmorBox || showEnergy){
-                    show_img = detectFrame.clone();
-                    tmp_t = last_mission_time; //同步时间
-                    tmp_cnt = cnt;
-                }
-                detectMission = false;
+            if (detectMission && receiveMission) {
                 double st = (double) getTickCount();
+
                 Vector3f gimbal_ypd;
                 if(carName == VIDEO)
                     gimbal_ypd << 0, 0, 0;
@@ -381,11 +372,25 @@ namespace rm
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                 receiveMission = false;
 
+                int tmp_cnt;
+                if(showArmorBox || showEnergy){
+                    show_img = detectFrame.clone();
+                    tmp_t = last_mission_time; //同步时间
+                    tmp_cnt = cnt;
+                }
+                detectMission = false;
+
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (armorDetectorPtr->findState) {
                         predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
                                                    v_bullet,tmp_t);
-                        yaw_abs = predictPtr->predict_ypd[0];
+                        float yaw_offset = 0;
+                        if (carName == SENTRY) {
+                            yaw_offset = -0.6;
+                        } else if (carName == INFANTRY_MELEE1) {
+                            yaw_offset = -1.65;
+                        }
+                        yaw_abs = predictPtr->predict_ypd[0] + yaw_offset;
                         pitch_abs = predictPtr->predict_ypd[1];
                     }
                 }

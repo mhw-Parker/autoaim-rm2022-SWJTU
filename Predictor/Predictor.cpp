@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(110,300,500),
+Predictor::Predictor() : waveClass(100,300,1000),
                          omegaWave(3,600,1000)
 {
     if(carName == SENTRY)
@@ -75,7 +75,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         v_vec[v_vec_pointer++ % 4] = v_;
     }
     cout << "detectLostCnt: " << detectLostCnt << '\n';
-    if(!detectLostCnt) {
+    if (!detectLostCnt) {
         //lost_cnt = 0; //清空丢失目标计数
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist; //因为云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
@@ -95,11 +95,12 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
         // 计算要转过的角度
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-        // 计算抬枪，average_v_bullet = 12.5;
+        // 计算抬枪
         test_cal_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //predict_ypd[1] = solveAngle.CalPitch(predict_xyz, average_v_bullet, fly_t) + 5;
         predict_ypd[1] = test_cal_pitch;
-        latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
+        //预测时长为：响应时延+飞弹时延
+        latency = react_t + fly_t;
         cout << "Latency: " << latency << "s" << endl;
         ///
     }
@@ -115,14 +116,14 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
             // 计算要击打位置的YPD
             predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, before_lost_xyz);
             predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
-            latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
+            //预测时长为：响应时延+飞弹时延
+            latency = react_t + fly_t;
         } else {
             // 重置预测器
             Refresh();
         }
     }
 
-    //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
     //float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
 
     // 更新last值
@@ -154,6 +155,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
                 v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
+    //waveClass.displayWave(target_xyz[0], predict_xyz[0], "x");
 }
 
 /**

@@ -100,6 +100,12 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                 LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
             }
                 }},
+    {"-melee1", {
+                        "MELEE INFANTRY SET SAIL! COMMANDER!",[]() {
+                carName = INFANTRY_MELEE1;
+                LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
+            }
+                }},
     {"-track", {
                        "TRACK INFANTRY SET SAIL! COMMANDER!",[]() {
                 carName = INFANTRY_TRACK;

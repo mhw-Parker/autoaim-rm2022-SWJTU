@@ -137,7 +137,7 @@ namespace rm
         /* 保存图像相关 */
         string videoPath;
         string SVMPath;
-        int svm_img_num = 560;
+        int svm_img_num = 0;
         int save_img_cnt = 0;
         VideoWriter videowriter;
         /**/
@@ -180,7 +180,7 @@ namespace rm
         float pitch_abs;
         Vector3f target_ypd;
         Vector3f last_xyz; //用于存储丢目标前最后一帧的目标位置
-        float v_bullet = 15;
+        float v_bullet;
         RMTools::DisPlayWaveCLASS showWave;
 
         struct ReceiveData receiveData;

@@ -17,13 +17,25 @@ SolveAngle::SolveAngle() {
     }
     switch(carName) {
         case HERO:
+            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
+            fit_gun_error = 0.13;
+            coeff = 0.025;
+            break;
         case INFANTRY_MELEE0:
+            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
+            fit_gun_error = 0.2;
+            coeff = 0.025;
+            break;
         case INFANTRY_MELEE1:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            //枪口坐标系相对位置
-            //fit_xyz << 0, 50, 50; //x y z
+            fit_gun_error = 0.2;
+            coeff = 0.025;
             break;
         case INFANTRY_TRACK:
             break;
@@ -37,9 +49,8 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0.02;
-            //枪口坐标系相对位置
-            //fit_xyz << 0, 50, 50; //x y z
+            fit_gun_error = -0.11;
+            coeff = 0.025;
             break;
         case UAV:
             break;
@@ -192,11 +203,17 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
     return theta;
 }
 
+/**
+ * @brief 考虑f = -k * v^2得到的抬枪补偿
+ * @param target_xyz 目标xyz坐标
+ * @param target_ypd 目标yaw pitch distance
+ * @param v 子弹速度
+ * @return pitch相对于地面的角度
+ */
 float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
-    float k = carName == HERO ? k1 : k2;
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
-    float h = -y + fit_gun_error; //
+    float h = -y + fit_gun_error;
     float d_ = d, h_ = h, dh = 1; // temp value
     float pitch_;
     float v_x0, v_y0;
@@ -206,7 +223,7 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         pitch_ = atan2(h_,d_);
         v_x0 = v * cos(pitch_);
         v_y0 = v * sin(pitch_);
-        t_ = (exp(k*d) - 1) / v_x0 / k;
+        t_ = (exp(coeff*d) - 1) / v_x0 / coeff;
         float temp_h = v_y0*t_ - 0.5*g*t_*t_;
         dh = h - temp_h;
         //cout << "第 "<< i <<" 次迭代与实际高度的偏差：" << dh << "\t" << pitch_/degree2rad << "\t" << t_ << endl;

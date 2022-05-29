@@ -193,23 +193,21 @@ namespace rm
     * @return: if ever found armors in this image, return true, otherwise return false
     * @details: none
     */
-    bool ArmorDetector::DetectArmor(Mat &img)
-    {
+    bool ArmorDetector::DetectArmor(Mat &img) {
         findState = false;
         armorNumber = 0;
 
         vector<Lamp> lights;
 
-        if (showBinaryImg){
+        if (showBinaryImg) {
             imshow("binary_brightness_img", thresholdMap);
         }
 
         //lights = LampDetection(thresholdMap);
         lights = LightDetection(thresholdMap);
 
-        if (showLamps)
-        {
-            for(auto & light : lights) {
+        if (showLamps) {
+            for (auto &light: lights) {
                 Point2f rect_point[4]; //
                 light.rect.points(rect_point);
                 for (int j = 0; j < 4; j++) {
@@ -223,31 +221,28 @@ namespace rm
 
         MaxMatch(lights);
 
-        if (findState)
-        {
+        if (findState) {
             detectCnt++;
             lostCnt = 0;
             detectLostCnt = 0;
 
             MakeRectSafe(targetArmor.rect, img.size());
 
-            targetArmor.rect  = targetArmor.rect + Point(roiRect.x, roiRect.y);
-            targetArmor.center +=  Point(roiRect.x, roiRect.y);
+            targetArmor.rect = targetArmor.rect + Point(roiRect.x, roiRect.y);
+            targetArmor.center += Point(roiRect.x, roiRect.y);
 
             Armor(targetArmor.rect);
 
-            for(int i = 0; i< 4;i++){
+            for (int i = 0; i < 4; i++) {
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
 
-            if (showArmorBox)
-            {
-                rectangle(img,roiRect,Scalar(255,255,255),2);
-
+            if (showArmorBox) {
+                rectangle(img, roiRect, Scalar(255, 255, 255), 2);
                 for (int j = 0; j < 4; j++) {
                     line(img, targetArmor.pts[j], targetArmor.pts[(j + 1) % 4], Scalar(255, 0, 255), 2);
                 }
-                circle(img,targetArmor.center,5,Scalar(0,0,255),-1);
+                circle(img, targetArmor.center, 5, Scalar(0, 0, 255), -1);
             }
 
             /**update roi rect, last armor, average of lamps' R channel subtract B channel value**/
@@ -256,9 +251,11 @@ namespace rm
 #endif
 
             lastTarget = targetArmor;
-            if(showArmorBox){
-                putText(img,"id:",Point(roiRect.x, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
-                putText(img, to_string(armorNumber),Point(roiRect.x+35, roiRect.y),cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 62, 191), 1, 5, 0);
+            if (showArmorBox) {
+                putText(img, "id:", Point(roiRect.x, roiRect.y), cv::FONT_HERSHEY_PLAIN, 2, Scalar(255, 62, 191), 1, 5,
+                        0);
+                putText(img, to_string(armorNumber), Point(roiRect.x + 35, roiRect.y), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 62, 191), 1, 5, 0);
             }
 
             //averageRSubBVal = averageRSubBVal*armorFoundCounter/(armorFoundCounter + 1) + targetArmor.avgRSubBVal/(armorFoundCounter + 1);
@@ -266,9 +263,7 @@ namespace rm
             //cout<<"Average Value of R Sub B : "<<averageRSubBVal<<endl;
 
             return true;
-        }
-        else
-        {
+        } else {
             detectLostCnt++;
             detectCnt = 0;
             lostCnt++;
