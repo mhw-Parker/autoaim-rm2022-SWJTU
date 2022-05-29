@@ -99,7 +99,7 @@ namespace rm
         armorWidth = rect.width;
         armorHeight = rect.height;
 
-        armorType =  (armorWidth / armorHeight > 2) ? (BIG_ARMOR) : (SMALL_ARMOR);
+        armorType =  (armorWidth / armorHeight > 1.75) ? (BIG_ARMOR) : (SMALL_ARMOR);
 
         priority = 0;
 

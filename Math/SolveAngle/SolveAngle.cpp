@@ -96,9 +96,9 @@ void SolveAngle::Generate3DPoints(bool mode) {
  * @param v_ 弹速
  * */
 void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd) {
-    if(armor_mode==SMALL_ARMOR)
+    if(armor_mode)
         cout << "--small target !" << endl;
-    else if(armor_mode==BIG_ARMOR)
+    else
         cout << "--big target !" << endl;
 
     cv::Mat Rvec;
