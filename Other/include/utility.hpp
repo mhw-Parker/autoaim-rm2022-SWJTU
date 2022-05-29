@@ -308,8 +308,16 @@ namespace RMTools {
         float theta = z > 0 ? -asin(sin_theta) : CV_PI - asin(sin_theta);
         return {rho, theta};
     }
+
     /**
-     * @brief 获取
+     * 计算两坐标距离
+     */
+    inline float GetDistance(const Eigen::Vector3f& pos1, const Eigen::Vector3f& pos2) {
+        return (pos1 - pos2).norm();
+    }
+
+    /**
+     * @brief 获取两坐标的YPD差
      * */
     inline Eigen::Vector3f GetDeltaYPD(Eigen::Vector3f cur_xyz, Eigen::Vector3f last_xyz){
         float lx = last_xyz[0], ly = last_xyz[1], lz = last_xyz[2];

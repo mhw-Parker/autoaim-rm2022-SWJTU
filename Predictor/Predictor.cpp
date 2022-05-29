@@ -31,11 +31,13 @@ void Predictor::Refresh() {
     total_theta = 0;
 
 }
+
 void Predictor::kalmanRefresh() {
     RMKF_flag = false;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
 }
+
 void Predictor::updateTimeStamp(float &dt) {
     total_t += dt;  ///时序更新方式最好变成全局变量
     time_series.push_back(total_t);    //存放时间序列
@@ -80,27 +82,43 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         ///
 
     }
-    else {     /// 闪烁导致丢失目标时的处理策略，目前为运动线性插值
-        if(detectLostCnt == 1)
-            last_xyz = target_xyz;
-        if(detectLostCnt < 4) {
+    else {     /// 闪烁导致丢失目标时的处理策略，目前为匀加速运动模型插值
+        if(detectLostCnt == 1) {
+            // 目标消失前位置
+            before_lost_xyz = target_xyz;
+        } else if(detectLostCnt < 4) {
+            // 预测目标当前位置
             target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
+            // 预测目标要击打位置
             predict_xyz = kalmanPredict(target_xyz,v_,latency);
-            predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
+            // 计算要击打位置的YPD
+            predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, before_lost_xyz);
             float fly_t = 0;
             predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
             latency = react_t + fly_t; //预测时长组成为  响应时延+飞弹时延
-        } else Refresh();
+        } else {
+            // 重置预测器
+            Refresh();
+        }
     }
 
+    //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
+    //float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
+
+    // 距离大于某个阈值认为更换目标
+    if (RMTools::GetDistance(last_xyz, target_xyz) > 300) {
+        kalmanRefresh();
+    }
+    last_xyz = target_xyz;
+
     // 以下为debug显示数据
-    if(showArmorBox){
+    if (showArmorBox) {
         vector<float> data2;
-        for(int len = 0;len<target_xyz.size();len++)
+        for (int len = 0; len < target_xyz.size(); len++)
             data2.push_back(target_xyz[len]);
-        for(int len = 0;len<RMKF.state_post_.rows();len++)
+        for (int len = 0; len < RMKF.state_post_.rows(); len++)
             data2.push_back(RMKF.state_post_[len]);
-        for(int i=0;i<3;i++)
+        for (int i = 0; i < 3; i++)
             data2.push_back(predict_ypd[i]);
         string str2[] = {"m_x","m_y","m_z",
                         "kf_x","kf_y","kf_z",
@@ -119,14 +137,6 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
                 v_,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    //waveClass.displayWave(gimbal_ypd[0],target_ypd[0],"yaw&pitch");
-    float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
-    cam_yaw = solveAngle.yaw_/degree2rad;
-    if(fabs(cam_yaw - last_yaw_) > 30)
-        kalmanRefresh();
-    //waitKey(0);
-    last_yaw_  = cam_yaw;
-    waveClass.displayWave(cam_yaw,-90,"cam_yaw");
 }
 
 /**

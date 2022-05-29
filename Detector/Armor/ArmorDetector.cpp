@@ -214,7 +214,9 @@ namespace rm
                 light.rect.points(rect_point);
                 for (int j = 0; j < 4; j++) {
                     //imgRoi is not a bug here, because imgRoi share the same memory with img
-                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y), rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y), Scalar(0, 255, 255), 2);
+                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
+                         rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
+                         Scalar(0, 255, 255), 2);
                 }
             }
         }
@@ -458,22 +460,21 @@ namespace rm
     * for GPU, the result shows that edge detection costs more time(using same video, without edge detection, task costs
     * 4.19548ms;with edge detection, task costs 4.27403ms)
     */
-    void ArmorDetector::Preprocess(Mat &img)
-    {
+    void ArmorDetector::Preprocess(Mat &img) {
         Mat bright;
         vector<Mat> channels;
-        split(img,channels);
-        cvtColor(img,bright,COLOR_BGR2GRAY);//0,2,1
+        split(img, channels);
+        cvtColor(img, bright, COLOR_BGR2GRAY);//0,2,1
 
         //Attention!!!if the calculate result is small than 0, because the mat format is CV_UC3, it will be set as 0.
-        cv::subtract(channels[0],channels[2],bSubR);
-        cv::subtract(channels[2],channels[0],rSubB);
+        cv::subtract(channels[0], channels[2], bSubR);
+        cv::subtract(channels[2], channels[0], rSubB);
         sub = rSubB - bSubR;
         //imshow ("rSubB - bSubR",sub);
         //imshow ("r - b",bSubR);
-        threshold(bright, svmBinaryImage, 10, 200, NORM_MINMAX);
-        GaussianBlur(bright,bright,Size(5,5),5);
-        threshold(bright, thresholdMap, 100, 255, NORM_MINMAX);
+        threshold(bright, svmBinaryImage, 10, 200, THRESH_BINARY);
+        GaussianBlur(bright, bright, Size(5, 5), 5);
+        threshold(bright, thresholdMap, 100, 255, THRESH_BINARY);
         //Mat adaptive;
         //adaptiveThreshold(bright,adaptive,255,)
         //imshow("grey",bright);
@@ -567,26 +568,19 @@ namespace rm
     * @return none
     * @details none
     */
-    void ArmorDetector::GetRoi()
-    {
+    void ArmorDetector::GetRoi() {
         Rect rectTemp = roiRect;
-        if (lostCnt>3 || rectTemp.width == 0 || rectTemp.height == 0)
-        {
-            roiRect = Rect(0, 0,FRAMEWIDTH, FRAMEHEIGHT);
+        if (lostCnt > 3 || rectTemp.width == 0 || rectTemp.height == 0) {
+            roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
             findState = false;
-        }
-        else if(detectCnt>0)
-        {
+        } else if (detectCnt > 0) {
             float scale = 3;
             int w = int(rectTemp.width * scale);
             int h = int(rectTemp.height * scale);
             int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);
             int y = int(rectTemp.y - (h - rectTemp.height) * 0.5);
-
             roiRect = Rect(x, y, w, h);
-            //MakeRectSafe(roiRect, img.size());
-            if (!MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT)))
-            {
+            if (!MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT))) {
                 roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
             }
         }
