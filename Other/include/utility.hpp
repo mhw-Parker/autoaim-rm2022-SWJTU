@@ -240,8 +240,8 @@ namespace RMTools {
                 min_v = 15;
                 max_v = 30;
             case SENTRY:
-                min_v = 10;
-                max_v = 16;
+                min_v = 25;
+                max_v = 30;
                 break;
             case UAV:
                 break;
@@ -273,7 +273,8 @@ namespace RMTools {
             case INFANTRY_TRACK:
                 break;
             case SENTRY:
-                offset[0] = -0.6;
+                offset[0] = -1.15;
+                offset[1] = -1.15;
                 break;
             case UAV:
                 break;

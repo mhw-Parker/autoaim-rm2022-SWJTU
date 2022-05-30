@@ -255,7 +255,7 @@ namespace rm
 
 
         /*the number of frames that program get a target armor constantly*/
-        int detectCnt = 0;
+        unsigned long long detectCnt = 0;
 
         /*the counter for successfully detection of target armor*/
         int armorFoundCounter = 0;

@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(100,300,1000),
+Predictor::Predictor() : waveClass(400,300,1000),
                          omegaWave(3,600,1000)
 {
     if(carName == SENTRY)
@@ -12,21 +12,21 @@ Predictor::Predictor() : waveClass(100,300,1000),
     // TODO 通过各种优先模式设置初始弹速
     switch (carName) {
         case HERO:
-            average_v_bullet = v_vec[0] = 15;
+            average_v_bullet = v_vec[0] = 14;
             break;
         case INFANTRY_MELEE0:
         case INFANTRY_MELEE1:
-            average_v_bullet = v_vec[0] = 15;
+            average_v_bullet = v_vec[0] = 14;
             break;
         case INFANTRY_TRACK:
             break;
         case SENTRY:
-            average_v_bullet = v_vec[0] = 30;
+            average_v_bullet = v_vec[0] = 28;
             break;
         case UAV:
             break;
         case VIDEO:
-            average_v_bullet = v_vec[0] = 15;
+            average_v_bullet = v_vec[0] = 14;
             break;
         case NOTDEFINED:
             break;
@@ -97,56 +97,51 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     }
     // 取弹速平均值
     average_v_bullet = RMTools::average(v_vec, 4);
-    float test_cal_pitch = 0;
-    if (!detectLostCnt) {
-        //lost_cnt = 0; //清空丢失目标计数
-        solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
-        //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
-        delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
-        target_ypd = gimbal_ypd + delta_ypd;
-        // 通过目标xyz坐标计算yaw pitch distance
-        target_xyz = GetGyroXYZ(target_ypd);
-        // 和上一次target的距离大于某个阈值，则认为更换目标
-        if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
-            if (detectLostCnt > 5) {
-                KalmanRefresh();
-            } else {
-                KalmanShallowRefresh();
-            }
-        }
-        // kalman预测要击打位置的xyz
-        predict_xyz = KalmanPredict(average_v_bullet, latency);
-        predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
-        // 计算要转过的角度
-        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-        // 计算抬枪
-        test_cal_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
-        //predict_ypd[1] = solveAngle.CalPitch(predict_xyz, average_v_bullet, fly_t) + 5;
-        predict_ypd[1] = test_cal_pitch;
-        //预测时长为：响应时延+飞弹时延
-        latency = react_t + fly_t;
-        cout << "Latency: " << latency << "s" << endl;
-        ///
+    // 解算YPD
+    //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
+    solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
+    delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
+    target_ypd = gimbal_ypd + delta_ypd;
+    // 通过目标xyz坐标计算yaw pitch distance
+    target_xyz = GetGyroXYZ(target_ypd);
+    // 和上一次target的距离大于某个阈值，则认为更换目标
+    if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
+//        if (detectLostCnt > 5) {
+//            KalmanRefresh();
+//        } else {
+//            KalmanShallowRefresh();
+//        }
+        KalmanShallowRefresh();
     }
-    else {     /// 闪烁导致丢失目标时的处理策略，目前为匀加速运动模型插值
-        if(detectLostCnt == 1) {
-            // 目标消失前位置
-            before_lost_xyz = target_xyz;
-        } else if(detectLostCnt <= 5) {
-            // 预测目标当前位置
-            target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
-            // 预测目标要击打位置
-            predict_xyz = KalmanPredict(average_v_bullet, latency);
-            // 计算要击打位置的YPD
-            predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, before_lost_xyz);
-            predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
-            //预测时长为：响应时延+飞弹时延
-            latency = react_t + fly_t;
-        } else {
-            // 重置预测器
-            Refresh();
-        }
-    }
+    // kalman预测要击打位置的xyz
+    predict_xyz = KalmanPredict(average_v_bullet, latency);
+    predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
+    // 计算要转过的角度
+    predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+    // 计算抬枪
+    predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
+    //预测时长为：响应时延+飞弹时延
+    latency = react_t + fly_t;
+
+    // TODO 闪烁导致丢失目标
+//    /// 闪烁导致丢失目标时的处理策略，目前为匀加速运动模型插值
+//    if(detectLostCnt == 1) {
+//        // 目标消失前位置
+//        before_lost_xyz = target_xyz;
+//    } else if(detectLostCnt <= 5) {
+//        // 预测目标当前位置
+//        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
+//        // 预测目标要击打位置
+//        predict_xyz = KalmanPredict(average_v_bullet, latency);
+//        // 计算要击打位置的YPD
+//        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, before_lost_xyz);
+//        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
+//        //预测时长为：响应时延+飞弹时延
+//        latency = react_t + fly_t;
+//    } else {
+//        // 重置预测器
+//        Refresh();
+//    }
 
     //float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
 
@@ -173,13 +168,14 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
                         "tar-pit:","pre-yaw","pre-pit",
                         "v bullet","Average v","latency"};
         vector<float> data1(8);
+        Vector2f offset = RMTools::GetOffset(carName);
         data1 = {gimbal_ypd[0],gimbal_ypd[1],
                 target_ypd[0],target_ypd[1],
-                predict_ypd[0],test_cal_pitch,
+                predict_ypd[0] + offset[0],predict_ypd[1] + offset[1],
                 v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    //waveClass.displayWave(target_xyz[0], predict_xyz[0], "x");
+    waveClass.displayWave(target_xyz[0], predict_xyz[0], "x");
 }
 
 /**
@@ -213,8 +209,7 @@ Vector3f Predictor::GetGyroXYZ(Vector3f target_ypd) {
  * @param t 预测时间
  * */
 Vector3f Predictor::KalmanPredict(float v_, float t) {
-    int step = t / 0.05;
-    cout << "step: " << step << endl;
+    int step = t / predict_dt;
     if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -253,10 +248,10 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
     RMKF.process_noise_.setIdentity();
-    RMKF.process_noise_ *= 1;
+    RMKF.process_noise_ *= 0.5;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 5;
+    RMKF.measure_noise_ *= 1;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     // 后验估计
@@ -287,13 +282,11 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
     temp_target_xyz <<  KF.state_post_(0),
                         KF.state_post_(1),
                         KF.state_post_(2);
-    // 拉长步长节省时间
-    float dt = 0.05;
     for (int i = 0; i < 6; ++i) {
-        KF.trans_mat_(i, i + 3) = dt;
+        KF.trans_mat_(i, i + 3) = predict_dt;
     }
     for (int i = 0; i < 3; ++i) {
-        KF.trans_mat_(i, i + 6) = 0.5 * dt * dt;
+        KF.trans_mat_(i, i + 6) = 0.5 * predict_dt * predict_dt;
     }
     for (int i = 0; i < iterate_times; ++i) {
         KF.predict();

@@ -49,7 +49,6 @@ public:
     float latency = 0.5, fly_t = 0.2, react_t = 0.5;
     Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
     Vector3f target_xyz{}, predict_xyz{};
-    Vector3f before_lost_xyz{};
     Vector3f last_xyz{};
     // 弹速相关
     float average_v_bullet;
@@ -84,7 +83,8 @@ private:
     EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);
     // flag为false则初始化Kalman，否则更新Kalman
     bool RMKF_flag = false;
-    float delta_t = 0.015; // s
+    float delta_t = 0.016; // s
+    float predict_dt = 0.05; // 预测时拉长步长节省计算，sentry:0.03
 
 public:
     void EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt);

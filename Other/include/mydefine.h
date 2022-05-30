@@ -79,7 +79,7 @@ enum CARNAME {HERO, INFANTRY_MELEE0, INFANTRY_MELEE1, INFANTRY_TRACK, SENTRY, UA
 #endif
 
 #ifndef SHOWTIME
-#define SHOWTIME 1
+#define SHOWTIME 0
 #endif
 
 #ifndef DEBUG_MSG
@@ -131,7 +131,6 @@ extern bool saveSVM;
 extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
-extern int detectLostCnt;
 extern CARNAME carName;
 extern std::string videoPath;
 extern int cameraIndex;

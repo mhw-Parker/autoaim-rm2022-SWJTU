@@ -440,7 +440,6 @@ namespace rm
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
                     curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
-                    // TODO 弹速异常，应重置为上一次平均弹速
                     v_bullet = receiveData.bulletSpeed;
                     //blueTarget = receiveData.targetColor;
                 }

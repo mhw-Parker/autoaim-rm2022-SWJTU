@@ -21,7 +21,7 @@ namespace rm
         center.x = static_cast<int>((L1.rect.center.x + L2.rect.center.x) / 2);
         center.y = static_cast<int>((L1.rect.center.y + L2.rect.center.y) / 2);
         rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2), Size(armorWidth, armorHeight));
-        armorType = (armorWidth / armorHeight > 2) ? (BIG_ARMOR) : (SMALL_ARMOR);
+        armorType = (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
         priority = priority_;
         avgRSubBVal = (L1.avgRSubBVal + L2.avgRSubBVal)/2;
 
@@ -99,7 +99,7 @@ namespace rm
         armorWidth = rect.width;
         armorHeight = rect.height;
 
-        armorType =  (armorWidth / armorHeight > 1.75) ? (BIG_ARMOR) : (SMALL_ARMOR);
+        armorType =  (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
 
         priority = 0;
 
@@ -224,7 +224,6 @@ namespace rm
         if (findState) {
             detectCnt++;
             lostCnt = 0;
-            detectLostCnt = 0;
 
             MakeRectSafe(targetArmor.rect, img.size());
 
@@ -262,13 +261,15 @@ namespace rm
             //armorFoundCounter++;
             //cout<<"Average Value of R Sub B : "<<averageRSubBVal<<endl;
 
+            printf("detectCnt: %d\nlostCnt: %d\n", detectCnt, lostCnt);
             return true;
         } else {
-            detectLostCnt++;
             detectCnt = 0;
             lostCnt++;
+            printf("detectCnt: %d\nlostCnt: %d\n", detectCnt, lostCnt);
             return false;
         }
+
     }
 
     /**
@@ -407,7 +408,6 @@ namespace rm
 
                 //armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
                 armorNumber = getArmorNumber(targetArmor);
-                cout << "SVM model detect : " << armorNumber << endl;
 
                 if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
                 {
@@ -737,10 +737,7 @@ namespace rm
 //        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
 
         warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
-        auto svm_start = getTickCount();
         int number = lround(svm->predict(svmParamMatrix));
-        auto svm_end = getTickCount();
-        cout << "SVM prediction cost: " <<(svm_end - svm_start) / getTickFrequency() * 1000 << "ms" <<endl;
         return number;
     }
     /**
