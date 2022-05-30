@@ -53,10 +53,6 @@ private:
 
     Matrix3f Ry, Rp, cam2world_mat;
 
-    float g = 9.8; //
-    float g2 = 9.8*9.8;
-    float fit_gun_error = 0;// m
-
     float degree2rad = CV_PI / 180;
     Matrix3f cam_mat;
 
@@ -83,6 +79,9 @@ private:
 
     Vector3f fit_xyz;
     Vector3f gun_xyz; //枪口坐标系下的x,y,z
+    float g = 9.8; //
+    float g2 = 9.8*9.8;
+    float fit_gun_error = 0;// m
     // 阻力系数
     float coeff = 0.025;
 };

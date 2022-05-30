@@ -126,7 +126,7 @@ namespace rm
         double freq;
 
         /***/
-        double tmp_t = 0;
+        float tmp_t = 0;
         double last_mission_time = 0.025; //上一次任务总体耗时
         vector<double> whole_time_arr;
         int time_cnt;

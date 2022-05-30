@@ -9,6 +9,28 @@ Predictor::Predictor() : waveClass(100,300,1000),
     if(carName == SENTRY)
         react_t = 0.6;
     predict_pts.assign(4,Point2f(0,0));
+    // TODO 通过各种优先模式设置初始弹速
+    switch (carName) {
+        case HERO:
+            average_v_bullet = v_vec[0] = 15;
+            break;
+        case INFANTRY_MELEE0:
+        case INFANTRY_MELEE1:
+            average_v_bullet = v_vec[0] = 15;
+            break;
+        case INFANTRY_TRACK:
+            break;
+        case SENTRY:
+            average_v_bullet = v_vec[0] = 30;
+            break;
+        case UAV:
+            break;
+        case VIDEO:
+            average_v_bullet = v_vec[0] = 15;
+            break;
+        case NOTDEFINED:
+            break;
+    }
 }
 
 Predictor::~Predictor() = default;
@@ -67,23 +89,25 @@ void Predictor::UpdateTimeStamp(float &dt) {
 void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
                                const Vector3f &gimbal_ypd, float v_, float dt) {
     UpdateTimeStamp(dt);
-    float test_cal_pitch;
-    // 取弹速平均值
-    float average_v_bullet = RMTools::average(v_vec, 4);
-    // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均
-    if (v_vec[(v_vec_pointer + 3) % 4] != v_) {
+    // 检查异常弹速数据
+    bool check = RMTools::CheckBulletVelocity(carName, v_);
+    // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均；数组满则覆盖头部
+    if (check && v_vec[(v_vec_pointer + 3) % 4] != v_) {
         v_vec[v_vec_pointer++ % 4] = v_;
     }
-    cout << "detectLostCnt: " << detectLostCnt << '\n';
+    // 取弹速平均值
+    average_v_bullet = RMTools::average(v_vec, 4);
+    float test_cal_pitch = 0;
     if (!detectLostCnt) {
         //lost_cnt = 0; //清空丢失目标计数
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
-        delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist; //因为云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
+        //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
+        delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
         target_xyz = GetGyroXYZ(target_ypd);
         // 和上一次target的距离大于某个阈值，则认为更换目标
-        if (RMTools::GetDistance(last_xyz, target_xyz) > 300) {
+        if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
             if (detectLostCnt > 5) {
                 KalmanRefresh();
             } else {
@@ -232,7 +256,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.process_noise_ *= 1;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 10;
+    RMKF.measure_noise_ *= 5;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     // 后验估计

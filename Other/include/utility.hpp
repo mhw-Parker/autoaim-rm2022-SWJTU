@@ -222,22 +222,88 @@ namespace RMTools {
         return true;
     }
 
-/**
- * 求平均值
- */
-    inline double average(const double *x, int len);
+    /**
+     * 检查收到子弹弹速数据是否正常
+     * @param receive_v_bullet 收到的弹速数据
+     * @param last_average_v 上次的平均弹速
+     * @return 本次弹速
+     */
+    inline bool CheckBulletVelocity(CARNAME carName, float receive_v_bullet) {
+        float min_v = 10, max_v = 30;
+        switch (carName) {
+            case HERO:
+                min_v = 10;
+                max_v = 16;
+                break;
+            case INFANTRY_MELEE0:
+            case INFANTRY_MELEE1:
+                min_v = 15;
+                max_v = 30;
+            case SENTRY:
+                min_v = 10;
+                max_v = 16;
+                break;
+            case UAV:
+                break;
+            case VIDEO:
+                break;
+            case NOTDEFINED:
+                break;
+        }
+        if (receive_v_bullet < min_v || receive_v_bullet > max_v) {
+            return false;
+        }
+        return true;
+    }
 
-    double average(const double *x, int len) {
-        double sum = 0;
-        for (int i = 0; i < len; i++) // 求和
+    /**
+     * 针对每个车返回offset
+     */
+    inline Eigen::Vector2f GetOffset(CARNAME carName) {
+        Eigen::Vector2f offset;
+        switch (carName) {
+            case HERO:
+                offset[0] = -0.4;
+                break;
+            case INFANTRY_MELEE0:
+                break;
+            case INFANTRY_MELEE1:
+                offset[0] = -1.65;
+                break;
+            case INFANTRY_TRACK:
+                break;
+            case SENTRY:
+                offset[0] = -0.6;
+                break;
+            case UAV:
+                break;
+            case VIDEO:
+                break;
+            case NOTDEFINED:
+                break;
+        }
+        return offset;
+    }
+
+/**
+ * 求平均值，为0的数据认为不可用
+ */
+    inline float average(const float* x, int len) {
+        float sum = 0;
+        for (int i = 0; i < len; i++) {
+            if (x[i] == 0) {
+                len = i;
+                break;
+            }
             sum += x[i];
+        }
         return sum / len; // 得到平均值
     }
 
 /**
  * 求方差
  */
-    inline double variance(double *x, int len) {
+    inline float variance(float *x, int len) {
         double sum = 0;
         double average1 = average(x, len);
         for (int i = 0; i < len; i++) // 求和
@@ -248,7 +314,7 @@ namespace RMTools {
 /**
  * 求标准差
  */
-    inline double stdDeviation(double *x, int len) {
+    inline float stdDeviation(float *x, int len) {
         double variance1 = variance(x, len);
         return sqrt(variance1); // 得到标准差
     }

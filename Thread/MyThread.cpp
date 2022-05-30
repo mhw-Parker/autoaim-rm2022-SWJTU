@@ -384,14 +384,9 @@ namespace rm
                     if (armorDetectorPtr->findState) {
                         predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
                                                    v_bullet,tmp_t);
-                        float yaw_offset = 0;
-                        if (carName == SENTRY) {
-                            yaw_offset = -0.6;
-                        } else if (carName == INFANTRY_MELEE1) {
-                            yaw_offset = -1.65;
-                        }
-                        yaw_abs = predictPtr->predict_ypd[0] + yaw_offset;
-                        pitch_abs = predictPtr->predict_ypd[1];
+                        Vector2f offset = RMTools::GetOffset(carName);
+                        yaw_abs = predictPtr->predict_ypd[0] + offset[0];
+                        pitch_abs = predictPtr->predict_ypd[1] + offset[1];
                     }
                 }
                 else {
@@ -445,7 +440,8 @@ namespace rm
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
                     curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
-                    v_bullet = receiveData.bulletSpeed < 10 ? 15 : receiveData.bulletSpeed;
+                    // TODO 弹速异常，应重置为上一次平均弹速
+                    v_bullet = receiveData.bulletSpeed;
                     //blueTarget = receiveData.targetColor;
                 }
                 receiveTime = CalWasteTime(st, freq);

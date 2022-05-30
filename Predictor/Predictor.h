@@ -51,6 +51,10 @@ public:
     Vector3f target_xyz{}, predict_xyz{};
     Vector3f before_lost_xyz{};
     Vector3f last_xyz{};
+    // 弹速相关
+    float average_v_bullet;
+    float v_vec[4]{};
+    int v_vec_pointer = 1;
 
 private:
     void UpdateTimeStamp(float &dt);
@@ -58,12 +62,9 @@ private:
     vector<float> time_series;
     float total_t = 0;
     float degree2rad = CV_PI / 180;
-    int v_vec_pointer = 0;
-    double v_vec[4] = {15,15,15,15};
 
 public:
     void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt);
-
     Vector3f target_v_xyz{};
     Vector3f target_a_xyz{};
 
