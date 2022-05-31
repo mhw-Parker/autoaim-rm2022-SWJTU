@@ -64,7 +64,9 @@ private:
     float degree2rad = CV_PI / 180;
 
 public:
-    void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type, const Vector3f &gimbal_ypd, float v_, float dt);
+    void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
+                        const Vector3f &gimbal_ypd, float v_, float dt,
+                        int lost_cnt);
     Vector3f target_v_xyz{};
     Vector3f target_a_xyz{};
 

@@ -181,6 +181,7 @@ namespace rm
                 driver = &v4l2Capture;
                 break;
             case SENTRY:
+            case SENTRYDOWN:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -200,7 +201,7 @@ namespace rm
         }
         if(saveVideo){
             videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 50.0, cv::Size(1280, 1024));
+            videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 10.0, cv::Size(1280, 1024));
         }
         if(showEnergy)
             curControlState = BIG_ENERGY_STATE;
@@ -389,7 +390,7 @@ namespace rm
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (find_state) {
                         predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
-                                                   v_bullet,tmp_t);
+                                                   v_bullet,tmp_t, armorDetectorPtr->lostCnt);
                         Vector2f offset = RMTools::GetOffset(carName);
                         yaw_abs = predictPtr->predict_ypd[0] + offset[0];
                         pitch_abs = predictPtr->predict_ypd[1] + offset[1];

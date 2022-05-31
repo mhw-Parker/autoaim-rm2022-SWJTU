@@ -10,11 +10,11 @@ Predictor::Predictor() : waveClass(6.3,300,1000),
     // TODO 通过各种优先模式设置初始弹速
     switch (carName) {
         case HERO:
-            average_v_bullet = v_vec[0] = 14;
+            average_v_bullet = v_vec[0] = 15;
             break;
         case INFANTRY_MELEE0:
         case INFANTRY_MELEE1:
-            average_v_bullet = v_vec[0] = 14;
+            average_v_bullet = v_vec[0] = 15;
             break;
         case INFANTRY_TRACK:
             break;
@@ -22,10 +22,14 @@ Predictor::Predictor() : waveClass(6.3,300,1000),
             average_v_bullet = v_vec[0] = 28;
             react_t = 0.6;
             break;
+        case SENTRYDOWN:
+            average_v_bullet = v_vec[0] = 28;
+            react_t = 0.6;
+            break;
         case UAV:
             break;
         case VIDEO:
-            average_v_bullet = v_vec[0] = 14;
+            average_v_bullet = v_vec[0] = 15;
             break;
         case NOTDEFINED:
             break;
@@ -93,7 +97,8 @@ void Predictor::UpdateTimeStamp(float &dt) {
  * @param dt 两次处理源图像时间间隔
  * */
 void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
-                               const Vector3f &gimbal_ypd, float v_, float dt) {
+                               const Vector3f &gimbal_ypd, float v_, float dt,
+                               int lost_cnt) {
     UpdateTimeStamp(dt);
     // 检查异常弹速数据
     bool check = RMTools::CheckBulletVelocity(carName, v_);
@@ -110,47 +115,35 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     target_ypd = gimbal_ypd + delta_ypd;
     // 通过目标xyz坐标计算yaw pitch distance
     target_xyz = GetGyroXYZ(target_ypd);
-    // 和上一次target的距离大于某个阈值，则认为更换目标
-    if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
-//        if (detectLostCnt > 5) {
-//            KalmanRefresh();
-//        } else {
-//            KalmanShallowRefresh();
-//        }
-        KalmanShallowRefresh();
+    //
+    if (target_xyz != last_xyz) {
+        // 和上一次target的距离大于某个阈值，则认为更换目标
+        if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
+            KalmanShallowRefresh();
+        }
+        // kalman预测要击打位置的xyz
+        predict_xyz = KalmanPredict(average_v_bullet, latency);
+        predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
+        // 计算要转过的角度
+        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+        // 计算抬枪
+        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
+        //预测时长为：响应时延+飞弹时延
+        latency = react_t + fly_t;
     }
-    // kalman预测要击打位置的xyz
-    predict_xyz = KalmanPredict(average_v_bullet, latency);
-    predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
-    // 计算要转过的角度
-    predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-    // 计算抬枪
-    predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
-    //预测时长为：响应时延+飞弹时延
-    latency = react_t + fly_t;
-
-    // TODO 闪烁导致丢失目标
-//    /// 闪烁导致丢失目标时的处理策略，目前为匀加速运动模型插值
-//    if(detectLostCnt == 1) {
-//        // 目标消失前位置
-//        before_lost_xyz = target_xyz;
-//    } else if(detectLostCnt <= 5) {
-//        // 预测目标当前位置
-//        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
-//        // 预测目标要击打位置
-//        predict_xyz = KalmanPredict(average_v_bullet, latency);
-//        // 计算要击打位置的YPD
-//        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, before_lost_xyz);
-//        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
-//        //预测时长为：响应时延+飞弹时延
-//        latency = react_t + fly_t;
-//    } else {
-//        // 重置预测器
-//        Refresh();
-//    }
-
-    //float v_flat = sqrt(RMKF.state_post_[3]*RMKF.state_post_[3] + RMKF.state_post_[5]*RMKF.state_post_[5]); //sqrt(x*x + z*z)
-
+    // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
+    else {
+        // 预测目标当前位置
+        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
+        // 预测目标要击打位置
+        predict_xyz = KalmanPredict(average_v_bullet, latency);
+        // 计算要击打位置的YPD
+        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
+        // 计算抬枪
+        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
+        //预测时长为：响应时延+飞弹时延
+        latency = react_t + fly_t;
+    }
     // 更新last值
     last_xyz = target_xyz;
 
