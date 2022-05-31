@@ -183,6 +183,7 @@ namespace rm
         float v_bullet;
         RMTools::DisPlayWaveCLASS showWave;
 
+        bool find_state;
         struct ReceiveData receiveData;
         int armorType;
 

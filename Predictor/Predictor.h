@@ -46,7 +46,7 @@ public:
     ~Predictor();
     void Refresh();
     cv::Point2f predict_point;
-    float latency = 0.5, fly_t = 0.2, react_t = 0.5;
+    float latency = 0.5, fly_t = 0.2, react_t = 0.3;
     Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
     Vector3f target_xyz{}, predict_xyz{};
     Vector3f last_xyz{};
@@ -57,6 +57,7 @@ public:
 
 private:
     void UpdateTimeStamp(float &dt);
+    void TimeRefresh();
     SolveAngle solveAngle;
     vector<float> time_series;
     float total_t = 0;
@@ -88,12 +89,13 @@ private:
 
 public:
     void EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt);
+    void EnergyRefresh();
     vector<Point2f> predict_pts;
 
 private:
     /** energy machine common function **/
     bool JudgeFanRotation();
-    float CalOmega(int step, float &total_theta);
+    float CalOmegaNStep(int step, float &total_theta);
     bool EnergyStateSwitch();
 
     float total_theta = 0;
@@ -115,6 +117,7 @@ private:
     EigenKalmanFilter omega_kf = EigenKalmanFilter(3, 2, 1);
     EigenKalmanFilter rad_kf = EigenKalmanFilter(3,1);
     vector<float> filter_omega;
+    bool energy_flag = false;
 
     /**---- estimate big fan rotation speed parameters ----**/
     void estimateParam(vector<float> &omega_, vector<float> &t_);

@@ -20,7 +20,7 @@ sec=1
 cnt=0
 PROC_NAME= "run -sentry -blue" #进程名字，取决于你自己make后的名称，也可以在终端输入top来查找
 Thread=`ps -ef | grep "$PROC_NAME"` #判断用到，具体用法自行百度
-cd /home/sentrydown/Robomaster/Debug/HeliosCV-2022-SWJTU/build #进入文件里面
+cd /home/hero/Robomaster/Debug/HeliosCV-2022-SWJTU/build #进入文件里面
 make clean && make -j        #清除并重新make一下，防止文件损坏（-j提高效率）
 echo "24796" | sudo -S sudo chmod +777 /dev/ttyUSB0 #用自动输入密码并开启ttyusb权限
 echo "24796" | sudo ./run -sentry -blue #运行

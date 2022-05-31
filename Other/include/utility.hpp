@@ -236,9 +236,13 @@ namespace RMTools {
                 max_v = 16;
                 break;
             case INFANTRY_MELEE0:
+                min_v = 15;
+                max_v = 30;
+                break;
             case INFANTRY_MELEE1:
                 min_v = 15;
                 max_v = 30;
+                break;
             case SENTRY:
                 min_v = 25;
                 max_v = 30;

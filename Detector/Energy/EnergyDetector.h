@@ -63,22 +63,19 @@ public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
     void EnergyDetectTask(const Mat &src);
-    void Refresh();
 
+    vector<Point2f> output_pts;
     vector<Point2f> pts;
-    vector<Point2f> predict_pts;
     cv::Point2f target_point;//目标装甲板中心坐标
-    cv::Point2f predict_point;//预测的击打点坐标
     cv::Point2f circle_center_point;//风车圆心坐标
-    std::vector<cv::Point2f> target_armor_centers;//get R
 
 	bool detect_flag = false;
-    float cur_phi = 0;
-    float cur_omega = 0;
-    float predict_rad = 0;
+
     Mat outline;
 
 private:
+    std::vector<cv::Point2f> target_armor_centers;//get
+
     const float R = 168;
     const float K = 10; //半径倍数
 

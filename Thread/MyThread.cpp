@@ -336,19 +336,17 @@ namespace rm
                 if (lastControlState == curControlState) {
                     lastControlState = curControlState;
                 } else {
-                    energyPtr->Refresh();
                     predictPtr->Refresh();
                 }
                 lastControlState = curControlState; //更新上一次的状态值
                 switch (curControlState) {
                     case AUTO_SHOOT_STATE:
                         Armor();
-                        target_pts = armorDetectorPtr->targetArmor.pts;
                         break;
                     case BIG_ENERGY_STATE:
                     case SMALL_ENERGY_STATE:
                         Energy();
-                        target_pts = energyPtr->pts;
+                        target_pts = energyPtr->output_pts;
                         rotate_center = energyPtr->circle_center_point;
                         break;
                     default:
@@ -378,10 +376,18 @@ namespace rm
                     tmp_t = last_mission_time; //同步时间
                     tmp_cnt = cnt;
                 }
+                if(curControlState == AUTO_SHOOT_STATE){
+                    target_pts = armorDetectorPtr->targetArmor.pts;
+                    find_state = armorDetectorPtr->findState;
+                }
+                else {
+                    target_pts = energyPtr->pts;
+                    find_state = energyPtr->detect_flag;
+                }
                 detectMission = false;
 
                 if (curControlState == AUTO_SHOOT_STATE) {
-                    if (armorDetectorPtr->findState) {
+                    if (find_state) {
                         predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
                                                    v_bullet,tmp_t);
                         Vector2f offset = RMTools::GetOffset(carName);
@@ -390,9 +396,9 @@ namespace rm
                     }
                 }
                 else {
-                    predictPtr->EnergyPredictor(curControlState,target_pts,rotate_center,gimbal_ypd,
+                    predictPtr->EnergyPredictor(curControlState,energyPtr->pts,rotate_center,gimbal_ypd,
                                                    v_bullet,tmp_t);
-                    yaw_abs = predictPtr->predict_ypd[0] - 1;
+                    yaw_abs = predictPtr->predict_ypd[0];
                     pitch_abs = predictPtr->predict_ypd[1];
                 }
                 /** package data and prepare for sending data to lower-machine **/
@@ -400,7 +406,7 @@ namespace rm
                                 pitch_abs,
                                 solverPtr->dist,
                                 solverPtr->shoot,
-                                armorDetectorPtr->findState,
+                                find_state,
                                 curControlState,
                                 0);
 #if SAVE_TEST_DATA == 1
@@ -499,7 +505,7 @@ namespace rm
                     circle(show_img, energyPtr->target_point, 2, Scalar(0, 0, 255), 3);
                     circle(show_img, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
                 }
-                if (showArmorBox && armorDetectorPtr->findState) {
+                if (find_state) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
                 }
                 circle(show_img, predictPtr->predict_point, 5, Scalar(100, 240, 15), 2);

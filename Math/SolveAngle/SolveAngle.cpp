@@ -91,8 +91,8 @@ void SolveAngle::Generate3DPoints(bool mode) {
         targetWidth3D = 135;
     }
     else{
-        targetHeight3D = 140;
-        targetWidth3D = 225;
+        targetHeight3D = 150; //140
+        targetWidth3D = 250;  //225
     }
     targetPoints3D.emplace_back(-targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, -targetHeight3D / 2, 0);
@@ -191,6 +191,7 @@ void SolveAngle::GunXYZ2YPD(Vector3f cam_xyz) {
  * @return pitch相对于地面的角度
  */
 float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
+    if(v < 15 || v > 30) v = 15;
     float x = target_xyz[0]/1000, y = target_xyz[1]/1000, z = target_xyz[2]/1000; //转换为m
     float d = sqrt(x*x+z*z);
     float a = 0.25 * g2;
@@ -231,7 +232,7 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         if(i>10) break;
     }
     pitch_ /= degree2rad;
-    //if(pitch_ > 10) pitch_ += 0.2*(pitch_-10);
+    if(t_>1) t_=1;
     if(pitch_ > 90) pitch_ = 0;
     return pitch_;
 }

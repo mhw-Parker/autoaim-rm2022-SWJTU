@@ -81,15 +81,13 @@ FILE(GLOB_RECURSE sourceFiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detecto
 ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourceFiles} ${DRIVER_SRC} Predictor/Predictor.h Predictor/Predictor.cpp)
 
 list(APPEND PSMOVEAPI_TRACKER_REQUIRED_LIBS v4l2)
-set(LIBS umfpack cxsparse glog gflags gomp
-        ccolamd btf klu cholmod lapack blas camd amd pthread) #${Ceres_LIBS_DIR}/libceres.a
-
+#set(LIBS umfpack cxsparse glog gflags gomp
+#        ccolamd btf klu cholmod lapack blas camd amd pthread) #${Ceres_LIBS_DIR}/libceres.a
+SET(LIBS glog pthread)
 target_link_libraries(${BIN_NAME} ${LIBS})
 TARGET_LINK_LIBRARIES(${BIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
 TARGET_LINK_LIBRARIES(${BIN_NAME} ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(${BIN_NAME} Ceres::ceres)
-
-#TARGET_LINK_LIBRARIES(${BIN_NAME} ${Ceres_LIBS})
 
 if(REALSENSE)
     TARGET_LINK_LIBRARIES(${BIN_NAME} ${realsense2_LIBRARY})

@@ -43,11 +43,7 @@ EnergyDetector::~EnergyDetector() = default;
  * @remark 初始化成员变量
  */
 void EnergyDetector::initEnergy() {
-    predict_rad = 0;//预测提前角
-    predict_point = Point(0, 0);//预测打击点初始化
     pts.resize(4);
-    predict_pts.resize(4);
-    //startT = getTickCount();
 }
 
 /**
@@ -136,9 +132,8 @@ void EnergyDetector::clearAll() {
     valid_fan_strip.clear();
     target_blades.clear();
     armor_centers.clear();
+    output_pts.clear(); //输出4点
 }
-
-
 void EnergyDetector::EnergyDetectTask(const Mat &src) {
     clearAll();
     Mat img = src.clone();
@@ -148,6 +143,7 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
         getPts(target_armor);
         getCircleCenter(binary);
         detect_flag = true;
+        output_pts = pts;
     } else {
         misscount++;
         if(misscount>5){ //连续5帧丢目标
@@ -156,14 +152,6 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
         }
     }
 }
-/**
- * @brief 每次切换状态清空
- * */
-void EnergyDetector::Refresh() {
-    clearAll(); //清除容器
-}
-
-
 /**
  * @brief EnergyDetector::preprocess
  * @param Mat& src
@@ -205,40 +193,6 @@ Mat EnergyDetector::preprocess(Mat &src) {
     return binary;
 }
 
-void EnergyDetector::findROI(Mat &src, Mat &dst) {
-    if(detect_flag){
-        if(circle_center_point.x < 300)
-            roi_sp.x = 0;
-        else if(circle_center_point.x > IMGWIDTH - 300)
-            roi_sp.x = IMGWIDTH - 600;
-        else
-            roi_sp.x = circle_center_point.x - 300;
-
-        if(circle_center_point.y < 300)
-            roi_sp.y = 0;
-        else if(circle_center_point.y > IMGHEIGHT - 300)
-            roi_sp.y = IMGHEIGHT - 600;
-        else
-            roi_sp.y = circle_center_point.y - 300;
-
-
-        dst = src(Rect(roi_sp.x,roi_sp.y,600,600));
-
-    } else {
-        dst = src;
-        roi_sp = Point2f (0,0);
-    }
-
-}
-void EnergyDetector::roiPoint2src() {
-    target_point += roi_sp;
-    circle_center_point += roi_sp;
-    predict_point += roi_sp;
-    for(int i = 0;i<=pts.size();i++){
-        pts[i] += roi_sp;
-        predict_pts[i] += roi_sp;
-    }
-}
 bool EnergyDetector::DetectAll(Mat &src) {
     Mat dilate_mat = src.clone();
     vector<vector<Point> > all_contours;
@@ -409,7 +363,7 @@ bool EnergyDetector::getCircleCenter(Mat &src){
             }
             //else cout << "ratio = " << ratio << endl;
         }
-        return false;
+        //return false;
     } else {
         circle_center_point = calR3P(); //当同时存在3个装甲板时，直接用三点定圆
     }
@@ -541,26 +495,6 @@ Point2f EnergyDetector::calR3P() {
     circle(outline,Point2f (result(1,0),result(0,0)),3,Scalar(200,200,50),2);
     return Point2f (result(1,0),result(0,0));
 }
-/**
- * @param p 变换参考点
- * @param center 极坐标中心
- * @param theta 预测转过角度
- * @return 预测点坐标
- * @remark 计算预测点坐标
- */
-
-
-
-/**
- * @param Mat src
- * @brief 通过相邻帧的圆心指向目标的向量叉乘来达到既能判断方向，又可以通过叉乘求角度相邻帧转过的角度（因为已知R在图像中为168）
- * @remark 给出预测射击点位置predict_point
- */
-
-
-/**
- * @remark:
- */
 void EnergyDetector::updateLastValues() {
     last_target_armor = target_armor;
     last_target_point = target_point;

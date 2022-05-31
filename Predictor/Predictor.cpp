@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(400,300,1000),
+Predictor::Predictor() : waveClass(6.3,300,1000),
                          omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
@@ -39,20 +39,27 @@ Predictor::~Predictor() = default;
  * */
 void Predictor::Refresh() {
     /**--------- 公共享有部分清空 ---------**/
-    time_series.clear();
-    total_t = 0;
+    TimeRefresh();
     /**--------- 装甲板预测部分清空 ---------**/
     KalmanRefresh();
-    latency = 0.5;
     /**--------- 能量机关预测部分清空 ---------**/
+    EnergyRefresh();
+}
+void Predictor::EnergyRefresh(){
+    TimeRefresh();
     angle.clear();
     omega.clear();
     filter_omega.clear();
     ctrl_mode = STANDBY;
     total_theta = 0;
-
+    average_v_bullet = v_vec[0] = 18;
+    energy_flag = false;
 }
-
+void Predictor::TimeRefresh() {
+    total_t = 0;
+    time_series.clear();
+    latency = 0.5;
+}
 /**
  * @brief 深重置，Kalman滤波器整个重置，目标速度加速度置零
  */
@@ -314,6 +321,15 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * */
 void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
     UpdateTimeStamp(dt);
+    average_v_bullet = v_;
+    //v_ = v_ < 18 ? 18 : v_; //打幅弹速
+//    bool check = RMTools::CheckBulletVelocity(carName, v_);
+//    if (check && v_vec[(v_vec_pointer + 3) % 4] != v_) {
+//        v_vec[v_vec_pointer++ % 4] = v_;
+//    }
+//    // 取弹速平均值
+//    average_v_bullet = RMTools::average(v_vec, 4);
+//    average_v_bullet = (average_v_bullet > 17) ? average_v_bullet : 17;
     Point2f target_point;
     if(target_pts.size() == 4)
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
@@ -325,25 +341,29 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     if(JudgeFanRotation()) {
         if(mode == BIG_ENERGY_STATE) {
             FilterOmega(dt);
-            if(EnergyStateSwitch())
+            if(EnergyStateSwitch()){
                 FilterRad(latency);
+            }
             else
                 predict_rad = 0;
         }
         else
-            predict_rad = energy_rotation_direction * 1.4 * latency;
+            predict_rad = energy_rotation_direction * 1.4 * latency; //小幅
         predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
         getPredictRect(center, target_pts, predict_rad); //获得预测矩形
     }
     else
         predict_pts = target_pts;
-    solveAngle.GetPoseV(predict_pts, false, gimbal_ypd);
+    solveAngle.GetPoseV(predict_pts, false, gimbal_ypd); ///测试弹道 变为静态目标点
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = GetGyroXYZ(predict_ypd);
-    predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t);
-    latency = 0.2 + fly_t;
+    float iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
+    predict_ypd[1] = iterate_pitch + 3.2;// + ((iterate_pitch > 15) ? (iterate_pitch-15)*0.4 : 0);
+    //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;
+    latency = react_t + fly_t;
 }
+
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
         case STANDBY:
@@ -368,7 +388,7 @@ bool Predictor::EnergyStateSwitch() {
 }
 bool Predictor::JudgeFanRotation() {
     if(angle.size() > 3 && angle.size() < 19){
-        current_omega = CalOmega(3, total_theta);
+        current_omega = CalOmegaNStep(3, total_theta);
         omega.push_back(current_omega);
         if(angle.size() == 18) {
             int clockwise_cnt = 0; //顺时针旋转计数器
@@ -382,14 +402,17 @@ bool Predictor::JudgeFanRotation() {
         }
         else return false;
     }
-    else return true;
+    else {
+        energy_flag = true;
+        return true;
+    }
 }
 /**
  * @brief 计算能量机关旋转角速度
  * @param step 逐差步长
  * @param total_theta 累积角度
  * */
-float Predictor::CalOmega(int step, float &total_theta) {
+float Predictor::CalOmegaNStep(int step, float &total_theta) {
     int step_ = step + 1;
     float d_theta = angle.back() - angle[angle.size()-step_];
     float dt = time_series.back() - time_series[time_series.size()-step_];
@@ -398,7 +421,18 @@ float Predictor::CalOmega(int step, float &total_theta) {
     if(d_theta < -6)
         d_theta += 2*CV_PI;
     total_theta += d_theta;
-    return d_theta / dt;
+    float tmp_omega = d_theta / dt;
+    if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
+        if(energy_flag) //该次omega用kalman插值
+        {
+            total_theta = omega_kf.state_post_[0];
+            tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
+        }
+        else //kalman未初始化则直接限幅
+            tmp_omega = (tmp_omega > 0) ? 2.15 : -2.15;
+    }
+    //waveClass.displayWave(d_theta,angle.back(),"d_theta");
+    return tmp_omega;
 }
 /**
  * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
@@ -407,15 +441,20 @@ void Predictor::FilterOmega(const float dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
                             0, 1, dt,
                             0, 0, 1;
-    current_omega = CalOmega(3, total_theta);
+    current_omega = CalOmegaNStep(3, total_theta);
     VectorXf measure_vec(2,1);
     measure_vec <<  total_theta,
                     current_omega;
-
     omega_kf.predict();
     omega_kf.correct(measure_vec);
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
     omegaWave.displayWave(energy_rotation_direction*current_omega,filter_omega.back(),"omega");
+    if(showEnergy){
+        string str[] = {"flat-dist","height","v-bullet","pitch","latency"};
+        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],average_v_bullet,
+                              predict_ypd[1],latency};
+        RMTools::showData(data,str,"energy param");
+    }
 }
 void Predictor::FilterRad(const float latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
@@ -513,7 +552,6 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     if(w_ < 0) w_ = abs(w_);
     if(w_ < 1.884) w_ = 1.884;
     else if(w_ > 2) w_ = 2;
-    //waitKey(0);
 }
 /**
  * @brief 通过预测的弧度增量值获得目标点的对应预测点
