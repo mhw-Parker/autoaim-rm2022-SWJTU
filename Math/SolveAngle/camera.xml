@@ -42,16 +42,16 @@
     <cols>3</cols>
     <dt>d</dt>
     <data>
-      1759.6 0.0000 645.5970
-      0.0000 1761.0 482.3324
-      0.0000 0.0000 1.000000
+      1760.55506985705 0 646.283116140709
+      0 1761.01541011471 483.376617258825
+      0 0 1
     </data>
   </Intrinsic_Matrix_MIND134GC-0>
   <Distortion_Coefficients5_MIND134GC-0 type_id="opencv-matrix">
     <rows>5</rows>
     <cols>1</cols>
     <dt>d</dt>
-    <data>-0.0744 0.3689 0 0 0
+    <data>-0.0759322899962658 0.371617154476779 0 0 0
     </data>
   </Distortion_Coefficients5_MIND134GC-0>
 
