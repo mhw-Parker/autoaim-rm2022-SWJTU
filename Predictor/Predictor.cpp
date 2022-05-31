@@ -6,8 +6,6 @@
 Predictor::Predictor() : waveClass(400,300,1000),
                          omegaWave(3,600,1000)
 {
-    if(carName == SENTRY)
-        react_t = 0.6;
     predict_pts.assign(4,Point2f(0,0));
     // TODO 通过各种优先模式设置初始弹速
     switch (carName) {
@@ -22,6 +20,7 @@ Predictor::Predictor() : waveClass(400,300,1000),
             break;
         case SENTRY:
             average_v_bullet = v_vec[0] = 28;
+            react_t = 0.6;
             break;
         case UAV:
             break;
