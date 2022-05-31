@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 2.9)
 
 project(MASTER)
-SET(CMAKE_BUILE_TYPE DEBUG)
+SET(CMAKE_BUILD_TYPE DEBUG)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g -std=c++17 -pthread -lv4l1 -lv4l2")
 SET(BIN_NAME "run")
+SET(CMAKE_CXX_STANDARD 14)
 #根据实际路径修改
 #set(OpenCV_DIR "/home/tyy/opencv-4.5.4/build")
 
@@ -81,11 +82,13 @@ FILE(GLOB_RECURSE sourceFiles "Other/src/*.cpp" "Detector/Energy/*.cpp" "Detecto
 ADD_EXECUTABLE(${BIN_NAME} main.cpp ${sourceFiles} ${DRIVER_SRC} Predictor/Predictor.h Predictor/Predictor.cpp)
 
 list(APPEND PSMOVEAPI_TRACKER_REQUIRED_LIBS v4l2)
-set(LIBS libceres.a umfpack cxsparse glog gflags gomp
+set(LIBS umfpack cxsparse glog gflags gomp
         ccolamd btf klu cholmod lapack blas camd amd pthread) #${Ceres_LIBS_DIR}/libceres.a
+
 target_link_libraries(${BIN_NAME} ${LIBS})
 TARGET_LINK_LIBRARIES(${BIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
 TARGET_LINK_LIBRARIES(${BIN_NAME} ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(${BIN_NAME} Ceres::ceres)
 
 #TARGET_LINK_LIBRARIES(${BIN_NAME} ${Ceres_LIBS})
 
