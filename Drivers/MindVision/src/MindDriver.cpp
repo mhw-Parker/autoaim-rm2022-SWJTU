@@ -94,6 +94,7 @@ bool MindDriver::StartGrab() {
 bool MindDriver::StopGrab() {
     CameraPause(hCamera);
     CameraReleaseImageBuffer(hCamera, pbyBuffer);
+    CameraStop(hCamera);
     return false;
 }
 

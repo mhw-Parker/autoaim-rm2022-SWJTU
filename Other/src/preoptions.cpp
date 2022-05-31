@@ -118,6 +118,12 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                 LOGM("SENTRY SET SAIL! COMMANDER!");
             }
                   }},
+    {"-sentrydown", {
+                        "SENTRY SET SAIL! COMMANDER!",[]() {
+                carName = SENTRYDOWN;
+                LOGM("SENTRY SET SAIL! COMMANDER!");
+            }
+                }},
     {"-binary", {
                         "Show Binary ROI Image",[]() {
                 showBinaryImg = true;

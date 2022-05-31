@@ -52,6 +52,13 @@ SolveAngle::SolveAngle() {
             fit_gun_error = -0.11;
             coeff = 0.025;
             break;
+        case SENTRYDOWN:
+            fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
+            fit_gun_error = -0.11;
+            coeff = 0.025;
+            break;
         case UAV:
             break;
         default:

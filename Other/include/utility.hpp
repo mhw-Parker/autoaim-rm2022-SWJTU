@@ -239,7 +239,9 @@ namespace RMTools {
             case INFANTRY_MELEE1:
                 min_v = 15;
                 max_v = 30;
+                break;
             case SENTRY:
+            case SENTRYDOWN:
                 min_v = 25;
                 max_v = 30;
                 break;
@@ -275,6 +277,10 @@ namespace RMTools {
             case SENTRY:
                 offset[0] = -1.15;
                 offset[1] = -1.15;
+                break;
+            case SENTRYDOWN:
+                offset[0] = -0.9;
+                offset[1] = -1.5;
                 break;
             case UAV:
                 break;
@@ -402,7 +408,7 @@ namespace RMTools {
             delta_yaw += CV_PI;
 
         // 计算delta_pitch
-        if (carName == SENTRY) {
+        if (carName == SENTRY || carName == SENTRYDOWN) {
             target_theta = asin(ly / ldist);
             predict_theta = asin(y / dist);
         } else {

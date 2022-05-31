@@ -10,11 +10,11 @@ Predictor::Predictor() : waveClass(400,300,1000),
     // TODO 通过各种优先模式设置初始弹速
     switch (carName) {
         case HERO:
-            average_v_bullet = v_vec[0] = 14;
+            average_v_bullet = v_vec[0] = 15;
             break;
         case INFANTRY_MELEE0:
         case INFANTRY_MELEE1:
-            average_v_bullet = v_vec[0] = 14;
+            average_v_bullet = v_vec[0] = 15;
             break;
         case INFANTRY_TRACK:
             break;
@@ -22,10 +22,14 @@ Predictor::Predictor() : waveClass(400,300,1000),
             average_v_bullet = v_vec[0] = 28;
             react_t = 0.6;
             break;
+        case SENTRYDOWN:
+            average_v_bullet = v_vec[0] = 28;
+            react_t = 0.6;
+            break;
         case UAV:
             break;
         case VIDEO:
-            average_v_bullet = v_vec[0] = 14;
+            average_v_bullet = v_vec[0] = 15;
             break;
         case NOTDEFINED:
             break;
@@ -86,7 +90,8 @@ void Predictor::UpdateTimeStamp(float &dt) {
  * @param dt 两次处理源图像时间间隔
  * */
 void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
-                               const Vector3f &gimbal_ypd, float v_, float dt) {
+                               const Vector3f &gimbal_ypd, float v_, float dt,
+                               int lost_cnt) {
     UpdateTimeStamp(dt);
     // 检查异常弹速数据
     bool check = RMTools::CheckBulletVelocity(carName, v_);

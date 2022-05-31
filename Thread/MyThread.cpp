@@ -181,6 +181,7 @@ namespace rm
                 driver = &v4l2Capture;
                 break;
             case SENTRY:
+            case SENTRYDOWN:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -383,7 +384,7 @@ namespace rm
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (armorDetectorPtr->findState) {
                         predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
-                                                   v_bullet,tmp_t);
+                                                   v_bullet,tmp_t, armorDetectorPtr->lostCnt);
                         Vector2f offset = RMTools::GetOffset(carName);
                         yaw_abs = predictPtr->predict_ypd[0] + offset[0];
                         pitch_abs = predictPtr->predict_ypd[1] + offset[1];

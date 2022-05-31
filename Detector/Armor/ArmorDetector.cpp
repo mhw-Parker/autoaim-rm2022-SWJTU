@@ -261,12 +261,10 @@ namespace rm
             //armorFoundCounter++;
             //cout<<"Average Value of R Sub B : "<<averageRSubBVal<<endl;
 
-            printf("detectCnt: %d\nlostCnt: %d\n", detectCnt, lostCnt);
             return true;
         } else {
             detectCnt = 0;
             lostCnt++;
-            printf("detectCnt: %d\nlostCnt: %d\n", detectCnt, lostCnt);
             return false;
         }
 
