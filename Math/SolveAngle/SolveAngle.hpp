@@ -21,7 +21,7 @@ public:
 
     void Generate2DPoints(Rect rect);
 
-    void GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd); //Pnp模型
+    void GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vector3f gimbal_ypd); //Pnp模型
 
     float CalPitch(Vector3f target_xyz, float v, float &t) const;
     float iteratePitch(Vector3f target_xyz, float v, float &t);
@@ -43,7 +43,7 @@ public:
     float yaw_;
 
 private:
-    void Generate3DPoints(bool mode);
+    void Generate3DPoints(const int targetSize);
     void camXYZ2YPD();
     void GunXYZ2YPD(Vector3f cam_xyz);
 

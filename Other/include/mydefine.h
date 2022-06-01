@@ -33,11 +33,15 @@
 #endif
 
 #ifndef BIG_ARMOR
-#define  BIG_ARMOR 0
+#define  BIG_ARMOR 1
 #endif
 
 #ifndef SMALL_ARMOR
-#define  SMALL_ARMOR 1
+#define  SMALL_ARMOR 2
+#endif
+
+#ifndef ENERGY_ARMOR
+#define  ENERGY_ARMOR 3
 #endif
 
 #ifndef FIND_ARMOR_YES
@@ -132,6 +136,7 @@ extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
 extern CARNAME carName;
+
 extern std::string videoPath;
 extern int cameraIndex;
 extern float feedbackDelta;

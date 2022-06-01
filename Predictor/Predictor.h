@@ -106,6 +106,8 @@ private:
     vector<float> angle;
     vector<float> omega;
 
+    Point2f last_point;
+
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
     u_int8_t ctrl_mode = STANDBY;
 

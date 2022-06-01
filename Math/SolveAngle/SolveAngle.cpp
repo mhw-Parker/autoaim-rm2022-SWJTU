@@ -91,16 +91,28 @@ void SolveAngle::Generate2DPoints(Rect rect) {
  * @brief 将装甲板中心设为 pnp 解算 4 点模型的解算原点
  * @remark 装甲板的实际大小可能要根据情况修改
  * */
-void SolveAngle::Generate3DPoints(bool mode) {
+void SolveAngle::Generate3DPoints(const int targetSize) {
     //because the armor is  incline,so the height of the armor should be smaller than reality.
-    if (mode){
-        targetHeight3D = 125;
-        targetWidth3D = 135;
-    }
-    else{
-        targetHeight3D = 150; //140
-        targetWidth3D = 250;  //225
-    }
+    switch(targetSize) {
+        case SMALL_ARMOR:
+            targetHeight3D = 125;
+            targetWidth3D = 135;
+            printf("-- Small Armor ! --");
+            break;
+        case BIG_ARMOR:
+            targetHeight3D = 140;
+            targetWidth3D = 225;
+            printf("-- Big Armor ! --");
+            break;
+        case ENERGY_ARMOR:
+            targetHeight3D = 150;
+            targetWidth3D = 250;
+            printf("-- Energy Armor ! --");
+            break;
+        default:
+            targetHeight3D = 125;
+            targetWidth3D = 135;
+    };
     targetPoints3D.emplace_back(-targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, targetHeight3D / 2, 0);
@@ -113,7 +125,7 @@ void SolveAngle::Generate3DPoints(bool mode) {
  * @param pts 装甲板 4 点坐标
  * @param v_ 弹速
  * */
-void SolveAngle::GetPoseV(const vector<Point2f>& pts, bool armor_mode, Vector3f gimbal_ypd) {
+void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vector3f gimbal_ypd) {
     if(armor_mode)
         cout << "--small target !" << endl;
     else

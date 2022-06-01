@@ -130,8 +130,6 @@ namespace rm
         double last_mission_time = 0.025; //上一次任务总体耗时
         vector<double> whole_time_arr;
         int time_cnt;
-        float total_time;
-        float deltat;
         /***/
 
         /* 保存图像相关 */
@@ -188,8 +186,6 @@ namespace rm
         int armorType;
 
         int missCount;
-        int direction_flag = 1;
-        float fly_t = 0.3;
 
     private:
         double startT;

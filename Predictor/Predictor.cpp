@@ -313,21 +313,17 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * @param dt 两次处理源图像时间间隔
  * */
 void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
-    UpdateTimeStamp(dt);
+    total_t += dt; //时间戳正常累加
     average_v_bullet = v_;
-    //v_ = v_ < 18 ? 18 : v_; //打幅弹速
-//    bool check = RMTools::CheckBulletVelocity(carName, v_);
-//    if (check && v_vec[(v_vec_pointer + 3) % 4] != v_) {
-//        v_vec[v_vec_pointer++ % 4] = v_;
-//    }
-//    // 取弹速平均值
-//    average_v_bullet = RMTools::average(v_vec, 4);
-//    average_v_bullet = (average_v_bullet > 17) ? average_v_bullet : 17;
     Point2f target_point;
     if(target_pts.size() == 4)
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
     else
         return;
+    if(last_point == target_point) return; //如果目标没有更新
+    last_point = target_point; //目标更新
+    time_series.push_back(total_t); //更新时间序列
+
     Point2f p = target_point - center; //圆心指向目标的向量
     current_theta = atan2(p.y,p.x);     //当前角度 弧度制
     angle.push_back(current_theta);    //存放对应的角度序列
@@ -347,12 +343,12 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     }
     else
         predict_pts = target_pts;
-    solveAngle.GetPoseV(predict_pts, false, gimbal_ypd); ///测试弹道 变为静态目标点
+    solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); ///测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = GetGyroXYZ(predict_ypd);
     float iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
-    predict_ypd[1] = iterate_pitch + 3.2;// + ((iterate_pitch > 15) ? (iterate_pitch-15)*0.4 : 0);
+    predict_ypd[1] = iterate_pitch + 3.2;
     //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;
     latency = react_t + fly_t;
 }

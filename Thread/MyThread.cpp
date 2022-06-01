@@ -327,11 +327,11 @@ namespace rm
         do {
             if (!detectMission && produceMission) {
                 double st = (double)getTickCount();
-                last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //用当次时间序列值 - 上次时间序列值
+                last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //两次图片时间间隔 用当次时间序列值 - 上次时间序列值
                 last_cnt = cnt; //更新当次时间序列序号
                 detectFrame = frame.clone();
                 produceMission = false;
-                /** 计算上一次执行耗时 **/
+                /** 计算上一次源图像执行耗时 **/
                 cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
                 /** ** **/
                 if (lastControlState == curControlState) {
@@ -371,20 +371,11 @@ namespace rm
                     gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
                 receiveMission = false;
 
-                int tmp_cnt;
+                tmp_t = last_mission_time; //同步时间
                 if(showArmorBox || showEnergy){
                     show_img = detectFrame.clone();
-                    tmp_t = last_mission_time; //同步时间
-                    tmp_cnt = cnt;
                 }
-                if(curControlState == AUTO_SHOOT_STATE){
-                    target_pts = armorDetectorPtr->targetArmor.pts;
-                    find_state = armorDetectorPtr->findState;
-                }
-                else {
-                    target_pts = energyPtr->pts;
-                    find_state = energyPtr->detect_flag;
-                }
+                find_state = (curControlState == AUTO_SHOOT_STATE) ? armorDetectorPtr->findState : energyPtr->detect_flag;
                 detectMission = false;
 
                 if (curControlState == AUTO_SHOOT_STATE) {
