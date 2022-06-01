@@ -375,12 +375,12 @@ namespace rm
                 if(showArmorBox || showEnergy){
                     show_img = detectFrame.clone();
                 }
-                find_state = (curControlState == AUTO_SHOOT_STATE) ? armorDetectorPtr->findState : energyPtr->detect_flag;
+                find_state = (curControlState == AUTO_SHOOT_STATE) ? (!armorDetectorPtr->lostState) : energyPtr->detect_flag;
                 detectMission = false;
 
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (find_state) {
-                        predictPtr->ArmorPredictor(target_pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
+                        predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
                                                    v_bullet,tmp_t, armorDetectorPtr->lostCnt);
                         Vector2f offset = RMTools::GetOffset(carName);
                         yaw_abs = predictPtr->predict_ypd[0] + offset[0];

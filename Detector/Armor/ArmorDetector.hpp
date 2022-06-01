@@ -208,6 +208,9 @@ namespace rm
         /*current find state*/
         bool findState;
 
+        /*Send this to CONTROL*/
+        bool lostState;
+
         /*current armor type*/
         bool isSmall;
 

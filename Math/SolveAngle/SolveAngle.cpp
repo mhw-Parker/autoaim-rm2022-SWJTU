@@ -97,17 +97,17 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
         case SMALL_ARMOR:
             targetHeight3D = 125;
             targetWidth3D = 135;
-            printf("-- Small Armor ! --");
+            printf("-- Small Armor ! --\n");
             break;
         case BIG_ARMOR:
             targetHeight3D = 140;
             targetWidth3D = 225;
-            printf("-- Big Armor ! --");
+            printf("-- Big Armor ! --\n");
             break;
         case ENERGY_ARMOR:
             targetHeight3D = 150;
             targetWidth3D = 250;
-            printf("-- Energy Armor ! --");
+            printf("-- Energy Armor ! --\n");
             break;
         default:
             targetHeight3D = 125;
@@ -126,11 +126,6 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
  * @param v_ 弹速
  * */
 void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vector3f gimbal_ypd) {
-    if(armor_mode)
-        cout << "--small target !" << endl;
-    else
-        cout << "--big target !" << endl;
-
     cv::Mat Rvec;
     cv::Mat_<float> Tvec;
     Generate3DPoints(armor_mode);

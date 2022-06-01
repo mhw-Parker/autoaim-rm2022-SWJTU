@@ -283,7 +283,7 @@ namespace RMTools {
                 break;
             case SENTRYDOWN:
                 offset[0] = -0.9;
-                offset[1] = -1.5;
+                offset[1] = -2;
                 break;
             case UAV:
                 break;

@@ -64,7 +64,7 @@ private:
     float degree2rad = CV_PI / 180;
 
 public:
-    void ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
+    void ArmorPredictor(vector<Point2f> &target_pts, const int& armor_type,
                         const Vector3f &gimbal_ypd, float v_, float dt,
                         int lost_cnt);
     Vector3f target_v_xyz{};
@@ -72,7 +72,7 @@ public:
 
 private:
     Vector3f KalmanPredict(float v_, float t);
-    Vector3f GetGyroXYZ(Vector3f target_ypd);
+    Vector3f GetGyroXYZ();
     Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
     inline void KalmanRefresh();
     inline void KalmanShallowRefresh();

@@ -50,13 +50,11 @@ void Predictor::Refresh() {
     EnergyRefresh();
 }
 void Predictor::EnergyRefresh(){
-    TimeRefresh();
     angle.clear();
     omega.clear();
     filter_omega.clear();
     ctrl_mode = STANDBY;
     total_theta = 0;
-    average_v_bullet = v_vec[0] = 18;
     energy_flag = false;
 }
 void Predictor::TimeRefresh() {
@@ -96,7 +94,7 @@ void Predictor::UpdateTimeStamp(float &dt) {
  * @param v_ 弹速
  * @param dt 两次处理源图像时间间隔
  * */
-void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
+void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_type,
                                const Vector3f &gimbal_ypd, float v_, float dt,
                                int lost_cnt) {
     UpdateTimeStamp(dt);
@@ -114,11 +112,12 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     target_ypd = gimbal_ypd + delta_ypd;
     // 通过目标xyz坐标计算yaw pitch distance
-    target_xyz = GetGyroXYZ(target_ypd);
-    //
+    target_xyz = GetGyroXYZ();
+    // 识别到
     if (target_xyz != last_xyz) {
-        // 和上一次target的距离大于某个阈值，则认为更换目标
+        // 和上一次target的距离大于某个阈值，则认为更换目标（小陀螺场景）
         if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
+            // 进行浅重置，保留速度
             KalmanShallowRefresh();
         }
         // kalman预测要击打位置的xyz
@@ -132,7 +131,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         latency = react_t + fly_t;
     }
     // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
-    else {
+    else if (lost_cnt < 6) {
         // 预测目标当前位置
         target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
         // 预测目标要击打位置
@@ -143,6 +142,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
+    } else {
+        Refresh();
     }
     // 更新last值
     last_xyz = target_xyz;
@@ -181,7 +182,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, bool armor_type,
  * @brief 获得陀螺仪坐标系下的 x y z
  * @param target_ypd 目标的 yaw pitch dist
  * */
-Vector3f Predictor::GetGyroXYZ(Vector3f target_ypd) {
+Vector3f Predictor::GetGyroXYZ() {
     pair<float, float> quadrant[4] = {{-1, 1},
                                       {-1, -1},
                                       {1, -1},
@@ -346,7 +347,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); ///测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
-    predict_xyz = GetGyroXYZ(predict_ypd);
+    predict_xyz = GetGyroXYZ();
     float iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
     predict_ypd[1] = iterate_pitch + 3.2;
     //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;

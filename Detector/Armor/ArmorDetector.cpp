@@ -222,6 +222,7 @@ namespace rm
         MaxMatch(lights);
 
         if (findState) {
+            lostState = false;
             detectCnt++;
             lostCnt = 0;
 
@@ -265,6 +266,7 @@ namespace rm
         } else {
             detectCnt = 0;
             lostCnt++;
+            if (lostCnt > 4) lostState = true;
             return false;
         }
 
@@ -375,8 +377,7 @@ namespace rm
         }
 
         /*sort these pairs of lamps by match factor*/
-        if (matchLights.empty())
-        {
+        if (matchLights.empty()) {
             findState = false;
             return;
         }
@@ -729,12 +730,8 @@ namespace rm
         pyrDown(warpPerspective_dst,warpPerspective_dst,Size(20,20)); //下采样为20*20
 
         imshow("svm",warpPerspective_dst);
-
-//        svmParamMatrix = warpPerspective_dst.reshape(1, 1);
-//        svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
-//        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
-
-        warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
+        //
+       warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
         int number = lround(svm->predict(svmParamMatrix));
         return number;
     }
