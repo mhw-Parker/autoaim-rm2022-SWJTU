@@ -22,7 +22,7 @@ void EigenKalmanFilter::Init(int state_param, int measure_param, int control_par
     gain_.setZero(state_param, measure_param);
 
     if (control_param > 0)
-        control_mat_.setZero(state_param, control_param);
+        control_mat_.setIdentity(state_param, control_param);
 
     temp1.setZero(state_param, state_param);
     temp2.setZero(measure_param, state_param);

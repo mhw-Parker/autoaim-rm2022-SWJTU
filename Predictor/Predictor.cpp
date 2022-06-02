@@ -413,7 +413,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
     total_theta += d_theta;
     float tmp_omega = d_theta / dt;
     if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
-        if(energy_flag) //该次omega用kalman插值
+        if(energy_flag) //该次omega用kalman的后验估计
         {
             total_theta = omega_kf.state_post_[0];
             tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
