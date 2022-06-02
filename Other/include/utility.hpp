@@ -208,7 +208,7 @@ namespace RMTools {
  * */
     inline bool showData(vector<float> data, string *str, const string win_name){
         int c = data.size() * 33;
-        if(data.size() - sizeof(data) /sizeof (data[0]) == 0){
+        if(data.size() != sizeof(data)/sizeof (data[0])){
             cout << "The vector length doesn't match !" << endl;
             return false;
         }

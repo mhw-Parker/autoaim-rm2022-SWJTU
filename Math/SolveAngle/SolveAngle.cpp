@@ -166,7 +166,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vect
             0     , cos_p , -sin_p,
             0     , sin_p , cos_p ;
     cam2world_mat = Ry * Rp;
-    world_xyz = Cam2World(p_cam_xyz);
+    world_xyz = Cam2World();
 
     rectPoint2D.clear();
     targetPoints3D.clear();
@@ -182,16 +182,6 @@ void SolveAngle::camXYZ2YPD() {
     dist = sqrt(x*x + y*y + z*z); //sqrt(x^2 + y^2 + z^2)
 }
 
-/**
- *
- * @param cam_xyz
- * @return
- */
-Vector3f SolveAngle::Cam2World(Vector3f cam_xyz) {
-    Vector3f world_xyz;
-    world_xyz = cam2world_mat * cam_xyz;
-    return world_xyz;
-}
 
 [[maybe_unused]] void SolveAngle::GunXYZ2YPD(Vector3f cam_xyz) {
     gun_xyz = cam_xyz - fit_xyz; //枪管坐标系
@@ -230,7 +220,7 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
  * @return pitch相对于地面的角度
  */
 float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
-    if(v < 15 || v > 30) v = 15;
+    if(v < 15 || v > 35) v = 20;
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
     float h = -y + fit_gun_error;
@@ -251,8 +241,6 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
         if(i>10) break;
     }
     pitch_ /= degree2rad;
-    if(t_>1) t_=1;
-    if(pitch_ > 90) pitch_ = 0;
     return pitch_;
 }
 
@@ -285,4 +273,14 @@ Vector3f SolveAngle::Cam2Pixel(Vector3f cam_xyz) {
     Vector3f pix_uv1;
     pix_uv1 = cam_mat/cam_xyz[2] * cam_xyz;
     return pix_uv1;
+}
+/**
+ *
+ * @param cam_xyz
+ * @return
+ */
+Vector3f SolveAngle::Cam2World() {
+    Vector3f world_xyz;
+    world_xyz = cam2world_mat * p_cam_xyz;
+    return world_xyz;
 }
