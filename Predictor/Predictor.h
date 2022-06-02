@@ -80,7 +80,6 @@ private:
     inline void KalmanRefresh();
     inline void KalmanShallowRefresh();
     void UpdateKF(const Vector3f& z_k);
-    void InitTransMat(const float dt);
     void InitKfAcceleration(const float dt);
 
     RMTools::DisPlayWaveCLASS waveClass;
@@ -110,6 +109,7 @@ private:
     vector<float> omega;
 
     Point2f last_point;
+    float dt_ = 0.01;
 
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
     u_int8_t ctrl_mode = STANDBY;
@@ -117,8 +117,8 @@ private:
     RMTools::DisPlayWaveCLASS omegaWave;
 
     /**---- energy machine kalman filter ----**/
-    void FilterOmega(const float dt);
-    void FilterRad(const float latency);
+    void FilterOmega(const float &dt);
+    void FilterRad(const float &latency);
     void initFanRotateKalman();
     void initFanRadKalman();
     EigenKalmanFilter omega_kf = EigenKalmanFilter(3, 2, 1);

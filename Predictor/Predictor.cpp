@@ -314,6 +314,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * @param dt 两次处理源图像时间间隔
  * */
 void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
+    dt_ = dt;
     total_t += dt; //时间戳正常累加
     average_v_bullet = v_;
     Point2f target_point;
@@ -427,7 +428,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
 /**
  * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
  * */
-void Predictor::FilterOmega(const float dt) {
+void Predictor::FilterOmega(const float &dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
                             0, 1, dt,
                             0, 0, 1;
@@ -446,9 +447,10 @@ void Predictor::FilterOmega(const float dt) {
         RMTools::showData(data,str,"energy param");
     }
 }
-void Predictor::FilterRad(const float latency) {
-    vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
-    vector<float> cut_time_series(time_series.end()-6,time_series.end());
+void Predictor::FilterRad(const float &latency) {
+    int n = 0.12 / dt_; //用接近0.12s的数据左最小二乘判断增减性
+    vector<float> cut_filter_omega(filter_omega.end()-n,filter_omega.end()); //取 av_omega 的后 6 个数
+    vector<float> cut_time_series(time_series.end()-n,time_series.end());
     Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘
     // Five consecutive same judge can change the current state.
     int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘判断角速度增减性
@@ -466,7 +468,7 @@ void Predictor::FilterRad(const float latency) {
         cur_phi = CV_PI / 2;
     else
         cur_phi = - CV_PI / 2;
-    double t = cur_phi / w_;
+    double t = cur_phi / w_; //用初相计算对应时间，为后续积分计算时间准备
     predict_rad = energy_rotation_direction * (spdInt(t + latency) - spdInt(t));
     VectorXf rad_vec(1,1);
     rad_vec << predict_rad;
