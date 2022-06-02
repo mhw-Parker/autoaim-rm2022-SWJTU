@@ -202,10 +202,6 @@ namespace rm
                 driver = &videoCapture;
                 break;
         }
-        if(saveVideo){
-            videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 10.0, cv::Size(1280, 1024));
-        }
         if(showEnergy)
             curControlState = BIG_ENERGY_STATE;
         Mat curImage;
@@ -218,10 +214,9 @@ namespace rm
         else
         {
             driver->StopGrab();
-
             exit(-1);
         }
-
+        //尝试读取5次相机采集
         do
         {
             if(driver->Grab(curImage))
@@ -239,6 +234,10 @@ namespace rm
             }
         }while(true);
         missCount = 0;
+        if(saveVideo){
+            videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
+            videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
+        }
         //LOGM("Initialization Completed\n");
         return true;
     }
@@ -319,9 +318,6 @@ namespace rm
                     videowriter.write(frame);
                 produceTime = CalWasteTime(st, freq);
                 produceMission = true;
-#if SHOWTIME == 1
-                //cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
-#endif
             }
         }while(!quitFlag);
     }
@@ -351,8 +347,7 @@ namespace rm
                     case BIG_ENERGY_STATE:
                     case SMALL_ENERGY_STATE:
                         Energy();
-                        target_pts = energyPtr->output_pts;
-                        rotate_center = energyPtr->circle_center_point;
+                        //target_pts = energyPtr->output_pts;
                         break;
                     default:
                         Armor();
@@ -380,6 +375,8 @@ namespace rm
                     show_img = detectFrame.clone();
                 }
                 find_state = (curControlState == AUTO_SHOOT_STATE) ? (!armorDetectorPtr->lostState) : energyPtr->detect_flag;
+                if(curControlState != AUTO_SHOOT_STATE)
+                    rotate_center = energyPtr->circle_center_point;
                 detectMission = false;
 
                 if (curControlState == AUTO_SHOOT_STATE) {

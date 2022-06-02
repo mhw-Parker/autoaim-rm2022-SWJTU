@@ -336,9 +336,9 @@ bool EnergyDetector::getCircleCenter(Mat &src){
         std::vector<vector<Point> > circle_contours;
         vector<Vec3f> circle_point;
 
-        Canny(img, CannyEdge, 30, 200);
+        //Canny(img, CannyEdge, 30, 200);
         //imshow("canny",CannyEdge);
-        findContours(CannyEdge, circle_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+        findContours(src, circle_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
         for (size_t t = 0; t <  circle_contours.size(); t++) {
             double area = contourArea( circle_contours[t]);
@@ -348,7 +348,8 @@ bool EnergyDetector::getCircleCenter(Mat &src){
             }
             Rect rect = boundingRect( circle_contours[t]);
             float ratio = float(rect.width) / float(rect.height);
-            if (ratio < 2 && ratio > 0.5) { //近似正方形
+            if (ratio < 4 && ratio > 0.8) { //近似正方形
+                //cout << "ratio : " << ratio << endl;
                 int x = rect.x + rect.width / 2;
                 int y = rect.y + rect.height / 2;
                 Point2f cal_center = calR1P(); //反解的圆心位置用于判断检测圆心的可信度
@@ -357,6 +358,7 @@ bool EnergyDetector::getCircleCenter(Mat &src){
                 if(pointDistance(cal_center,Point2f(x,y))< 100){
                     circle_center_point = Point(x, y);
                     circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
+                    //imshow("outline",outline);
                     return true;
                 }
                 //cout << area << '\t' << ratio << endl;

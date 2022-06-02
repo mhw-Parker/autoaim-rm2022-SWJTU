@@ -183,6 +183,14 @@ namespace rm
         DetectArmor(img_);
 
         //img_ = img.clone();
+        if(!showArmorBox) {
+            printf("----- Armor Detector Info -----\n");
+            if(findState) {
+                printf("TARGET !\n");
+                printf("number: %d\n",armorNumber);
+            } else
+                printf("NO TARGET !\n\n");
+        }
 
         return findState;
     }
@@ -696,8 +704,8 @@ namespace rm
 
         pyrDown(warpPerspective_dst,warpPerspective_dst);
         // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
-
-        imshow("svm",warpPerspective_dst);
+        if(showArmorBox)
+            imshow("svm",warpPerspective_dst);
 
         svmParamMatrix = warpPerspective_dst.reshape(1, 1);
         svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
