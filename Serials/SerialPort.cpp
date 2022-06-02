@@ -89,8 +89,8 @@ void Serial::pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t fin
     memcpy(buff + 2, &yaw, 4);
     memcpy(buff + 6, &pitch, 4);
     memcpy(buff + 10, &dist, 4);
-    memcpy(buff + 14, &shoot, 4);
-    memcpy(buff + 15, &find, 4);
+    memcpy(buff + 14, &shoot, 1);
+    memcpy(buff + 15, &find, 1);
     memcpy(buff + 16, &timeStamp, 8);
     buff[24] = static_cast<char>(VISION_TOF);
 }
@@ -114,8 +114,8 @@ bool Serial::WriteData() {
 
     //cout<<"Write Over to USB!!!!!!!!!!!!!!!!!"<<endl;
     if (curr < 0) {
+        raise(SIGINT);
         LOGW("Write Serial offline!");
-        //cout<<("Write Serial offline!")<<endl;
         close(fd);
         if (wait_uart) {
             InitPort(nSpeed, nEvent, nBits, nStop);
