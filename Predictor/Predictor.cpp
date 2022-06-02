@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(6.3,300,1000),
+Predictor::Predictor() : waveClass(1000,300,1000),
                          omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
@@ -131,7 +131,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         latency = react_t + fly_t;
     }
     // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
-    else if (lost_cnt < 6) {
+    else if (lost_cnt <= max_lost) {
         // 预测目标当前位置
         target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
         // 预测目标要击打位置
@@ -175,7 +175,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                 v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    waveClass.displayWave(target_xyz[0], predict_xyz[0], "x");
+    waveClass.displayWave(target_xyz[1], 0, "y");
 }
 
 /**

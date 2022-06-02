@@ -305,6 +305,7 @@ namespace rm
                         driver->StopGrab();
                         GrabFlag = false;
                         quitFlag = true;
+                        cout << "Exit for grabing fail." << '\n';
                         raise(SIGINT);
                         break;
                     }

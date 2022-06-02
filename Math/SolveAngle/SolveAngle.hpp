@@ -45,7 +45,8 @@ public:
 private:
     void Generate3DPoints(const int targetSize);
     void camXYZ2YPD();
-    void GunXYZ2YPD(Vector3f cam_xyz);
+
+    [[maybe_unused]] void GunXYZ2YPD(Vector3f cam_xyz);
 
     Vector3f Cam2World(Vector3f cam_xyz);
     Vector3f World2Cam(Vector3f world_xyz);
@@ -73,8 +74,6 @@ private:
     float averageX;
     float averageY;
 
-    float yaw_static{};
-    float pitch_static{};
     float x_static, y_static;
 
     Vector3f fit_xyz;

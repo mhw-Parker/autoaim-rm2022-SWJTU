@@ -208,8 +208,11 @@ namespace rm
         /*current find state*/
         bool findState;
 
+        /*最大允许连续丢失次数，不开图显要调高此数值*/
+        short maxLost = showArmorBox ? 7 : 14;
+
         /*Send this to CONTROL*/
-        bool lostState;
+        bool lostState = true;
 
         /*current armor type*/
         bool isSmall;

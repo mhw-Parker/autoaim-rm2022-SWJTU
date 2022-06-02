@@ -266,7 +266,8 @@ namespace rm
         } else {
             detectCnt = 0;
             lostCnt++;
-            if (lostCnt > 4) lostState = true;
+            if (lostCnt > maxLost) lostState = true;
+            cout << "Lost: " << lostCnt << '\n';
             return false;
         }
 

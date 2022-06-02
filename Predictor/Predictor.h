@@ -18,6 +18,7 @@
 #include "Kalman.hpp"
 #include "RMKF.hpp"
 #include "SolveAngle.hpp"
+#include "mydefine.h"
 
 
 #ifndef STANDBY
@@ -54,6 +55,8 @@ public:
     float average_v_bullet;
     float v_vec[4]{};
     int v_vec_pointer = 1;
+    // 丢失目标
+    short max_lost = showArmorBox ? 7 : 14;
 
 private:
     void UpdateTimeStamp(float &dt);

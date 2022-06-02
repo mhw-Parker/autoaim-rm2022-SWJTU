@@ -43,8 +43,6 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            yaw_static = 1.6;
-            pitch_static = 0.5;
         case SENTRY:
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
@@ -97,17 +95,17 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
         case SMALL_ARMOR:
             targetHeight3D = 125;
             targetWidth3D = 135;
-            printf("-- Small Armor ! --\n");
+            //printf("-- Small Armor ! --\n");
             break;
         case BIG_ARMOR:
             targetHeight3D = 140;
             targetWidth3D = 225;
-            printf("-- Big Armor ! --\n");
+            //printf("-- Big Armor ! --\n");
             break;
         case ENERGY_ARMOR:
             targetHeight3D = 150;
             targetWidth3D = 250;
-            printf("-- Energy Armor ! --\n");
+            //printf("-- Energy Armor ! --\n");
             break;
         default:
             targetHeight3D = 125;
@@ -182,19 +180,25 @@ void SolveAngle::camXYZ2YPD() {
     yaw = atan2(x,z) / degree2rad; //arctan(x/z)
     pitch = -atan2(y, sqrt(x*x + z*z) ) / degree2rad; //arctan(y/sqrt(x^2 + z^2))
     dist = sqrt(x*x + y*y + z*z); //sqrt(x^2 + y^2 + z^2)
-    // 静态补偿
-    yaw = yaw + yaw_static;
-    pitch = pitch + pitch_static;
 }
 
-void SolveAngle::GunXYZ2YPD(Vector3f cam_xyz) {
+/**
+ *
+ * @param cam_xyz
+ * @return
+ */
+Vector3f SolveAngle::Cam2World(Vector3f cam_xyz) {
+    Vector3f world_xyz;
+    world_xyz = cam2world_mat * cam_xyz;
+    return world_xyz;
+}
+
+[[maybe_unused]] void SolveAngle::GunXYZ2YPD(Vector3f cam_xyz) {
     gun_xyz = cam_xyz - fit_xyz; //枪管坐标系
     float x = gun_xyz[0], y = gun_xyz[1], z = gun_xyz[2];
     yaw = atan2(x,z) / degree2rad;
     pitch = -atan2(y,sqrt(x*x+z*z));
     dist = sqrt(x*x + y*y + z*z);
-    yaw = yaw + yaw_static;
-    pitch = pitch + pitch_static;
 }
 
 /**
@@ -270,11 +274,6 @@ Point2f SolveAngle::getBackProject2DPoint(Vector3f target_xyz) {
     cam_xyz = World2Cam(target_xyz);
     pix_uv1 = Cam2Pixel(cam_xyz);
     return Point2f (pix_uv1[0],pix_uv1[1]);
-}
-Vector3f SolveAngle::Cam2World(Vector3f cam_xyz) {
-    Vector3f world_xyz;
-    world_xyz = cam2world_mat * cam_xyz;
-    return world_xyz;
 }
 Vector3f SolveAngle::World2Cam(Vector3f world_xyz) {
     Vector3f cam_xyz;
