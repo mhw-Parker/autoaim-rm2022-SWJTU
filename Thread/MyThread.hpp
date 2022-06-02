@@ -69,7 +69,7 @@ namespace rm
     public:
         ImgProdCons();
 
-        ~ImgProdCons() {};
+        ~ImgProdCons();
 
         /*initialize*/
         bool Init();

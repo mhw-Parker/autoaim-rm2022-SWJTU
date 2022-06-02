@@ -71,6 +71,11 @@ bool MindDriver::SetCam() {
 
     CameraSetAeState(hCamera, false); //设置为手动曝光
 
+    // 调整RGB三个通道增益
+    int r_gain, g_gain, b_gain;
+    CameraGetGain(hCamera, &r_gain, &g_gain, &b_gain);
+    CameraSetGain(hCamera, r_gain + 5, g_gain, b_gain);
+
     if (carName == SENTRY) { // 134
         CameraSetExposureTime(hCamera, 5500); //设置曝光时间
         CameraSetAnalogGainX(hCamera,2); //设置增益系数
@@ -78,7 +83,8 @@ bool MindDriver::SetCam() {
         CameraSetExposureTime(hCamera, 5000); //设置曝光时间
     }
 
-    //CameraSetAnalogGainX(hCamera,14); //设置增益系数
+
+
     /* 让SDK进入工作模式，开始接收来自相机发送的图像
         数据。如果当前相机是触发模式，则需要接收到
         触发帧以后才会更新图像。    */

@@ -10,6 +10,7 @@
 #include <fcntl.h>      // File Control Definitions
 #include <cerrno>      // ERROR Number Definitions
 #include <termios.h>
+#include <csignal>
 #include <cstring>
 #include <cstdio>
 

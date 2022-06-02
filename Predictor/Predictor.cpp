@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(1000,300,1000),
+Predictor::Predictor() : waveClass(40,300,1000),
                          omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
@@ -93,11 +93,14 @@ void Predictor::UpdateTimeStamp(float &dt) {
  * @param gimbal_ypd 云台陀螺仪角度
  * @param v_ 弹速
  * @param dt 两次处理源图像时间间隔
+ * @param lost_cnt
  * */
 void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_type,
                                const Vector3f &gimbal_ypd, float v_, float dt,
                                int lost_cnt) {
     UpdateTimeStamp(dt);
+    // 静态偏置量
+    Vector2f offset = RMTools::GetOffset(carName);
     // 检查异常弹速数据
     bool check = RMTools::CheckBulletVelocity(carName, v_);
     // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均；数组满则覆盖头部
@@ -145,6 +148,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     } else {
         Refresh();
     }
+    // 哨兵射击命令
+    if (carName == SENTRY || carName == SENTRYDOWN) {
+        shootCmd = CheckShoot(gimbal_ypd, offset, armor_type);
+    }
     // 更新last值
     last_xyz = target_xyz;
 
@@ -164,18 +171,15 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                         "pre_yaw","pre_pitch","pre_dist"};
         RMTools::showData(data2, str2, "data window");
 
-        string str1[] = {"re-yaw:","re-pitch:","tar-yaw:",
-                        "tar-pit:","pre-yaw","pre-pit",
+        string str1[] = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
                         "v bullet","Average v","latency"};
-        vector<float> data1(8);
-        Vector2f offset = RMTools::GetOffset(carName);
-        data1 = {gimbal_ypd[0],gimbal_ypd[1],
-                target_ypd[0],target_ypd[1],
-                predict_ypd[0] + offset[0],predict_ypd[1] + offset[1],
-                v_,average_v_bullet,latency};
+        vector<float> data1(6);
+        data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
+                 gimbal_ypd[1],predict_ypd[1] + offset[1],
+                 v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
-        waveClass.displayWave(target_xyz[1], 0, "y");
     }
+    waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
 }
 
 /**
@@ -248,10 +252,12 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
     RMKF.process_noise_.setIdentity();
-    RMKF.process_noise_ *= 0.5;
+    RMKF.process_noise_ *= 1;
+    RMKF.process_noise_(2, 2) *= 5;
+    RMKF.process_noise_(8, 8) *= 5;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 1;
+    RMKF.measure_noise_ *= 2.5;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     // 后验估计
@@ -286,7 +292,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
         KF.trans_mat_(i, i + 3) = predict_dt;
     }
     for (int i = 0; i < 3; ++i) {
-        KF.trans_mat_(i, i + 6) = 0.5 * predict_dt * predict_dt;
+        KF.trans_mat_(i, i + 6) = 0.5f * predict_dt * predict_dt;
     }
     for (int i = 0; i < iterate_times; ++i) {
         KF.predict();
@@ -298,7 +304,24 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
     return temp_target_xyz;
 }
 
-
+/**
+ * 哨兵射击命令
+ * @brief 直接用装甲板长度的1/1.4倍作为垂直于相机的长度分量
+ */
+bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
+                           const int& armor_type) {
+    float distance = predict_ypd[2];
+    float armor_width = (armor_type == 1 ? 230.0f : 135.0f) / 1.4;
+    float armor_height = 126 / 1.4;
+    float yaw_error_threshold = atan(armor_width / 2 / distance) / degree2rad;
+    float pitch_error_threshold = atan(armor_height / 2 / distance) / degree2rad;
+    printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
+    if (fabs(gimbal_ypd[0] - predict_ypd[0] - offset[0]) < yaw_error_threshold &&
+        fabs(gimbal_ypd[1] - predict_ypd[1] - offset[1]) < pitch_error_threshold) {
+        return true;
+    }
+    return false;
+}
 /******************************************************************************************/
 
 /**----------------------- Helios 2022赛季能量机关预测部分 ---------------------------------**/
@@ -314,7 +337,6 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * @param dt 两次处理源图像时间间隔
  * */
 void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
-    dt_ = dt;
     total_t += dt; //时间戳正常累加
     average_v_bullet = v_;
     Point2f target_point;
@@ -420,7 +442,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
     total_theta += d_theta;
     float tmp_omega = d_theta / dt;
     if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
-        if(energy_flag) //该次omega用kalman的后验估计
+        if(energy_flag) //该次omega用kalman插值
         {
             total_theta = omega_kf.state_post_[0];
             tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
@@ -434,7 +456,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
 /**
  * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
  * */
-void Predictor::FilterOmega(const float &dt) {
+void Predictor::FilterOmega(const float dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
                             0, 1, dt,
                             0, 0, 1;
@@ -453,10 +475,9 @@ void Predictor::FilterOmega(const float &dt) {
         omegaWave.displayWave(energy_rotation_direction*current_omega,filter_omega.back(),"omega");
     }
 }
-void Predictor::FilterRad(const float &latency) {
-    int n = 0.12 / dt_; //用接近0.12s的数据左最小二乘判断增减性
-    vector<float> cut_filter_omega(filter_omega.end()-n,filter_omega.end()); //取 av_omega 的后 6 个数
-    vector<float> cut_time_series(time_series.end()-n,time_series.end());
+void Predictor::FilterRad(const float latency) {
+    vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
+    vector<float> cut_time_series(time_series.end()-6,time_series.end());
     Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘
     // Five consecutive same judge can change the current state.
     int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘判断角速度增减性
@@ -474,7 +495,7 @@ void Predictor::FilterRad(const float &latency) {
         cur_phi = CV_PI / 2;
     else
         cur_phi = - CV_PI / 2;
-    double t = cur_phi / w_; //用初相计算对应时间，为后续积分计算时间准备
+    double t = cur_phi / w_;
     predict_rad = energy_rotation_direction * (spdInt(t + latency) - spdInt(t));
     VectorXf rad_vec(1,1);
     rad_vec << predict_rad;

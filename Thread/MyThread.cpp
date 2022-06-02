@@ -150,6 +150,9 @@ namespace rm
 //    <<"SHOOT    "<<endl;
 //#endif
     }
+    ImgProdCons::~ImgProdCons() {
+        driver->StopGrab();
+    }
 
     bool ImgProdCons::Init()
     {
@@ -378,8 +381,8 @@ namespace rm
 
                 if (curControlState == AUTO_SHOOT_STATE) {
                     if (find_state) {
-                        predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts, armorDetectorPtr->targetArmor.armorType, gimbal_ypd,
-                                                   v_bullet,tmp_t, armorDetectorPtr->lostCnt);
+                        predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts, armorDetectorPtr->targetArmor.armorType,
+                                                   gimbal_ypd,v_bullet,tmp_t, armorDetectorPtr->lostCnt);
                         Vector2f offset = RMTools::GetOffset(carName);
                         yaw_abs = predictPtr->predict_ypd[0] + offset[0];
                         pitch_abs = predictPtr->predict_ypd[1] + offset[1];
@@ -395,7 +398,7 @@ namespace rm
                 serialPtr->pack(yaw_abs,
                                 pitch_abs,
                                 solverPtr->dist,
-                                solverPtr->shoot,
+                                predictPtr->shootCmd,
                                 find_state,
                                 curControlState,
                                 0);
@@ -437,7 +440,7 @@ namespace rm
                 if (serialPtr->ReadData(receiveData)) {
                     curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed;
-                    //blueTarget = receiveData.targetColor;
+                    blueTarget = receiveData.targetColor;
                 }
                 receiveTime = CalWasteTime(st, freq);
                 receiveMission = true;
