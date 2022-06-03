@@ -315,7 +315,7 @@ bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
     float armor_height = 126 / 1.4;
     float yaw_error_threshold = atan(armor_width / 2 / distance) / degree2rad;
     float pitch_error_threshold = atan(armor_height / 2 / distance) / degree2rad;
-    printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
+    //printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
     if (fabs(gimbal_ypd[0] - predict_ypd[0] - offset[0]) < yaw_error_threshold &&
         fabs(gimbal_ypd[1] - predict_ypd[1] - offset[1]) < pitch_error_threshold) {
         return true;
@@ -450,7 +450,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
 /**
  * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
  * */
-void Predictor::FilterOmega(const float dt) {
+void Predictor::FilterOmega(const float& dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
                             0, 1, dt,
                             0, 0, 1;
@@ -469,7 +469,7 @@ void Predictor::FilterOmega(const float dt) {
         RMTools::showData(data,str,"energy param");
     }
 }
-void Predictor::FilterRad(const float latency) {
+void Predictor::FilterRad(const float& latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
     vector<float> cut_time_series(time_series.end()-6,time_series.end());
     Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘

@@ -186,10 +186,9 @@ namespace rm
         if(!showArmorBox) {
             printf("----- Armor Detector Info -----\n");
             if(findState) {
-                printf("TARGET !\n");
-                printf("number: %d\n",armorNumber);
+                printf("Target Number: %d\n",armorNumber);
             } else
-                printf("NO TARGET !\n\n");
+                printf("No target!\n\n");
         }
 
         return findState;
