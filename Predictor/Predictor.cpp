@@ -370,9 +370,15 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); ///测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
-    predict_xyz = GetGyroXYZ();
-    float iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
-    predict_ypd[1] = iterate_pitch + 3.2;
+    predict_xyz = solveAngle.world_xyz;
+    //predict_xyz = GetGyroXYZ();
+    iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
+    //predict_ypd = target_ypd;
+    if(average_v_bullet>26)
+        predict_ypd[1] = iterate_pitch + 2;
+    else
+        predict_ypd[1] = iterate_pitch + 1.5 + (0.1*(iterate_pitch-7) < 1.5 ? 0.1*(iterate_pitch-7) : 1.5);
+    predict_ypd[0] += -1;
     //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;
     latency = react_t + fly_t;
 }
@@ -461,12 +467,12 @@ void Predictor::FilterOmega(const float& dt) {
     omega_kf.predict();
     omega_kf.correct(measure_vec);
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
-    omegaWave.displayWave(energy_rotation_direction*current_omega,filter_omega.back(),"omega");
     if(showEnergy){
-        string str[] = {"flat-dist","height","v-bullet","pitch","latency"};
-        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],average_v_bullet,
-                              predict_ypd[1],latency};
+        string str[] = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
+        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
+                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
         RMTools::showData(data,str,"energy param");
+        omegaWave.displayWave(energy_rotation_direction*current_omega,filter_omega.back(),"omega");
     }
 }
 void Predictor::FilterRad(const float& latency) {

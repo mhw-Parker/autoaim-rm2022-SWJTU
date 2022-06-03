@@ -29,6 +29,10 @@ public:
     void backProject2D(Mat &src, Vector3f target_xyz);
     Point2f getBackProject2DPoint(Vector3f target_xyz);
 
+    Vector3f Cam2World();
+    Vector3f World2Cam(Vector3f world_xyz);
+    Vector3f Cam2Pixel(Vector3f cam_xyz);
+
     float scale = 0.99f;
     float f_ = 1500;
 
@@ -48,9 +52,7 @@ private:
 
     [[maybe_unused]] void GunXYZ2YPD(Vector3f cam_xyz);
 
-    Vector3f Cam2World(Vector3f cam_xyz);
-    Vector3f World2Cam(Vector3f world_xyz);
-    Vector3f Cam2Pixel(Vector3f cam_xyz);
+
 
     Matrix3f Ry, Rp, cam2world_mat;
 

@@ -47,7 +47,7 @@ public:
     ~Predictor();
     void Refresh();
     cv::Point2f predict_point;
-    float latency = 0.5, fly_t = 0.2, react_t = 0.3;
+    float latency = 0.5, fly_t = 0.2, react_t = 0.15;
     Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
     Vector3f target_xyz{}, predict_xyz{};
     Vector3f last_xyz{};
@@ -115,6 +115,7 @@ private:
 
     Point2f last_point;
     float dt_ = 0.01;
+    float iterate_pitch ;
 
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
     u_int8_t ctrl_mode = STANDBY;
