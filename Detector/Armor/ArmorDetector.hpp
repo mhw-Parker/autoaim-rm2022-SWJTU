@@ -32,6 +32,7 @@
 #include <omp.h>
 #include "log.h"
 #include "mydefine.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace cv;
@@ -58,6 +59,10 @@ namespace rm
         float maxLightAngle = 30;
         float minLightW2H = 0.5;
         float maxLightW2H = 10;
+
+        float maxLightW = 50;
+        float maxLightH = 200;
+        float minLightH = 15;
 
         float maxLightRatio = 5;
     };
@@ -171,12 +176,14 @@ namespace rm
 
         bool ArmorDetectTask(Mat &img);
 
+    private:
+        /***/
+        void Preprocess(Mat &img);
+        vector<Lamp> LampDetection(Mat& img);
+        /***/
         void GetRoi();
 
         bool DetectArmor(Mat &img);
-
-        void Preprocess(Mat &img);
-        void preprocess(Mat &img);
 
         void MaxMatch(vector<Lamp> &lights);
 

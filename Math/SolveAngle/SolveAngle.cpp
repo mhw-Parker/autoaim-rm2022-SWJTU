@@ -220,7 +220,7 @@ float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
  * @return pitch相对于地面的角度
  */
 float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
-    if(v < 15 || v > 35) v = 20;
+    if(v < 13 || v > 35) v = 20;
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
     float h = -y + fit_gun_error;

@@ -170,17 +170,13 @@ namespace rm
     */
     bool ArmorDetector::ArmorDetectTask(Mat &img_)
     {
-        //this->img = img_.clone();
-
         GetRoi(); //get roi
-
         imgRoi = img_(roiRect);
 
         Preprocess(imgRoi);
 
-        /*open two threads to recognition number and finding target armor*/
-
         DetectArmor(img_);
+
 
         //img_ = img.clone();
         if(!showArmorBox) {
@@ -200,6 +196,7 @@ namespace rm
     * @return: if ever found armors in this image, return true, otherwise return false
     * @details: none
     */
+
     bool ArmorDetector::DetectArmor(Mat &img) {
         findState = false;
         armorNumber = 0;
@@ -210,21 +207,21 @@ namespace rm
             imshow("binary_brightness_img", thresholdMap);
         }
 
-        //lights = LampDetection(thresholdMap);
-        lights = LightDetection(thresholdMap);
+        lights = LampDetection(img);
+        //lights = LightDetection(thresholdMap);
 
-        if (showLamps) {
-            for (auto &light: lights) {
-                Point2f rect_point[4]; //
-                light.rect.points(rect_point);
-                for (int j = 0; j < 4; j++) {
-                    //imgRoi is not a bug here, because imgRoi share the same memory with img
-                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
-                         rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
-                         Scalar(0, 255, 255), 2);
-                }
-            }
-        }
+//        if (showLamps) {
+//            for (auto &light: lights) {
+//                Point2f rect_point[4]; //
+//                light.rect.points(rect_point);
+//                for (int j = 0; j < 4; j++) {
+//                    //imgRoi is not a bug here, because imgRoi share the same memory with img
+//                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
+//                         rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
+//                         Scalar(0, 255, 255), 2);
+//                }
+//            }
+//        }
 
         MaxMatch(lights);
 
@@ -463,27 +460,6 @@ namespace rm
     * 4.19548ms;with edge detection, task costs 4.27403ms)
     */
     void ArmorDetector::Preprocess(Mat &img) {
-        Mat bright;
-        vector<Mat> channels;
-        split(img, channels);
-        cvtColor(img, bright, COLOR_BGR2GRAY);//0,2,1
-
-        //Attention!!!if the calculate result is small than 0, because the mat format is CV_UC3, it will be set as 0.
-        cv::subtract(channels[0], channels[2], bSubR);
-        cv::subtract(channels[2], channels[0], rSubB);
-        sub = rSubB - bSubR;
-        //imshow ("rSubB - bSubR",sub);
-        //imshow ("r - b",bSubR);
-        threshold(bright, svmBinaryImage, 10, 200, THRESH_BINARY);
-        GaussianBlur(bright, bright, Size(5, 5), 5);
-        threshold(bright, thresholdMap, 100, 255, THRESH_BINARY);
-        //Mat adaptive;
-        //adaptiveThreshold(bright,adaptive,255,)
-        //imshow("grey",bright);
-        colorMap = Mat_<int>(rSubB) - Mat_<int>(bSubR);
-        //colorMap = Mat_<int>(sub);
-    }
-    void ArmorDetector::preprocess(Mat &img) {
         Mat gray;
         vector<Mat> channels;
         split(img,channels);
@@ -492,7 +468,80 @@ namespace rm
             subtract(channels[0],channels[1],sub);
         else
             subtract(channels[1],channels[0],sub);
-        threshold(gray, svmBinaryImage, 10, 200, NORM_MINMAX);
+        threshold(sub, sub, 50, 255, THRESH_BINARY);
+        threshold(gray,thresholdMap,110,255,THRESH_BINARY);
+        threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
+        colorMap = Mat_<int>(sub);
+        //imshow("channels-sub",sub);
+        //imshow("gray-binary",thresholdMap);
+    }
+    vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
+        Mat_<int> lampImage;
+        float angle_ = 0;
+        Scalar_<double> avg,avgBrightness;
+        float lampArea;
+        RotatedRect possibleLamp;
+        Rect rectLamp;
+        vector<Lamp> lampVector;
+
+        vector<vector<Point>> contoursLight;
+
+        findContours(thresholdMap, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+
+#pragma omp parallel for  // enable multi-thread run for "for"
+        for (auto & i : contoursLight)
+        {
+            if (i.size() < 20)
+                continue;
+            double length = arcLength(i, true);
+            if (length > 20 && length < 800) //条件1：灯条周长
+            {
+                possibleLamp = fitEllipse(i); //用椭圆近似形状
+                //ellipse(img,possibleLamp,Scalar::all(255));
+                lampArea = possibleLamp.size.width * possibleLamp.size.height;
+                //if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue; //条件2：面积
+                if(possibleLamp.size.width > param.maxLightW) continue; //限制
+                float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
+                //if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H)) continue; //条件3：长宽比例
+                angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
+
+                if(fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
+
+                rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
+                MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
+                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的全1灰度图
+
+                lampImage = colorMap(rectLamp);
+                avgBrightness = mean(lampImage, mask); //求两者均值
+
+                if(avgBrightness[0]>20 && avgBrightness[0]<150){
+                    Lamp buildLampInfo(possibleLamp, angle_, avgBrightness[0]);
+                    lampVector.emplace_back(buildLampInfo);
+                }
+            }
+        }
+        if(showLamps) {
+            for (auto &light: lampVector) {
+                Point2f rect_point[4]; //
+                light.rect.points(rect_point);
+                for (int j = 0; j < 4; j++) {
+                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
+                     rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
+                     Scalar(0, 255, 255), 2);
+                }
+                vector<int> data{(int)(light.rect.size.height * light.rect.size.width),
+                                 (int)(light.rect.size.height / light.rect.size.width),
+                                 (int)light.rect.size.height,
+                                 (int)light.rect.size.width,
+                                 (int)light.rect.angle};
+                Point2f corner = Point2f (roiRect.x+ light.rect.center.x + light.rect.size.width/2,
+                                          roiRect.y+ light.rect.center.y - light.rect.size.height/2);
+                for(int j = 0;j < 5;j++){
+                    putText(img, to_string(data[j]),corner+Point2f(0,30*j),FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),1,8, 0);
+                }
+            }
+        }
+        return lampVector;
     }
 
     /**
@@ -502,7 +551,6 @@ namespace rm
     **/
     vector<Lamp> ArmorDetector::LightDetection(Mat& img)
     {
-        Mat hsv_binary;
         Mat_<int> lampImage;
         float angle_ = 0;
         Scalar_<double> avg,avgBrightness;
@@ -608,46 +656,6 @@ namespace rm
             rect.height = size.height - rect.y ;
         return !(rect.width <= 0 || rect.height <= 0);
     }
-
-    /**
-    * @brief track a armor
-    * @param [src] the image from camera or video that to be processed
-    * @param [target] tracker will be updated by this region
-    * @return if tracker ever found armors, return true, otherwise return false
-    * @details none
-    */
-//    bool ArmorDetector::trackingTarget(Mat &src, Rect target)
-//    {
-//        findState = false;
-//
-//        Preprocess(src);
-//
-//        auto pos = target;
-//        if (!tracker->update(src, target))
-//        {
-//            detectCnt = 0;
-//            return false;
-//        }
-//        if ((pos & cv::Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT)) != pos)
-//        {
-//            detectCnt = 0;
-//            return false;
-//        }
-//#if USEROI == 1
-//        roiRect = Rect(pos.x - pos.width , pos.y - pos.height , 3*pos.width, 3*pos.height); //tracker
-//
-//        MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT));
-//#endif
-//        imgRoi = src(roiRect);
-//
-//        Preprocess(imgRoi);
-//
-//        img = src.clone();
-//
-//        detectCnt = 0;
-//        src = img.clone();
-//        return false;
-//    }
 
     /**
      * @brief load SVM parameters
