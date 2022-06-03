@@ -273,7 +273,8 @@ namespace RMTools {
             case INFANTRY_MELEE0:
                 break;
             case INFANTRY_MELEE1:
-                offset[0] = -1.65;
+                offset[0] = -0.5;
+                offset[1] = 3;
                 break;
             case INFANTRY_TRACK:
                 break;

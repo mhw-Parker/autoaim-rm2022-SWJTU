@@ -98,7 +98,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.twin_point_max = 20;
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
-    _flow.Center_R_Control_area_max = 800;
+    _flow.Center_R_Control_area_max = 400;
     _flow.Center_R_Control_area_min = 150;
     _flow.Center_R_Control_length_max = 70;
     _flow.Center_R_Control_length_min = 6;
@@ -151,6 +151,7 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
             detect_flag = false;
         }
     }
+    //imshow("outline",outline);
 }
 /**
  * @brief EnergyDetector::preprocess
@@ -159,20 +160,20 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
  * @remark 图像预处理，完成二值化
  */
 Mat EnergyDetector::preprocess(Mat &src) {
-    Mat blue_binary, red_binary, binary;
-    //cvtColor(src, dst, COLOR_BGR2GRAY);
-    Mat single, blue_c, red_c;
-    vector<Mat> channels;
-
-    split(src, channels);
-
-    if (blueTarget) {
-        single = channels.at(0);
-        threshold(single,binary,120,255,THRESH_BINARY);
-    } else {
-        single = channels.at(2);
-        threshold(single,binary,50,255,THRESH_BINARY);
-    }
+//    Mat blue_binary, red_binary, binary;
+//    //cvtColor(src, dst, COLOR_BGR2GRAY);
+//    Mat single, blue_c, red_c;
+//    vector<Mat> channels;
+//
+//    split(src, channels);
+//
+//    if (blueTarget) {
+//        single = channels.at(0);
+//        threshold(single,binary,120,255,THRESH_BINARY);
+//    } else {
+//        single = channels.at(2);
+//        threshold(single,binary,50,255,THRESH_BINARY);
+//    }
 //    blue_c = channels.at(0);
 //    red_c = channels.at(2);
 //    threshold(single, binary, 150, 255, THRESH_BINARY);
@@ -180,14 +181,18 @@ Mat EnergyDetector::preprocess(Mat &src) {
 //    threshold(red_c,red_binary,50,255,THRESH_BINARY);
 //
 //    binary = blueTarget ? blue_binary - red_binary : red_binary - blue_binary; //滤掉白光
-//
-// //
+
+ //
+    Mat gray,binary;
+    cvtColor(src,gray, COLOR_BGR2GRAY);
+    threshold(gray,binary,70,255,THRESH_BINARY);
     Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
     dilate(binary, binary, element_dilate_1);
     morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
     threshold(binary, binary, 0, 255, THRESH_BINARY);
-//
+
     GaussianBlur(binary,binary,Size(3,3),0);
+
     if(showBinaryImg)
         imshow("binary",binary);
     return binary;
@@ -355,10 +360,11 @@ bool EnergyDetector::getCircleCenter(Mat &src){
                 Point2f cal_center = calR1P(); //反解的圆心位置用于判断检测圆心的可信度
                 circle(outline, cal_center, 3, Scalar(238, 238, 0), 2, 8, 0);
                 //cout << "--" << pointDistance(cal_center,Point2f(x,y)) << endl;
-                if(pointDistance(cal_center,Point2f(x,y))< 100){
+                if (pointDistance(cal_center,Point2f(x,y))< 50) {
                     circle_center_point = Point(x, y);
                     circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
                     //imshow("outline",outline);
+                    //cout << "area : " << area << "\n" ;
                     return true;
                 }
                 //cout << area << '\t' << ratio << endl;

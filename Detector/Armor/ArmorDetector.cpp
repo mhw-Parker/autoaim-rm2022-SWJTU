@@ -535,7 +535,7 @@ namespace rm
                                  (int)light.rect.size.width,
                                  (int)light.rect.angle};
                 Point2f corner = Point2f (roiRect.x+ light.rect.center.x + light.rect.size.width/2,
-                                          roiRect.y+ light.rect.center.y - light.rect.size.height/2);
+                                          roiRect.y+ light.rect.center.y + light.rect.size.height/2);
                 for(int j = 0;j < 5;j++){
                     putText(img, to_string(data[j]),corner+Point2f(0,30*j),FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),1,8, 0);
                 }

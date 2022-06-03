@@ -505,7 +505,6 @@ namespace rm
                 imshow("Detect Frame", show_img);
                 waitKey(1);
             }
-
             if (showOrigin) {
                 circle(frame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(255, 255, 255), -1);
 

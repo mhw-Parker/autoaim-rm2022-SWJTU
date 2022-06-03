@@ -13,8 +13,10 @@ Predictor::Predictor() : waveClass(40,300,1000),
             average_v_bullet = v_vec[0] = 15;
             break;
         case INFANTRY_MELEE0:
-        case INFANTRY_MELEE1:
             average_v_bullet = v_vec[0] = 15;
+            break;
+        case INFANTRY_MELEE1:
+            average_v_bullet = v_vec[0] = 28;
             break;
         case INFANTRY_TRACK:
             break;
@@ -338,7 +340,14 @@ bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
  * */
 void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
     total_t += dt; //时间戳正常累加
-    average_v_bullet = v_;
+    bool check = RMTools::CheckBulletVelocity(carName, v_);
+    // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均；数组满则覆盖头部
+    if (check && v_vec[(v_vec_pointer + 3) % 4] != v_) {
+        v_vec[v_vec_pointer++ % 4] = v_;
+    }
+    // 取弹速平均值
+    average_v_bullet = RMTools::average(v_vec, 4);
+    //average_v_bullet = v_;
     Point2f target_point;
     if(target_pts.size() == 4)
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
@@ -374,11 +383,17 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     //predict_xyz = GetGyroXYZ();
     iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
     //predict_ypd = target_ypd;
-    if(average_v_bullet>26)
-        predict_ypd[1] = iterate_pitch + 2;
-    else
-        predict_ypd[1] = iterate_pitch + 1.5 + (0.1*(iterate_pitch-7) < 1.5 ? 0.1*(iterate_pitch-7) : 1.5);
-    predict_ypd[0] += -1;
+//    if(average_v_bullet>26)
+//        predict_ypd[1] = iterate_pitch; + 3;
+//    else
+//        predict_ypd[1] = iterate_pitch; + 1.5 + (0.11*(iterate_pitch-6) < 1.3 ? 0.11*(iterate_pitch-6) : 1.3);
+//    predict_ypd[0] += -0.5;
+    Vector2f offset = RMTools::GetOffset(carName);
+    predict_ypd[0] += offset[0];
+    float y_max = 1580, y_min = 260;
+    float delta_y_max = y_max - y_min;
+    float strange_coeff = (-predict_xyz[1] * 0.00038) + 0.9;
+    predict_ypd[1] = iterate_pitch + offset[1] * strange_coeff;
     //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;
     latency = react_t + fly_t;
 }
@@ -472,7 +487,7 @@ void Predictor::FilterOmega(const float& dt) {
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,iterate_pitch,predict_ypd[1],latency};
         RMTools::showData(data,str,"energy param");
-        omegaWave.displayWave(energy_rotation_direction*current_omega,filter_omega.back(),"omega");
+        omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
     }
 }
 void Predictor::FilterRad(const float& latency) {
@@ -483,13 +498,13 @@ void Predictor::FilterRad(const float& latency) {
     int cur_flag = rate(0,0) > 0 ? 1 : 0; //最小二乘判断角速度增减性
     change_cnt = (cur_flag != last_flag) ? 0 : (change_cnt+1);
 
-    if (change_cnt == 3) {
+    if (change_cnt == 4) {
         flag = cur_flag;
         change_cnt = 0;
     }
     last_flag = cur_flag;
     float cur_phi;
-    if (filter_omega.back() > 0.52 && filter_omega.back() < 2.09)
+    if (filter_omega.back() > 2.09-2*a_ && filter_omega.back() < 2.09)
         cur_phi = spdPhi(filter_omega.back(), flag);
     else if(filter_omega.back() > 2.09)
         cur_phi = CV_PI / 2;
@@ -511,8 +526,8 @@ void Predictor::initFanRotateKalman() {
     omega_kf.process_noise_.setIdentity();
     // 测量噪声协方差矩阵R
     omega_kf.measure_noise_.setIdentity();
-    omega_kf.measure_noise_ <<  10, 0,
-                                0, 110;
+    omega_kf.measure_noise_ <<  50, 0,
+                                0, 50;
     // 误差估计协方差矩阵P
     omega_kf.error_post_.setIdentity();
     omega_kf.state_post_ << current_theta,
