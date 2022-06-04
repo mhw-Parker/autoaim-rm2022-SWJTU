@@ -177,8 +177,6 @@ namespace rm
 
         DetectArmor(img_);
 
-
-        //img_ = img.clone();
         if(!showArmorBox) {
             printf("----- Armor Detector Info -----\n");
             if(findState) {
@@ -196,7 +194,6 @@ namespace rm
     * @return: if ever found armors in this image, return true, otherwise return false
     * @details: none
     */
-
     bool ArmorDetector::DetectArmor(Mat &img) {
         findState = false;
         armorNumber = 0;
@@ -208,20 +205,6 @@ namespace rm
         }
 
         lights = LampDetection(img);
-        //lights = LightDetection(thresholdMap);
-
-//        if (showLamps) {
-//            for (auto &light: lights) {
-//                Point2f rect_point[4]; //
-//                light.rect.points(rect_point);
-//                for (int j = 0; j < 4; j++) {
-//                    //imgRoi is not a bug here, because imgRoi share the same memory with img
-//                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
-//                         rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
-//                         Scalar(0, 255, 255), 2);
-//                }
-//            }
-//        }
 
         MaxMatch(lights);
 
@@ -235,14 +218,12 @@ namespace rm
             targetArmor.rect = targetArmor.rect + Point(roiRect.x, roiRect.y);
             targetArmor.center += Point(roiRect.x, roiRect.y);
 
-            Armor(targetArmor.rect);
-
             for (int i = 0; i < 4; i++) {
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
 
             if (showArmorBox) {
-                rectangle(img, roiRect, Scalar(255, 255, 255), 2);
+                rectangle(img, roiRect, Scalar(255, 255, 255), 1);
                 for (int j = 0; j < 4; j++) {
                     line(img, targetArmor.pts[j], targetArmor.pts[(j + 1) % 4], Scalar(255, 0, 255), 2);
                 }
@@ -261,7 +242,12 @@ namespace rm
                 putText(img, to_string(armorNumber), Point(roiRect.x + 35, roiRect.y), cv::FONT_HERSHEY_PLAIN, 2,
                         Scalar(255, 62, 191), 1, 5, 0);
             }
-
+            switch(armorNumber){
+                case 1:
+                case 6: targetArmor.armorType = BIG_ARMOR; break;
+                default: Armor(targetArmor.rect);
+                    break;
+            }
             //averageRSubBVal = averageRSubBVal*armorFoundCounter/(armorFoundCounter + 1) + targetArmor.avgRSubBVal/(armorFoundCounter + 1);
             //armorFoundCounter++;
             //cout<<"Average Value of R Sub B : "<<averageRSubBVal<<endl;
@@ -464,21 +450,27 @@ namespace rm
         vector<Mat> channels;
         split(img,channels);
         cvtColor(img,gray,COLOR_BGR2GRAY);
-        if(blueTarget)
+        if (blueTarget)
             subtract(channels[0],channels[1],sub);
         else
             subtract(channels[1],channels[0],sub);
-        threshold(sub, sub, 50, 255, THRESH_BINARY);
+        threshold(sub, sub, 80, 255, THRESH_BINARY);
         threshold(gray,thresholdMap,110,255,THRESH_BINARY);
         threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
         colorMap = Mat_<int>(sub);
         //imshow("channels-sub",sub);
         //imshow("gray-binary",thresholdMap);
     }
+
+    /**
+     * 新版灯条检测
+     * @param img
+     * @return
+     */
     vector<Lamp> ArmorDetector::LampDetection(Mat &img) {
         Mat_<int> lampImage;
         float angle_ = 0;
-        Scalar_<double> avg,avgBrightness;
+        Scalar_<double> avg, avgBrightness;
         float lampArea;
         RotatedRect possibleLamp;
         Rect rectLamp;
@@ -489,55 +481,55 @@ namespace rm
         findContours(thresholdMap, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
 #pragma omp parallel for  // enable multi-thread run for "for"
-        for (auto & i : contoursLight)
-        {
+        for (auto &i: contoursLight) {
             if (i.size() < 20)
                 continue;
             double length = arcLength(i, true);
-            if (length > 20 && length < 800) //条件1：灯条周长
-            {
-                possibleLamp = fitEllipse(i); //用椭圆近似形状
-                //ellipse(img,possibleLamp,Scalar::all(255));
-                lampArea = possibleLamp.size.width * possibleLamp.size.height;
-                //if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue; //条件2：面积
-                if(possibleLamp.size.width > param.maxLightW) continue; //限制
-                float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
-                //if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H)) continue; //条件3：长宽比例
-                angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
+            // 条件1：灯条周长
+            if (length < 20 || length > 800) continue;
+            possibleLamp = fitEllipse(i); //用椭圆近似形状
+            //ellipse(img,possibleLamp,Scalar::all(255));
+            lampArea = possibleLamp.size.width * possibleLamp.size.height;
+            //if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue; //条件2：面积
+            if (possibleLamp.size.width > param.maxLightW) continue; //限制
+            float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
+            //if((rate_height2width < param.minLightW2H) || (rate_height2width > param.maxLightW2H)) continue; //条件3：长宽比例
+            angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
 
-                if(fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
+            if (fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
 
-                rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
-                MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
-                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的全1灰度图
+            rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
+            MakeRectSafe(rectLamp, colorMap.size()); //防止灯条矩形越出画幅边界
+            mask = Mat::ones(rectLamp.height, rectLamp.width, CV_8UC1); //矩形灯条大小的全1灰度图
 
-                lampImage = colorMap(rectLamp);
-                avgBrightness = mean(lampImage, mask); //求两者均值
+            lampImage = colorMap(rectLamp);
+            avgBrightness = mean(lampImage, mask); //求两者均值
 
-                if(avgBrightness[0]>20 && avgBrightness[0]<150){
-                    Lamp buildLampInfo(possibleLamp, angle_, avgBrightness[0]);
-                    lampVector.emplace_back(buildLampInfo);
-                }
+            if (avgBrightness[0] > 50 && avgBrightness[0] < 150) {
+                Lamp buildLampInfo(possibleLamp, angle_, avgBrightness[0]);
+                lampVector.emplace_back(buildLampInfo);
             }
         }
-        if(showLamps) {
+        if (showLamps) {
             for (auto &light: lampVector) {
                 Point2f rect_point[4]; //
                 light.rect.points(rect_point);
                 for (int j = 0; j < 4; j++) {
                     line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
-                     rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
-                     Scalar(0, 255, 255), 2);
+                         rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
+                         Scalar(0, 255, 255), 2);
                 }
-                vector<int> data{(int)(light.rect.size.height * light.rect.size.width),
-                                 (int)(light.rect.size.height / light.rect.size.width),
-                                 (int)light.rect.size.height,
-                                 (int)light.rect.size.width,
-                                 (int)light.rect.angle};
-                Point2f corner = Point2f (roiRect.x+ light.rect.center.x + light.rect.size.width/2,
-                                          roiRect.y+ light.rect.center.y + light.rect.size.height/2);
-                for(int j = 0;j < 5;j++){
-                    putText(img, to_string(data[j]),corner+Point2f(0,30*j),FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),1,8, 0);
+                vector<int> data{(int) (light.rect.size.height * light.rect.size.width),
+                                 (int) (light.rect.size.height / light.rect.size.width),
+                                 (int) light.rect.size.height,
+                                 (int) light.rect.size.width,
+                                 (int) light.rect.angle};
+                Point2f corner = Point2f(roiRect.x + light.rect.center.x + light.rect.size.width / 2,
+                                         roiRect.y + light.rect.center.y - light.rect.size.height / 2);
+                // 面积，高宽比，高，宽，角度
+                for (int j = 0; j < 5; j++) {
+                    putText(img, to_string(data[j]), corner + Point2f(0, 20 * j),
+                            FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
                 }
             }
         }

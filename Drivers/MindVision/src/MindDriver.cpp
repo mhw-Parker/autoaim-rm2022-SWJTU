@@ -74,7 +74,7 @@ bool MindDriver::SetCam() {
     // 调整RGB三个通道增益
     int r_gain, g_gain, b_gain;
     CameraGetGain(hCamera, &r_gain, &g_gain, &b_gain);
-    CameraSetGain(hCamera, r_gain + 5, g_gain, b_gain);
+    CameraSetGain(hCamera, r_gain + 3.5, g_gain, b_gain);
 
     if (carName == SENTRY) { // 134
         CameraSetExposureTime(hCamera, 5500); //设置曝光时间
@@ -100,7 +100,6 @@ bool MindDriver::StartGrab() {
 bool MindDriver::StopGrab() {
     CameraPause(hCamera);
     CameraReleaseImageBuffer(hCamera, pbyBuffer);
-    CameraStop(hCamera);
     return false;
 }
 

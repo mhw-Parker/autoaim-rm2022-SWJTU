@@ -256,13 +256,14 @@ namespace rm
                 if (armorDetectorPtr->ArmorDetectTask(detectFrame)) {
                     if (saveSVM) {
                         save_img_cnt++;
-                        if (save_img_cnt == 3) {
+                        if (save_img_cnt == 10) {
                             save_img_cnt = 0;
                             if (armorDetectorPtr->armorNumber) {
-                                SVMPath = (string(SAVE_SVM_PIC) + to_string(1) + "/" +
+                                SVMPath = (string(SAVE_SVM_PIC) + to_string(10) + "/" +
                                            to_string(svm_img_num)).append(".png");
                             } else {
-                                SVMPath = (string(SAVE_SVM_PIC) + "none/" + to_string(svm_img_num)).append(".png");
+                                SVMPath = (string(SAVE_SVM_PIC) + "none/" +
+                                           to_string(svm_img_num)).append(".png");
                             }
                             imwrite(SVMPath, armorDetectorPtr->warpPerspective_dst);
                             svm_img_num++;
@@ -397,7 +398,7 @@ namespace rm
                 /** package data and prepare for sending data to lower-machine **/
                 serialPtr->pack(yaw_abs,
                                 pitch_abs,
-                                solverPtr->dist,
+                                predictPtr->predict_ypd[2],
                                 predictPtr->shootCmd,
                                 find_state,
                                 curControlState,

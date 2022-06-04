@@ -206,9 +206,9 @@ namespace RMTools {
  * @param data 输入 vector<float> 型的数据
  * @param *str 数据对应的名称
  * */
-    inline bool showData(vector<float> data, string *str, const string win_name){
+    inline bool showData(vector<float> data, vector<string> str, const string win_name){
         int c = data.size() * 33;
-        if(data.size() != sizeof(data)/sizeof (data[0])){
+        if(data.size() != str.size()){
             cout << "The vector length doesn't match !" << endl;
             return false;
         }

@@ -166,19 +166,17 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
             data2.push_back(RMKF.state_post_[len]);
         for (int i = 0; i < 3; i++)
             data2.push_back(predict_ypd[i]);
-        string str2[] = {"m_x","m_y","m_z",
-                        "kf_x","kf_y","kf_z",
-                        "kf_vx","kf_vy","kf_vz",
-                        "kf_ax","kf_ay","kf_az",
-                        "pre_yaw","pre_pitch","pre_dist"};
+        vector<string> str2 = {"m_x","m_y","m_z",
+                               "kf_x","kf_y","kf_z",
+                               "kf_vx","kf_vy","kf_vz",
+                               "kf_ax","kf_ay","kf_az",
+                               "pre_yaw","pre_pitch","pre_dist"};
         RMTools::showData(data2, str2, "data window");
-
-        string str1[] = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
-                        "v bullet","Average v","latency"};
-        vector<float> data1(6);
-        data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
-                 gimbal_ypd[1],predict_ypd[1] + offset[1],
-                 v_,average_v_bullet,latency};
+        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
+                               "v bullet","Average v","latency"};
+        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
+                               gimbal_ypd[1],predict_ypd[1] + offset[1],
+                               v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
     waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
@@ -313,11 +311,11 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
 bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
                            const int& armor_type) {
     float distance = predict_ypd[2];
-    float armor_width = (armor_type == 1 ? 230.0f : 135.0f) / 1.4;
+    float armor_width = (armor_type == 1 ? 230.0f : 135.0f);
     float armor_height = 126 / 1.4;
     float yaw_error_threshold = atan(armor_width / 2 / distance) / degree2rad;
     float pitch_error_threshold = atan(armor_height / 2 / distance) / degree2rad;
-    //printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
+    printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
     if (fabs(gimbal_ypd[0] - predict_ypd[0] - offset[0]) < yaw_error_threshold &&
         fabs(gimbal_ypd[1] - predict_ypd[1] - offset[1]) < pitch_error_threshold) {
         return true;
@@ -483,7 +481,7 @@ void Predictor::FilterOmega(const float& dt) {
     omega_kf.correct(measure_vec);
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
     if(showEnergy){
-        string str[] = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
+        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,iterate_pitch,predict_ypd[1],latency};
         RMTools::showData(data,str,"energy param");
