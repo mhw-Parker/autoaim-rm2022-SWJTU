@@ -501,8 +501,8 @@ namespace rm
                 }
                 if (find_state) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
+                    circle(show_img, predictPtr->predict_point, 5, Scalar(100, 240, 15), 2);
                 }
-                circle(show_img, predictPtr->predict_point, 5, Scalar(100, 240, 15), 2);
                 imshow("Detect Frame", show_img);
                 waitKey(1);
             }
