@@ -290,8 +290,7 @@ namespace rm
     * @return none
     * @details none
     */
-    void ArmorDetector::MaxMatch(vector<Lamp> &lights)
-    {
+    void ArmorDetector::MaxMatch(vector<Lamp> &lights) {
         static float deviationAngle, xDiff,yDiff;
         static float nL,nW;
         static float dAngle;
@@ -309,21 +308,20 @@ namespace rm
         if (lights.size() < 2)
             return;
         //过滤器
-        for (unsigned int i = 0; i < lights.size() - 1; i++)
-        {
-            for (unsigned int j = i + 1; j < lights.size(); j++)
-            {
+        for (auto i = 0; i < lights.size() - 1; i++) {
+            for (auto j = i + 1; j < lights.size(); j++) {
                 /* the difference between two angles 灯条角度 */
                 dAngle = fabs(lights[i].lightAngle - lights[j].lightAngle);
-                if(dAngle > param.maxAngleError)continue;
+                if (dAngle > param.maxAngleError) continue;
 
                 /*the difference ratio of the two lights' height 灯条长度 */
-                contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) / max(lights[i].rect.size.height, lights[j].rect.size.height);
-                if(contourLen1 > param.maxLengthError)
-                    continue;
+                contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) /
+                              max(lights[i].rect.size.height, lights[j].rect.size.height);
+                if (contourLen1 > param.maxLengthError) continue;
 
                 /*the difference ratio of the two lights' width 灯条宽度比 */
-                contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) / max(lights[i].rect.size.width, lights[j].rect.size.width);
+                contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) /
+                              max(lights[i].rect.size.width, lights[j].rect.size.width);
 
                 /*the average height of two lights(also the height of the armor defined by these two lights)*/
                 nW = (lights[i].rect.size.height + lights[j].rect.size.height) / 2;
@@ -333,37 +331,31 @@ namespace rm
 
                 /*the ratio of the width and the height, must larger than 1 */
                 ratio = nL / nW;
-                if(ratio > param.maxRatio || ratio < param.minRatio)
-                    continue;
+                if (ratio > param.maxRatio || ratio < param.minRatio) continue;
 
                 /*anyway, the difference of the lights' angle is tiny,so anyone of them can be the angle of the armor*/
-                nAngle = fabs((lights[i].lightAngle + lights[j].lightAngle)/2);
-                if(nAngle > param.maxArmorAngle)
-                    continue;
+                nAngle = fabs((lights[i].lightAngle + lights[j].lightAngle) / 2);
+                if (nAngle > param.maxArmorAngle) continue;
 
                 /*the deviation angle of two lamps*/
                 deviationAngle = fabs(atan((lights[i].rect.center.y - lights[j].rect.center.y)
                                            / (lights[i].rect.center.x - lights[j].rect.center.x))) * 180 / CV_PI;
-                if(deviationAngle > param.maxDeviationAngle)
-                    continue;
+                if (deviationAngle > param.maxDeviationAngle) continue;
 
                 /*the difference of the y coordinate of the two center points*/
                 yDiff = abs(lights[i].rect.center.y - lights[j].rect.center.y) / nW;
-                if(yDiff > param.maxYDiff)
-                    continue;
+                if (yDiff > param.maxYDiff) continue;
 
                 /*difference of average brightness*/
                 dAvgB = abs(lights[i].avgRSubBVal - lights[j].avgRSubBVal);
 
-                /*the match factor is still rough now, but it can help filter  the most possible target from  the detected armors
-                Of course, we need to find a formula that is more reasonable*/
-                match_factor_ = contourLen1  + dAvgB + exp(dAngle + deviationAngle + MIN(fabs(ratio - 1.5), fabs(ratio - 3.5)));
+                /*The match factor is still rough now. A formula is more reasonable. */
+                match_factor_ = contourLen1 + dAvgB + exp(dAngle + deviationAngle + MIN(fabs(ratio - 1.5),
+                                                                                        fabs(ratio - 3.5)));
 
-                matchLight = MatchLight (i, j, match_factor_, nW);
-
+                matchLight = MatchLight(i, j, match_factor_, nW);
                 matchLights.emplace_back(matchLight);
             }
-
         }
 
         /*sort these pairs of lamps by match factor*/
@@ -383,33 +375,30 @@ namespace rm
         int targetMatchIndex = 0;
         Armor curArmor;
 
-        for(int i = 0; i < matchLights.size(); i++)
-        {
-            if(matchLights[i].matchIndex1 == mostPossibleLampsIndex1
-               || matchLights[i].matchIndex2 == mostPossibleLampsIndex1
-               || matchLights[i].matchIndex1 == mostPossibleLampsIndex2
-               || matchLights[i].matchIndex2 == mostPossibleLampsIndex2)
-            {
-                curArmor = Armor(lights[matchLights[i].matchIndex1], lights[matchLights[i].matchIndex2],matchLights[i].matchFactor);
-                MakeRectSafe(curArmor.rect,roiRect.size());
+        for (int i = 0; i < matchLights.size(); i++) {
+            if (matchLights[i].matchIndex1 == mostPossibleLampsIndex1
+                || matchLights[i].matchIndex2 == mostPossibleLampsIndex1
+                || matchLights[i].matchIndex1 == mostPossibleLampsIndex2
+                || matchLights[i].matchIndex2 == mostPossibleLampsIndex2) {
+                curArmor = Armor(lights[matchLights[i].matchIndex1], lights[matchLights[i].matchIndex2],
+                                 matchLights[i].matchFactor);
+                MakeRectSafe(curArmor.rect, roiRect.size());
 
-                SetSVMRectPoints(curArmor.pts[0],curArmor.pts[1],curArmor.pts[2],curArmor.pts[3]); //设置用于svm识别的4点区域
+                SetSVMRectPoints(curArmor.pts[0], curArmor.pts[1], curArmor.pts[2], curArmor.pts[3]); //设置用于svm识别的4点区域
 
                 //armorNumber = GetArmorNumber(); //获得装甲板区域对应的数字
                 armorNumber = getArmorNumber(targetArmor);
 
-                if(armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4))
-                {
+                if (armorNumber != 0 && (armorNumber == 1) || (armorNumber == 3) || (armorNumber == 4)) {
                     targetMatchIndex = i;
                     break;
                 }
-                if(fabs(matchLights[i].lampHeight - lastTarget.armorHeight) < curSmallestHeightError)
-                {
+                if (fabs(matchLights[i].lampHeight - lastTarget.armorHeight) < curSmallestHeightError) {
                     targetMatchIndex = i;
                     curSmallestHeightError = fabs(matchLights[i].lampHeight - lastTarget.armorHeight);
                 }
                 matchPossibleArmorCount++;
-                if(matchPossibleArmorCount == 5)
+                if (matchPossibleArmorCount == 5)
                     break;
             }
         }

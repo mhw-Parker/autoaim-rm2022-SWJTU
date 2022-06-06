@@ -44,27 +44,24 @@ namespace rm
     /**
      * define the parameters for lamp recognizing and lamp matching.
      */
-    struct ArmorParam
-    {
-        float maxArmorAngle = 45;
-        float maxAngleError = 6;
-        float maxLengthError = 0.5;
-        float maxDeviationAngle = 45;
-        float maxYDiff = 2;
-        float maxRatio = 3;
-        float minRatio = 0.8;
-
+    struct ArmorParam {
         float minLightArea = 10;
         float maxLightArea = 8000;
         float maxLightAngle = 30;
         float minLightW2H = 0.5;
         float maxLightW2H = 10;
-
         float maxLightW = 50;
         float maxLightH = 200;
         float minLightH = 15;
-
         float maxLightRatio = 5;
+
+        float maxAngleError = 6;
+        float maxLengthError = 0.5;
+        float minRatio = 0.7;
+        float maxRatio = 3;
+        float maxArmorAngle = 45;
+        float maxDeviationAngle = 45;
+        float maxYDiff = 2;
     };
 
     /**
@@ -275,7 +272,7 @@ namespace rm
 
         /**parameters used for lamps recognizing and lamps matching**/
     private:
-
+        // 灯条匹配和识别参数
         struct ArmorParam param;
 
         float averageRSubBVal = 0;
