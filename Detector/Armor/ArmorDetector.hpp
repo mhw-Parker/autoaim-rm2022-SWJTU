@@ -45,22 +45,34 @@ namespace rm
      * define the parameters for lamp recognizing and lamp matching.
      */
     struct ArmorParam {
+        /// 灯条识别参数
+        // 灯条面积
         float minLightArea = 10;
         float maxLightArea = 8000;
+        // 灯条角度
         float maxLightAngle = 30;
-        float minLightW2H = 0.5;
-        float maxLightW2H = 10;
+        // 灯条
+        float minLightH2W = 0.5;
+        float maxLightH2W = 10;
+        // 灯条宽度
         float maxLightW = 50;
+        // 灯条高度
         float maxLightH = 200;
         float minLightH = 15;
-        float maxLightRatio = 5;
 
+        /// 灯条匹配参数
+        // 角度差
         float maxAngleError = 6;
+        // 高度差
         float maxLengthError = 0.5;
-        float minRatio = 0.7;
+        // 装甲板长宽比
+        float minRatio = 0.75;
         float maxRatio = 3;
+        // 平均角度
         float maxArmorAngle = 45;
+        //
         float maxDeviationAngle = 45;
+        // 灯条中心的竖直距离差 / 装甲板高度
         float maxYDiff = 2;
     };
 
@@ -73,7 +85,8 @@ namespace rm
         unsigned int matchIndex2 = -1;
         float matchFactor = 10000;
 
-        explicit MatchLight(unsigned int match1 = 0, unsigned int match2 = 0, float factor = 1000, float lampHeight_ = 0) {
+        explicit MatchLight(unsigned int match1 = 0, unsigned int match2 = 0,
+                            float factor = 1000, float lampHeight_ = 0) {
             matchIndex1 = match1;
             matchIndex2 = match2;
             matchFactor = factor;
@@ -130,6 +143,7 @@ namespace rm
         RotatedRect rect;
 
         float lightAngle;
+        // 红减蓝通道图片中平均值
         float avgRSubBVal;
     };
 

@@ -21,11 +21,11 @@ Predictor::Predictor() : waveClass(40,300,1000),
         case INFANTRY_TRACK:
             break;
         case SENTRY:
-            average_v_bullet = v_vec[0] = 28;
+            average_v_bullet = v_vec[0] = 27;
             react_t = 0.6;
             break;
         case SENTRYDOWN:
-            average_v_bullet = v_vec[0] = 28;
+            average_v_bullet = v_vec[0] = 27;
             react_t = 0.6;
             break;
         case UAV:
