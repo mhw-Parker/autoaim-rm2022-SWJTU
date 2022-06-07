@@ -4,7 +4,7 @@
 #include "Predictor.h"
 
 Predictor::Predictor() : waveClass(40,300,1000),
-                         omegaWave(30,600,1000)
+                         omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
     // TODO 通过各种优先模式设置初始弹速
@@ -446,44 +446,45 @@ bool Predictor::JudgeFanRotation() {
  * */
 float Predictor::CalOmegaNStep(int step, float &total_theta) {
     int step_ = step + 1;
-    float d_theta = angle.back() - angle[angle.size()-step_];
-    float dt = time_series.back() - time_series[time_series.size()-step_];
-    if(d_theta > 6)
-        d_theta -= CV_2PI;
-    if(d_theta < -6)
-        d_theta += CV_2PI;
-    /** ********************* **/
-//    float last_d_theta = angle.back() - angle[angle.size()-2]; //与上一次差
-//    int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); //1.2566 = 2*pi/4  四舍五入
-//    if(abs(d_fan) >= 1) {
-//        //printf("change fan: %f\n",last_d_theta);
-//        int length = angle.size();
-//        //cout << length << endl;
-//        for(int i = 2;i <= step_;i++) {
-//            float tmp_angle = angle[length-i];
-//            angle[length-i] = tmp_angle + d_fan * 1.2566;
-//            if(angle[length-i] < CV_2PI) angle[length-i] += CV_2PI;
-//            if(angle[length-i] > CV_2PI) angle[length-i] += -CV_2PI;
-//            cout << angle[length-i] << "\t" ;
-//        }
-//        //cout << endl;
-//        d_theta = angle.back() - angle[angle.size()-step_];
-//    }
-    /** ************************* **/
-    total_theta += d_theta;
-    float tmp_omega = d_theta / dt;
-    if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
-        if(energy_flag) //该次omega用kalman插值
-        {
-            total_theta = omega_kf.state_post_[0];
-            tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
+    if(angle.size() < step_) {
+        return 0;
+    } else {
+        float d_theta = angle.back() - angle[angle.size()-step_];
+        float dt = time_series.back() - time_series[time_series.size()-step_];
+        if(d_theta > 6)
+            d_theta -= CV_2PI;
+        if(d_theta < -6)
+            d_theta += CV_2PI;
+        /** ********* new ************ **/
+        float last_d_theta = angle.back() - angle[angle.size()-2]; //与上一次差
+        int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); //1.2566 = 2*pi/4  四舍五入
+        if(abs(d_fan) >= 1) {
+            cout << d_fan << endl;
+            for(int i = 2;i <= step_;i++) {
+                angle[angle.size()-i] += d_fan * 1.2566;
+                if(angle[angle.size()-i] < CV_2PI) angle[angle.size()-i] += CV_2PI;
+                if(angle[angle.size()-i] > CV_2PI) angle[angle.size()-i] += -CV_2PI;
+                cout << angle[angle.size()-i] << "\t" ;
+            }
+            d_theta = angle.back() - angle[angle.size()-step_];
         }
-        else //kalman未初始化则直接限幅
-            tmp_omega = (tmp_omega > 0) ? 2.09 : -2.09;
+        /** ************************* **/
+        total_theta += d_theta;
+        float tmp_omega = d_theta / dt;
+        if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
+            if(energy_flag) //该次omega用kalman插值
+            {
+                total_theta = omega_kf.state_post_[0];
+                tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
+            }
+            else //kalman未初始化则直接限幅
+                tmp_omega = (tmp_omega > 0) ? 2.09 : -2.09;
+        }
+        //omegaWave.displayWave(total_theta,0,"current angle");
+        //omegaWave.displayWave(d_theta,0,"d_theta");
+        return tmp_omega;
     }
-    //omegaWave.displayWave(total_theta,0,"current angle");
-    //waveClass.displayWave(d_theta,angle.back(),"d_theta");
-    return tmp_omega;
+
 }
 /**
  * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
@@ -504,7 +505,7 @@ void Predictor::FilterOmega(const float& dt) {
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,iterate_pitch,predict_ypd[1],latency};
         RMTools::showData(data,str,"energy param");
-        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+        omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
         //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
     }
 }
