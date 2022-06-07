@@ -138,6 +138,7 @@ extern int FRAMEHEIGHT;
 extern CARNAME carName;
 
 extern std::string videoPath;
+extern std::string timePath;
 extern int cameraIndex;
 extern float feedbackDelta;
 

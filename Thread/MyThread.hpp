@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <sys/timeb.h>
 #include <sys/syscall.h>
+#include <fstream>
 
 #include "ArmorDetector.hpp"
 #include "SerialPort.hpp"
@@ -94,6 +95,8 @@ namespace rm
          */
         void Receive();
 
+        void Record();
+
         /**
          * @brief show debug images
          * */
@@ -133,11 +136,18 @@ namespace rm
         /***/
 
         /* 保存图像相关 */
-        string videoPath;
+        string saveVideoPath;
+        VideoWriter videoWriter;
+
+        string saveTimeSeriesPath;
+        std::ofstream timeWrite;
+
+        std::ifstream readTimeTxt;
+
         string SVMPath;
         int svm_img_num = 0;
         int save_img_cnt = 0;
-        VideoWriter videowriter;
+
         /**/
         int cnt1 = 0;
         float tt;

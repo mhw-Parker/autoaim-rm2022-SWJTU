@@ -24,6 +24,10 @@ int main(int argc, char** argv)
     std::thread detectThread(&rm::ImgProdCons::Detect, &pro);     //检测线程
     std::thread feedbackThread(&rm::ImgProdCons::Feedback, &pro); //反馈线程
 
+    if(saveVideo){
+        std::thread recordThread(&rm::ImgProdCons::Record, &pro);
+        recordThread.join();
+    }
     receiveThread.join();
     frameThread.join();
     detectThread.join();

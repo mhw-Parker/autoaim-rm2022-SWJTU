@@ -25,7 +25,7 @@ string now_time = getSysTime();
 
 #if SAVE_VIDEO == 1
 string path = ( string(root_path + now_time).append(".avi"));
-VideoWriter videowriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 50.0, cv::Size(1280, 1024));
+VideoWriter videoWriter(path, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 50.0, cv::Size(1280, 1024));
 #endif
 
 #if SAVE_LOG == 1
@@ -46,6 +46,7 @@ namespace rm
     bool receiveMission = true;//when receive mission completed, receiveMission is true
     bool produceMission = false;//when produce mission completed, produceMission is true, when feedback mission completed, produceMission is false
     bool detectMission = false;//when detect mission completed, detectMission is true, when produce mission completed, detectMission is false
+    bool saveMission = false;
     bool feedbackMission = false;//when feedback mission completed, feedbackMission is true, when produce mission completed, feedbackMission is false
 
     int8_t curControlState = AUTO_SHOOT_STATE; //current control mode
@@ -152,6 +153,7 @@ namespace rm
     }
     ImgProdCons::~ImgProdCons() {
         driver->StopGrab();
+        timeWrite.close();
     }
 
     bool ImgProdCons::Init()
@@ -188,9 +190,6 @@ namespace rm
 #ifdef MIND
                 driver = &mindCapture;
 #endif
-#ifdef DAHUA
-                driver = &dahuaCapture;
-#endif
                 break;
             case UAV:
                 driver = &v4l2Capture;
@@ -219,24 +218,35 @@ namespace rm
         //尝试读取5次相机采集
         do
         {
-            if(driver->Grab(curImage))
-            {
+            if(driver->Grab(curImage)) {
                 FRAMEWIDTH = curImage.cols;
                 FRAMEHEIGHT = curImage.rows;
                 armorDetectorPtr->Init();
                 break;
             }
             missCount++;
-            if(missCount > 5)
-            {
+            if(missCount > 5) {
                 driver->StopGrab();
                 exit(-1);
             }
         }while(true);
         missCount = 0;
         if(saveVideo){
-            videoPath = ( string(OUTPUT_PATH + now_time).append(".avi"));
-            videowriter = VideoWriter(videoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
+            saveVideoPath = ( string(OUTPUT_PATH + now_time).append(".avi") );
+            saveTimeSeriesPath = ( string(OUTPUT_PATH + now_time).append(".txt") );
+            timeWrite = ofstream (saveTimeSeriesPath, ios::out);
+            videoWriter = VideoWriter(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
+        }
+        /// 设置对应视频的每帧对应时间的 txt 路径
+        if(carName == VIDEO){
+            int pos = videoPath.find(".avi");
+            if(pos == -1) pos = videoPath.find(".mp4");
+            else cout << "my rough code can't cut out the root path !\n";
+            if(pos != -1) {
+                string rootPath = videoPath.erase(pos);
+                timePath = rootPath.append(".txt");
+                readTimeTxt = ifstream (timePath);
+            }
         }
         //LOGM("Initialization Completed\n");
         return true;
@@ -308,15 +318,22 @@ namespace rm
                         driver->StopGrab();
                         GrabFlag = false;
                         quitFlag = true;
-                        cout << "Exit for grabing fail." << '\n';
+                        cout << "Exit for grabbing fail." << '\n';
                         raise(SIGINT);
                         break;
                     }
                 } else {
-                    time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
+                    //if(carName != VIDEO)
+                        time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
+                    //else {
+                    //    readTimeTxt >> time_stamp[++cnt%6000];
+                    //}
+                    saveMission = true;
                 }
-                if (carName != VIDEO && saveVideo)
-                    videowriter.write(frame);
+//                if (carName != VIDEO && saveVideo) {
+//                    videoWriter.write(frame);
+//                    //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
+//                }
                 produceTime = CalWasteTime(st, freq);
                 produceMission = true;
             }
@@ -348,7 +365,6 @@ namespace rm
                     case BIG_ENERGY_STATE:
                     case SMALL_ENERGY_STATE:
                         Energy();
-                        //target_pts = energyPtr->output_pts;
                         break;
                     default:
                         Armor();
@@ -372,7 +388,7 @@ namespace rm
                 receiveMission = false;
 
                 tmp_t = last_mission_time; //同步时间
-                if(showArmorBox || showEnergy){
+                if(showArmorBox || showEnergy) {
                     show_img = detectFrame.clone();
                 }
                 find_state = (curControlState == AUTO_SHOOT_STATE) ? (!armorDetectorPtr->lostState) : energyPtr->detect_flag;
@@ -531,4 +547,23 @@ namespace rm
         }
         showImgTime = CalWasteTime(st,freq);
     }
+
+    void ImgProdCons::Record() {
+        do {
+            try {
+                if(saveMission) {
+                    videoWriter.write(frame);
+                    if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
+                    //else cout << "txt close\n" ;
+                }
+            }
+            catch (...) {
+                timeWrite.close();
+                std::this_thread::sleep_for(500ms);
+            }
+            //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
+            saveMission = false;
+        }while(!quitFlag);
+    }
 }
+
