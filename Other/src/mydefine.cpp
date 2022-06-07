@@ -19,7 +19,9 @@ int FRAMEHEIGHT;
 
 CARNAME carName = VIDEO;
 int cameraIndex = 0;
-std::string videoPath = "../blue_car.avi";
+
+std::string videoPath = "../Output/blue_car.avi";
+std::string timePath = "../Output/blue_car.txt";
 
 float feedbackDelta  = 1.32;
 
