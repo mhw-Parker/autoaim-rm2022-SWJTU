@@ -235,7 +235,7 @@ namespace rm
             saveVideoPath = ( string(OUTPUT_PATH + now_time).append(".avi") );
             saveTimeSeriesPath = ( string(OUTPUT_PATH + now_time).append(".txt") );
             timeWrite = ofstream (saveTimeSeriesPath, ios::out);
-            videoWriter = VideoWriter(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
+            videoWriter = VideoWriter(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 70.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
         }
         /// 设置对应视频的每帧对应时间的 txt 路径
         if(carName == VIDEO){
@@ -553,8 +553,9 @@ namespace rm
             try {
                 if(saveMission) {
                     videoWriter.write(frame);
-                    if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
+                    //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
                     //else cout << "txt close\n" ;
+                    saveMission = false;
                 }
             }
             catch (...) {
@@ -562,7 +563,7 @@ namespace rm
                 std::this_thread::sleep_for(500ms);
             }
             //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
-            saveMission = false;
+
         }while(!quitFlag);
     }
 }
