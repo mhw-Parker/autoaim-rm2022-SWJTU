@@ -323,17 +323,9 @@ namespace rm
                         break;
                     }
                 } else {
-                    //if(carName != VIDEO)
-                        time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
-                    //else {
-                    //    readTimeTxt >> time_stamp[++cnt%6000];
-                    //}
+                    time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
                     saveMission = true;
                 }
-//                if (carName != VIDEO && saveVideo) {
-//                    videoWriter.write(frame);
-//                    //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
-//                }
                 produceTime = CalWasteTime(st, freq);
                 produceMission = true;
             }
@@ -392,25 +384,26 @@ namespace rm
                     show_img = detectFrame.clone();
                 }
                 find_state = (curControlState == AUTO_SHOOT_STATE) ? (!armorDetectorPtr->lostState) : energyPtr->detect_flag;
-                if(curControlState != AUTO_SHOOT_STATE)
+                if(curControlState != AUTO_SHOOT_STATE && find_state)
                     rotate_center = energyPtr->circle_center_point;
                 detectMission = false;
 
-                if (curControlState == AUTO_SHOOT_STATE) {
-                    if (find_state) {
+                if(find_state) {
+                    if (curControlState == AUTO_SHOOT_STATE) {
                         predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts, armorDetectorPtr->targetArmor.armorType,
                                                    gimbal_ypd,v_bullet,tmp_t, armorDetectorPtr->lostCnt);
                         Vector2f offset = RMTools::GetOffset(carName);
                         yaw_abs = predictPtr->predict_ypd[0] + offset[0];
                         pitch_abs = predictPtr->predict_ypd[1] + offset[1];
                     }
+                    else {
+                        predictPtr->EnergyPredictor(curControlState,energyPtr->pts,rotate_center,gimbal_ypd,
+                                                    v_bullet,tmp_t);
+                        yaw_abs = predictPtr->predict_ypd[0];
+                        pitch_abs = predictPtr->predict_ypd[1];
+                    }
                 }
-                else {
-                    predictPtr->EnergyPredictor(curControlState,energyPtr->pts,rotate_center,gimbal_ypd,
-                                                   v_bullet,tmp_t);
-                    yaw_abs = predictPtr->predict_ypd[0];
-                    pitch_abs = predictPtr->predict_ypd[1];
-                }
+
                 /** package data and prepare for sending data to lower-machine **/
                 serialPtr->pack(yaw_abs,
                                 pitch_abs,
@@ -455,17 +448,13 @@ namespace rm
             if(produceMission && !receiveMission){
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
-                    //curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed;
                     blueTarget = receiveData.targetColor;
                 }
                 receiveTime = CalWasteTime(st, freq);
                 receiveMission = true;
             }
-#if SHOWTIME == 1
-            //
-#endif
-
         } while (!quitFlag);
     }
 
@@ -541,9 +530,6 @@ namespace rm
                     pauseFlag = false;
                 }
             }
-#if SHOWTIME == 1
-
-#endif
         }
         showImgTime = CalWasteTime(st,freq);
     }

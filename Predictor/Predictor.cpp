@@ -4,7 +4,7 @@
 #include "Predictor.h"
 
 Predictor::Predictor() : waveClass(40,300,1000),
-                         omegaWave(3,600,1000)
+                         omegaWave(30,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
     // TODO 通过各种优先模式设置初始弹速
@@ -357,7 +357,9 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
 
     Point2f p = target_point - center; //圆心指向目标的向量
     current_theta = atan2(p.y,p.x);     //当前角度 弧度制
+    //cout << "+++ " << current_theta << endl;
     angle.push_back(current_theta);    //存放对应的角度序列
+    //cout << "----" << endl;
     if(JudgeFanRotation()) {
         if(mode == BIG_ENERGY_STATE) {
             FilterOmega(dt);
@@ -380,18 +382,16 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     predict_xyz = solveAngle.world_xyz;
     //predict_xyz = GetGyroXYZ();
     iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
-    //predict_ypd = target_ypd;
-//    if(average_v_bullet>26)
-//        predict_ypd[1] = iterate_pitch; + 3;
-//    else
-//        predict_ypd[1] = iterate_pitch; + 1.5 + (0.11*(iterate_pitch-6) < 1.3 ? 0.11*(iterate_pitch-6) : 1.3);
-//    predict_ypd[0] += -0.5;
-    Vector2f offset = RMTools::GetOffset(carName);
-    predict_ypd[0] += offset[0];
-    float y_max = 1580, y_min = 260;
-    float delta_y_max = y_max - y_min;
-    float strange_coeff = (-predict_xyz[1] * 0.00038) + 0.9;
-    predict_ypd[1] = iterate_pitch + offset[1] * strange_coeff;
+    if(average_v_bullet > 25)
+        predict_ypd[1] = iterate_pitch + 2;
+    else
+        predict_ypd[1] = iterate_pitch + 3;
+//    Vector2f offset = RMTools::GetOffset(carName);
+//    predict_ypd[0] += offset[0];
+//    float y_max = 1580, y_min = 260;
+//    float delta_y_max = y_max - y_min;
+//    float strange_coeff = (-predict_xyz[1] * 0.00038) + 0.9;
+//    predict_ypd[1] = iterate_pitch + offset[1] * strange_coeff;
     //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;
     latency = react_t + fly_t;
 }
@@ -419,7 +419,7 @@ bool Predictor::EnergyStateSwitch() {
     }
 }
 bool Predictor::JudgeFanRotation() {
-    if(angle.size() > 3 && angle.size() < 19){
+    if(angle.size() > 4 && angle.size() < 19){
         current_omega = CalOmegaNStep(3, total_theta);
         omega.push_back(current_omega);
         if(angle.size() == 18) {
@@ -449,9 +449,27 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
     float d_theta = angle.back() - angle[angle.size()-step_];
     float dt = time_series.back() - time_series[time_series.size()-step_];
     if(d_theta > 6)
-        d_theta -= 2*CV_PI;
+        d_theta -= CV_2PI;
     if(d_theta < -6)
-        d_theta += 2*CV_PI;
+        d_theta += CV_2PI;
+    /** ********************* **/
+//    float last_d_theta = angle.back() - angle[angle.size()-2]; //与上一次差
+//    int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); //1.2566 = 2*pi/4  四舍五入
+//    if(abs(d_fan) >= 1) {
+//        //printf("change fan: %f\n",last_d_theta);
+//        int length = angle.size();
+//        //cout << length << endl;
+//        for(int i = 2;i <= step_;i++) {
+//            float tmp_angle = angle[length-i];
+//            angle[length-i] = tmp_angle + d_fan * 1.2566;
+//            if(angle[length-i] < CV_2PI) angle[length-i] += CV_2PI;
+//            if(angle[length-i] > CV_2PI) angle[length-i] += -CV_2PI;
+//            cout << angle[length-i] << "\t" ;
+//        }
+//        //cout << endl;
+//        d_theta = angle.back() - angle[angle.size()-step_];
+//    }
+    /** ************************* **/
     total_theta += d_theta;
     float tmp_omega = d_theta / dt;
     if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
@@ -461,8 +479,9 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
             tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
         }
         else //kalman未初始化则直接限幅
-            tmp_omega = (tmp_omega > 0) ? 2.15 : -2.15;
+            tmp_omega = (tmp_omega > 0) ? 2.09 : -2.09;
     }
+    //omegaWave.displayWave(total_theta,0,"current angle");
     //waveClass.displayWave(d_theta,angle.back(),"d_theta");
     return tmp_omega;
 }
@@ -485,7 +504,8 @@ void Predictor::FilterOmega(const float& dt) {
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,iterate_pitch,predict_ypd[1],latency};
         RMTools::showData(data,str,"energy param");
-        omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
     }
 }
 void Predictor::FilterRad(const float& latency) {
