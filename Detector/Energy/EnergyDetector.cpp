@@ -58,7 +58,7 @@ void EnergyDetector::initEnergyPartParam() {
     // area change to 1/3
 ///装甲板的相关筛选参数
     _flow.armor_contour_area_max = 2800;//1500
-    _flow.armor_contour_area_min = 400;//400
+    _flow.armor_contour_area_min = 200;//400
     _flow.armor_contour_length_max = 110;//50
     _flow.armor_contour_length_min = 25;//25
     _flow.armor_contour_width_max = 80;//30
@@ -151,7 +151,7 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
             detect_flag = false;
         }
     }
-    //imshow("outline",outline);
+    imshow("outline",outline);
 }
 /**
  * @brief EnergyDetector::preprocess
@@ -186,12 +186,12 @@ Mat EnergyDetector::preprocess(Mat &src) {
     Mat gray,binary;
     cvtColor(src,gray, COLOR_BGR2GRAY);
     threshold(gray,binary,70,255,THRESH_BINARY);
-    Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
-    dilate(binary, binary, element_dilate_1);
-    morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
-    threshold(binary, binary, 0, 255, THRESH_BINARY);
+    //Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
+    //dilate(binary, binary, element_dilate_1);
+    //morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
+    //threshold(binary, binary, 0, 255, THRESH_BINARY);
 
-    GaussianBlur(binary,binary,Size(3,3),0);
+    //GaussianBlur(binary,binary,Size(3,3),0);
 
     if(showBinaryImg)
         imshow("binary",binary);

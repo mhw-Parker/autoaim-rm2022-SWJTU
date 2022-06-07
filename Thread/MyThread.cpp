@@ -455,7 +455,7 @@ namespace rm
             if(produceMission && !receiveMission){
                 double st = (double) getTickCount();
                 if (serialPtr->ReadData(receiveData)) {
-                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                    //curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed;
                     blueTarget = receiveData.targetColor;
                 }

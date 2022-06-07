@@ -77,7 +77,7 @@ private:
     std::vector<cv::Point2f> target_armor_centers;//get
 
     const float R = 168;
-    const float K = 8.5; //半径倍数
+    const float K = 10; //半径倍数
 
     cv::Point2f last_circle_center_point;//上一次风车圆心坐标
     cv::Point2f last_target_point;//上一次目标装甲板坐标
