@@ -203,7 +203,7 @@ namespace rm
             imshow("binary_brightness_img", thresholdMap);
         }
 
-        lights = LampDetection(imgRoi);
+        lights = LampDetection(img);
 
         MaxMatch(lights);
 
@@ -306,13 +306,13 @@ namespace rm
             subtract(channels[0],channels[2],sub);
         else
             subtract(channels[2],channels[0],sub);
-        imshow("channels-sub",sub);
+        //imshow("channels-sub",sub);
         threshold(sub, sub, 120, 255, THRESH_BINARY);
         threshold(gray,thresholdMap,40,255,THRESH_BINARY);
         threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
         colorMap = Mat_<int>(sub);
-        imshow("channels-sub-binary",sub);
-        imshow("gray-binary",thresholdMap);
+        //imshow("channels-sub-binary",sub);
+        //imshow("gray-binary",thresholdMap);
     }
 
     /**

@@ -245,8 +245,8 @@ namespace RMTools {
                 break;
             case SENTRY:
             case SENTRYDOWN:
-                min_v = 25;
-                max_v = 30;
+                min_v = 24;
+                max_v = 32;
                 break;
             case UAV:
                 break;
@@ -284,7 +284,7 @@ namespace RMTools {
                 break;
             case SENTRYDOWN:
                 offset[0] = -0.9;
-                offset[1] = -2;
+                offset[1] = -1;
                 break;
             case UAV:
                 break;

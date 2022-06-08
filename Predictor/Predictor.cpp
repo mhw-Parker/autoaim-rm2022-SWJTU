@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(40,300,1000),
+Predictor::Predictor() : waveClass(2000,300,1000),
                          omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
@@ -21,11 +21,11 @@ Predictor::Predictor() : waveClass(40,300,1000),
         case INFANTRY_TRACK:
             break;
         case SENTRY:
-            average_v_bullet = v_vec[0] = 27;
+            average_v_bullet = v_vec[0] = 26;
             react_t = 0.6;
             break;
         case SENTRYDOWN:
-            average_v_bullet = v_vec[0] = 27;
+            average_v_bullet = v_vec[0] = 26;
             react_t = 0.6;
             break;
         case UAV:
@@ -130,7 +130,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
         // 计算要转过的角度
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
-        // 计算抬枪
+        // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
@@ -143,7 +143,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         predict_xyz = KalmanPredict(average_v_bullet, latency);
         // 计算要击打位置的YPD
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
-        // 计算抬枪
+        // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
@@ -153,6 +153,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 哨兵射击命令
     if (carName == SENTRY || carName == SENTRYDOWN) {
         shootCmd = CheckShoot(gimbal_ypd, offset, armor_type);
+        cout << "Latency: " << latency << '\n';
     }
     // 更新last值
     last_xyz = target_xyz;
@@ -179,7 +180,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
+    waveClass.displayWave(target_v_xyz[0], 0, "y");
 }
 
 /**
@@ -253,11 +254,9 @@ void Predictor::InitKfAcceleration(const float dt) {
     // 过程噪声协方差矩阵Q
     RMKF.process_noise_.setIdentity();
     RMKF.process_noise_ *= 1;
-    RMKF.process_noise_(2, 2) *= 5;
-    RMKF.process_noise_(8, 8) *= 5;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 2.5;
+    RMKF.measure_noise_ *= 5;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     // 后验估计

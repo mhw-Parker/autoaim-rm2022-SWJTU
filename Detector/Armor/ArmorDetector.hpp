@@ -52,27 +52,30 @@ namespace rm
         // 灯条角度
         float maxLightAngle = 35;
         // 灯条高宽比
-        float minLightH2W = 3;
+        // 哨兵巡逻会模糊，要调低此数值
+        float minLightH2W = 2.5;
         float maxLightH2W = 7.5;
         // 灯条宽度
-        float maxLightW = 18;
+        float maxLightW = 22;
         // 灯条高度
-        float maxLightH = 200;
+        float maxLightH = 85;
         float minLightH = 15;
-        // 通道相减图中平均权值
+        // 通道相减图中平均权值，场地
         float minAverageBrightness = 20;
+        // 哨兵抖起来会画面糊，应调高此数值；
+        // 场地要调低此数值
         float maxAverageBrightness = 120;
 
         /// 灯条匹配参数
         // 角度差
-        float maxAngleError = 6;
+        float maxAngleError = 5;
         // 高度差
-        float maxLengthError = 0.5;
+        float maxLengthError = 0.3;
         // 装甲板长宽比
-        float minRatio = 0.75;
+        float minRatio = 0.8;
         float maxRatio = 3;
         // 平均角度
-        float maxArmorAngle = 45;
+        float maxArmorAngle = 33;
         //
         float maxDeviationAngle = 45;
         // 灯条中心的竖直距离差 / 装甲板高度
