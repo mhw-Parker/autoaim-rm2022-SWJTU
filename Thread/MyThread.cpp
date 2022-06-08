@@ -153,7 +153,7 @@ namespace rm
     }
     ImgProdCons::~ImgProdCons() {
         driver->StopGrab();
-        timeWrite.close();
+        //timeWrite.close();
     }
 
     bool ImgProdCons::Init()
@@ -197,9 +197,6 @@ namespace rm
             case VIDEO:
                 driver = &videoCapture;
                 break;
-            case IMAGE:
-                driver = &imageCapture;
-                break;
             case NOTDEFINED:
                 driver = &videoCapture;
                 break;
@@ -218,8 +215,9 @@ namespace rm
             driver->StopGrab();
             exit(-1);
         }
-        //尝试5次相机采集，视频模式尝试1次
-        do {
+        //尝试读取5次相机采集
+        do
+        {
             if(driver->Grab(curImage)) {
                 FRAMEWIDTH = curImage.cols;
                 FRAMEHEIGHT = curImage.rows;
@@ -227,9 +225,6 @@ namespace rm
                 break;
             }
             missCount++;
-            if (carName == VIDEO && missCount) {
-                exit(-1);
-            }
             if(missCount > 5) {
                 driver->StopGrab();
                 exit(-1);
@@ -239,8 +234,9 @@ namespace rm
         if(saveVideo){
             saveVideoPath = ( string(OUTPUT_PATH + now_time).append(".avi") );
             saveTimeSeriesPath = ( string(OUTPUT_PATH + now_time).append(".txt") );
-            timeWrite = ofstream (saveTimeSeriesPath, ios::out);
-            videoWriter = VideoWriter(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
+            //timeWrite = ofstream (saveTimeSeriesPath, ios::out);
+            // 录制帧率
+            videoWriter = VideoWriter(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 70.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
         }
         /// 设置对应视频的每帧对应时间的 txt 路径
         if(carName == VIDEO){
@@ -328,17 +324,9 @@ namespace rm
                         break;
                     }
                 } else {
-                    //if(carName != VIDEO)
-                        time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
-                    //else {
-                    //    readTimeTxt >> time_stamp[++cnt%6000];
-                    //}
+                    time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
                     saveMission = true;
                 }
-//                if (carName != VIDEO && saveVideo) {
-//                    videoWriter.write(frame);
-//                    //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
-//                }
                 produceTime = CalWasteTime(st, freq);
                 produceMission = true;
             }
@@ -352,13 +340,6 @@ namespace rm
                 double st = (double)getTickCount();
                 last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //两次图片时间间隔 用当次时间序列值 - 上次时间序列值
                 last_cnt = cnt; //更新当次时间序列序号
-                // 读图片模式应该单线程执行Detect
-                if (carName == IMAGE) {
-                    driver->Grab(frame);
-                    FRAMEWIDTH = frame.cols;
-                    FRAMEHEIGHT = frame.rows;
-                    armorDetectorPtr->Init();
-                }
                 detectFrame = frame.clone();
                 produceMission = false;
                 /** 计算上一次源图像执行耗时 **/
@@ -381,18 +362,6 @@ namespace rm
                     default:
                         Armor();
                 }
-                // 读图片模式单线程，识别完按空格退出
-                if (carName == IMAGE) {
-                    show_img = detectFrame.clone();
-                    ShowImage();
-                    if (waitKey() == 32) exit(0);
-                }
-                // 读取视频空格暂停
-                if (carName == VIDEO) {
-                    if (waitKey(30) == 32) {
-                        while (waitKey() != 32) {}
-                    }
-                }
                 detectMission = true;
                 detectTime = CalWasteTime(st,freq);
             }
@@ -412,29 +381,30 @@ namespace rm
                 receiveMission = false;
 
                 tmp_t = last_mission_time; //同步时间
-                if(carName != IMAGE && (showArmorBox || showEnergy)) {
+                if(showArmorBox || showEnergy) {
                     show_img = detectFrame.clone();
                 }
                 find_state = (curControlState == AUTO_SHOOT_STATE) ? (!armorDetectorPtr->lostState) : energyPtr->detect_flag;
-                if(curControlState != AUTO_SHOOT_STATE)
+                if(curControlState != AUTO_SHOOT_STATE && find_state)
                     rotate_center = energyPtr->circle_center_point;
                 detectMission = false;
 
-                if (curControlState == AUTO_SHOOT_STATE) {
-                    if (find_state) {
+                if(find_state) {
+                    Vector2f offset = RMTools::GetOffset(carName);
+                    if (curControlState == AUTO_SHOOT_STATE) {
                         predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts, armorDetectorPtr->targetArmor.armorType,
                                                    gimbal_ypd,v_bullet,tmp_t, armorDetectorPtr->lostCnt);
-                        Vector2f offset = RMTools::GetOffset(carName);
                         yaw_abs = predictPtr->predict_ypd[0] + offset[0];
                         pitch_abs = predictPtr->predict_ypd[1] + offset[1];
                     }
+                    else {
+                        predictPtr->EnergyPredictor(curControlState,energyPtr->pts,rotate_center,gimbal_ypd,
+                                                    v_bullet,tmp_t);
+                        yaw_abs = predictPtr->predict_ypd[0] - 0.4;
+                        pitch_abs = predictPtr->predict_ypd[1];
+                    }
                 }
-                else {
-                    predictPtr->EnergyPredictor(curControlState,energyPtr->pts,rotate_center,gimbal_ypd,
-                                                   v_bullet,tmp_t);
-                    yaw_abs = predictPtr->predict_ypd[0];
-                    pitch_abs = predictPtr->predict_ypd[1];
-                }
+
                 /** package data and prepare for sending data to lower-machine **/
                 serialPtr->pack(yaw_abs,
                                 pitch_abs,
@@ -447,8 +417,8 @@ namespace rm
                 if(dataWrite.is_open())
                     dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << endl;
 #endif
-                /// 发送数据，除了读取视频模式
-                if (carName != VIDEO && serialPtr->WriteData()) {
+                /** send data from host to low-end machine to instruct holder's movement **/
+                if (serialPtr->WriteData()) {
 #if SAVE_LOG == 1
                     logWrite<<"[Write Data to USB2TTL SUCCEED]"<<endl;
 #endif
@@ -466,8 +436,7 @@ namespace rm
                     cout << "Show Image Cost : " << showImgTime << " ms" << endl;
                 cout << endl;
 #endif
-                //
-                if (carName != IMAGE && (showArmorBox || showEnergy || showOrigin)) {
+                if(showArmorBox || showEnergy || showOrigin){
                     ShowImage();
                 }
             }
@@ -479,19 +448,14 @@ namespace rm
         do{
             if(produceMission && !receiveMission){
                 double st = (double) getTickCount();
-                // 录制视频则不从电控读数据
-                if (carName != VIDEO && serialPtr->ReadData(receiveData)) {
-                    //curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                if (serialPtr->ReadData(receiveData)) {
+                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed;
                     blueTarget = receiveData.targetColor;
                 }
                 receiveTime = CalWasteTime(st, freq);
                 receiveMission = true;
             }
-#if SHOWTIME == 1
-            //
-#endif
-
         } while (!quitFlag);
     }
 
@@ -500,36 +464,35 @@ namespace rm
         if (!show_img.empty()) {
             //Mat show_img = detectFrame.clone();
             if (showArmorBox || showEnergy) {
-                circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2,
-                       Scalar(0, 255, 255), 3);
+                circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2, Scalar(0, 255, 255), 3);
 
-//                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
-//                        2,
-//                        8, 0);
-//                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(255, 255, 255), 2, 8, 0);
-//
-//                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-//                        8,
-//                        0);
-//                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(255, 255, 255), 2, 8, 0);
-//
-//                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-//                        8,
-//                        0);
-//                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(255, 255, 255), 2, 8, 0);
-//
-//                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
-//                        Scalar(255, 255, 255),
-//                        2, 8, 0);
-//
-//                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
-//                        Scalar(0, 255, 0),
-//                        1, 8, 0);
-//                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(0, 255, 0), 1, 8, 0);
+                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
+                        2,
+                        8, 0);
+                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
+                        8,
+                        0);
+                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
+                        8,
+                        0);
+                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
+                        Scalar(255, 255, 255),
+                        2, 8, 0);
+
+                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
+                        Scalar(0, 255, 0),
+                        1, 8, 0);
+                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(0, 255, 0), 1, 8, 0);
 
                 if (showEnergy) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
@@ -547,11 +510,7 @@ namespace rm
                     circle(show_img, predictPtr->predict_point, 5, Scalar(100, 240, 15), 2);
                 }
                 imshow("Detect Frame", show_img);
-                if (carName == IMAGE) {
-                    waitKey();
-                } else {
-                    waitKey(1);
-                }
+                waitKey(1);
             }
             if (showOrigin) {
                 circle(frame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(255, 255, 255), -1);
@@ -572,9 +531,6 @@ namespace rm
                     pauseFlag = false;
                 }
             }
-#if SHOWTIME == 1
-
-#endif
         }
         showImgTime = CalWasteTime(st,freq);
     }
@@ -584,16 +540,17 @@ namespace rm
             try {
                 if(saveMission) {
                     videoWriter.write(frame);
-                    if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
+                    //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
                     //else cout << "txt close\n" ;
+                    saveMission = false;
                 }
             }
             catch (...) {
-                timeWrite.close();
+                //timeWrite.close();
                 std::this_thread::sleep_for(500ms);
             }
             //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
-            saveMission = false;
+
         }while(!quitFlag);
     }
 }

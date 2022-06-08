@@ -182,8 +182,7 @@ Mat EnergyDetector::preprocess(Mat &src) {
     dilate(binary, binary, element_dilate_1);
     //morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
     //threshold(binary, binary, 0, 255, THRESH_BINARY);
-
-    //GaussianBlur(binary,binary,Size(3,3),0);
+        GaussianBlur(binary,binary,Size(3,3),0);
 
     if(showBinaryImg)
         imshow("binary",binary);

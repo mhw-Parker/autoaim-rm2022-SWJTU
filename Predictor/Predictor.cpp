@@ -370,7 +370,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 predict_rad = 0;
         }
         else
-            predict_rad = energy_rotation_direction * 1.4 * latency; //小幅
+            predict_rad = energy_rotation_direction * 1.05 * latency; //小幅
         predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
         getPredictRect(center, target_pts, predict_rad); //获得预测矩形
     }
@@ -383,7 +383,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     //predict_xyz = GetGyroXYZ();
     iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
     if(average_v_bullet > 25)
-        predict_ypd[1] = iterate_pitch + 2;
+        predict_ypd[1] = iterate_pitch + 1.9;
     else
         predict_ypd[1] = iterate_pitch + 3;
 //    Vector2f offset = RMTools::GetOffset(carName);
@@ -406,7 +406,7 @@ bool Predictor::EnergyStateSwitch() {
             }
             return false;
         case BEGIN:
-            if(time_series.back() - time_series[st] > 2)
+            if(time_series.back() - time_series[st] > 3)
                 ctrl_mode = ESTIMATE;
             return false;
         case ESTIMATE:
@@ -459,12 +459,12 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
         float last_d_theta = angle.back() - angle[angle.size()-2]; //与上一次差
         int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); //1.2566 = 2*pi/4  四舍五入
         if(abs(d_fan) >= 1) {
-            cout << d_fan << endl;
+            //cout << d_fan << endl;
             for(int i = 2;i <= step_;i++) {
                 angle[angle.size()-i] += d_fan * 1.2566;
                 if(angle[angle.size()-i] < CV_2PI) angle[angle.size()-i] += CV_2PI;
                 if(angle[angle.size()-i] > CV_2PI) angle[angle.size()-i] += -CV_2PI;
-                cout << angle[angle.size()-i] << "\t" ;
+                //cout << angle[angle.size()-i] << "\t" ;
             }
             d_theta = angle.back() - angle[angle.size()-step_];
         }

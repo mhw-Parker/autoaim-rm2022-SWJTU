@@ -16,6 +16,7 @@
 # Description:       start watchDog
 ### END INIT INFO
 
+xrandr -s 1920x1080
 sec=1
 cnt=0
 PROC_NAME= "run -sentry -blue" #进程名字，取决于你自己make后的名称，也可以在终端输入top来查找
