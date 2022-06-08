@@ -21,6 +21,7 @@
 #include "EnergyDetector.h"
 #include "V4L2KAS.h"
 #include "VideoDriver.hpp"
+#include "ImageWriter.hpp"
 #include "utility.hpp"
 #include "Predictor/Predictor.h"
 
@@ -161,6 +162,7 @@ namespace rm
 #endif
         V4L2Driver v4l2Capture;
         VideoDriver videoCapture;
+        ImageDriver imageCapture;
 
         /* Serial */
         std::unique_ptr<Serial> serialPtr;

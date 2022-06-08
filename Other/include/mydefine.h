@@ -75,7 +75,7 @@
 
 #ifndef CARNAME_
 #define CARNAME_
-enum CARNAME {HERO, INFANTRY_MELEE0, INFANTRY_MELEE1, INFANTRY_TRACK, SENTRY, SENTRYDOWN, UAV, VIDEO, NOTDEFINED};
+enum CARNAME {HERO, INFANTRY_MELEE0, INFANTRY_MELEE1, INFANTRY_TRACK, SENTRY, SENTRYDOWN, UAV, VIDEO, IMAGE, NOTDEFINED};
 #endif
 
 #ifndef DEBUG
@@ -83,7 +83,7 @@ enum CARNAME {HERO, INFANTRY_MELEE0, INFANTRY_MELEE1, INFANTRY_TRACK, SENTRY, SE
 #endif
 
 #ifndef SHOWTIME
-#define SHOWTIME 0
+#define SHOWTIME 1
 #endif
 
 #ifndef DEBUG_MSG
@@ -137,7 +137,7 @@ extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
 extern CARNAME carName;
 
-extern std::string videoPath;
+extern std::string srcPath;
 extern std::string timePath;
 extern int cameraIndex;
 extern float feedbackDelta;

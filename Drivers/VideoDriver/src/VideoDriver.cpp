@@ -5,7 +5,7 @@
 
 bool VideoDriver::InitCam()
 {
-    capture.open(videoPath);
+    capture.open(srcPath);
     if(!capture.isOpened())
     {
         perror("Video Open Failed!\n");

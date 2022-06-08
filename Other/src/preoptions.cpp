@@ -76,6 +76,12 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
 			LOGM("Run with Video!");
 		}
 	}},
+    {"-image", {
+                       "start the program with reading video directly without asking.", []() {
+                carName = IMAGE;
+                LOGM("Run with Video!");
+            }
+               }},
 	{"-energy", {
 		"show energy",[]() {
                 showEnergy = true;
@@ -157,7 +163,7 @@ void PreOptions(int argc, char** argv) {
             {
                 token = strtok(NULL,"=");
                 LOGM("Set Video Path as %s",token);
-                videoPath = std::string(token);
+                srcPath = std::string(token);
                 continue;
             }else if(!strcmp(token,"-index"))
             {

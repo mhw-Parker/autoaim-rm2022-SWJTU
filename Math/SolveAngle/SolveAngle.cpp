@@ -43,6 +43,16 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
+            fit_gun_error = 0;
+            coeff = 0.025;
+            break;
+        case IMAGE:
+            fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
+            fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
+            cv2eigen(cameraMatrix,cam_mat);
+            fit_gun_error = 0;
+            coeff = 0.025;
+            break;
         case SENTRY:
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;

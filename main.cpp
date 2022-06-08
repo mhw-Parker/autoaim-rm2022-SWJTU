@@ -1,6 +1,7 @@
 #include <thread>
 #include "MyThread.hpp"
 #include "preoptions.h"
+#include "mydefine.h"
 #include "config.h"
 
 using namespace rm;

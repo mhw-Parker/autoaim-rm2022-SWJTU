@@ -203,7 +203,7 @@ namespace rm
             imshow("binary_brightness_img", thresholdMap);
         }
 
-        lights = LampDetection(img);
+        lights = LampDetection(imgRoi);
 
         MaxMatch(lights);
 
@@ -303,15 +303,16 @@ namespace rm
         split(img,channels);
         cvtColor(img,gray,COLOR_BGR2GRAY);
         if (blueTarget)
-            subtract(channels[0],channels[1],sub);
+            subtract(channels[0],channels[2],sub);
         else
-            subtract(channels[1],channels[0],sub);
-        threshold(sub, sub, 80, 255, THRESH_BINARY);
-        threshold(gray,thresholdMap,110,255,THRESH_BINARY);
+            subtract(channels[2],channels[0],sub);
+        imshow("channels-sub",sub);
+        threshold(sub, sub, 120, 255, THRESH_BINARY);
+        threshold(gray,thresholdMap,40,255,THRESH_BINARY);
         threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
         colorMap = Mat_<int>(sub);
-        //imshow("channels-sub",sub);
-        //imshow("gray-binary",thresholdMap);
+        imshow("channels-sub-binary",sub);
+        imshow("gray-binary",thresholdMap);
     }
 
     /**
@@ -336,14 +337,15 @@ namespace rm
             // 1：灯条周长
             if (length < 20 || length > 800) continue;
             possibleLamp = fitEllipse(i); //用椭圆近似形状
+            //ellipse(img, possibleLamp, Scalar::all(255));
             // 2：面积
             float lampArea = possibleLamp.size.width * possibleLamp.size.height;
-            //if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue;
+            if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue;
             // 3：高，宽
             if (possibleLamp.size.width > param.maxLightW) continue; //限制
             // 4：长宽比例
             float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
-            //if((rate_height2width < param.minLightH2W) || (rate_height2width > param.maxLightH2W)) continue;
+            if ((rate_height2width < param.minLightH2W) || (rate_height2width > param.maxLightH2W)) continue;
             // 5：角度
             float angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
             if (fabs(angle_) >= param.maxLightAngle) continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
@@ -353,10 +355,11 @@ namespace rm
             mask = Mat::ones(rectLamp.height, rectLamp.width, CV_8UC1); //矩形灯条大小的全1灰度图
             lampImage = colorMap(rectLamp);
             avgBrightness = mean(lampImage, mask); //求均值
-            if (avgBrightness[0] < 20 || avgBrightness[0] > 150) continue;
+            if (avgBrightness[0] < param.minAverageBrightness || avgBrightness[0] > param.maxAverageBrightness)
+                continue;
             // 整合所有符合条件的灯条信息
-            Lamp buildLampInfo(possibleLamp, angle_, avgBrightness[0]);
-            lampVector.emplace_back(buildLampInfo);
+            Lamp lampWithInfo(possibleLamp, angle_, avgBrightness[0]);
+            lampVector.emplace_back(lampWithInfo);
         }
         // 画灯条
         if (showLamps) {
@@ -368,15 +371,15 @@ namespace rm
                          rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
                          Scalar(0, 255, 255), 2);
                 }
-                vector<int> data{(int) (light.rect.size.height * light.rect.size.width),
-                                 (int) (light.rect.size.height / light.rect.size.width),
-                                 (int) light.rect.size.height,
+                vector<int> data{(int) (light.rect.size.height * light.rect.size.width / 2),
+                                 (int) (light.rect.size.height / light.rect.size.width / 2),
+                                 (int) light.rect.size.height / 2,
                                  (int) light.rect.size.width,
                                  (int) light.lightAngle,
                                  (int) light.avgRSubBVal};
-                Point2f corner = Point2f(roiRect.x + light.rect.center.x + light.rect.size.width / 2,
-                                         roiRect.y + light.rect.center.y - light.rect.size.height / 2);
-                // 面积，高宽比，高，宽，角度
+                Point2f corner = Point2f(roiRect.x + light.rect.center.x + light.rect.size.width / 4,
+                                         roiRect.y + light.rect.center.y - light.rect.size.height / 4);
+                // 面积，高宽比，高，宽，角度，通道相减图平均权值
                 for (int j = 0; j < data.size(); j++) {
                     putText(img, to_string(data[j]), corner + Point2f(0, 20 * j),
                             FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));

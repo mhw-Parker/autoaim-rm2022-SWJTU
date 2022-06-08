@@ -48,17 +48,20 @@ namespace rm
         /// 灯条识别参数
         // 灯条面积
         float minLightArea = 10;
-        float maxLightArea = 8000;
+        float maxLightArea = 2100;
         // 灯条角度
-        float maxLightAngle = 30;
-        // 灯条
-        float minLightH2W = 0.5;
-        float maxLightH2W = 10;
+        float maxLightAngle = 35;
+        // 灯条高宽比
+        float minLightH2W = 3;
+        float maxLightH2W = 7.5;
         // 灯条宽度
-        float maxLightW = 50;
+        float maxLightW = 18;
         // 灯条高度
         float maxLightH = 200;
         float minLightH = 15;
+        // 通道相减图中平均权值
+        float minAverageBrightness = 20;
+        float maxAverageBrightness = 120;
 
         /// 灯条匹配参数
         // 角度差
@@ -134,8 +137,8 @@ namespace rm
         {
         }
 
-        Lamp(RotatedRect bar, float angle, float avgB) :lightAngle(angle),avgRSubBVal(avgB)
-        {
+        Lamp(RotatedRect bar, float angle, float avgB) :lightAngle(angle),avgRSubBVal(avgB) {
+            // 高度乘2
             cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2));
             rect = cv::RotatedRect(bar.center, exLSize, bar.angle);
         }

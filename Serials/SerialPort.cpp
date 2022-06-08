@@ -26,10 +26,8 @@ Serial::Serial(int nSpeed, char nEvent, int nBits, int nStop) :
         nSpeed(nSpeed), nEvent(nEvent), nBits(nBits), nStop(nStop) {
     if (wait_uart) {
         LOGA("Wait for serial be ready!");
-        //cout<<("Wait for serial be ready!")<<endl;
         InitPort(nSpeed, nEvent, nBits, nStop);
         LOGA("Port set successfully!");
-        //cout<<("Port set successfully!")<<endl;
     } else {
         if (InitPort(nSpeed, nEvent, nBits, nStop)) {
             LOGA("Port set successfully!");
