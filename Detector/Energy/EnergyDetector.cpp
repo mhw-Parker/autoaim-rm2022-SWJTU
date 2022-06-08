@@ -62,18 +62,18 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.armor_contour_length_max = 110;//50
     _flow.armor_contour_length_min = 25;//25
     _flow.armor_contour_width_max = 80;//30
-    _flow.armor_contour_width_min = 10;//15
+    _flow.armor_contour_width_min = 8;//15
     _flow.armor_contour_hw_ratio_max = 3;//3
     _flow.armor_contour_hw_ratio_min = 1;//1
 
 ///流动条所在扇叶的相关筛选参数
-    _flow.flow_strip_fan_contour_area_max = 8800;
-    _flow.flow_strip_fan_contour_area_min = 2000;
+    _flow.flow_strip_fan_contour_area_max = 5000;
+    _flow.flow_strip_fan_contour_area_min = 1500;
     _flow.flow_strip_fan_contour_length_max = 320;
-    _flow.flow_strip_fan_contour_length_min = 90;
+    _flow.flow_strip_fan_contour_length_min = 50;
     _flow.flow_strip_fan_contour_width_max = 140;
-    _flow.flow_strip_fan_contour_width_min = 45;
-    _flow.flow_strip_fan_contour_hw_ratio_max = 2.8;
+    _flow.flow_strip_fan_contour_width_min = 25;
+    _flow.flow_strip_fan_contour_hw_ratio_max = 3;
     _flow.flow_strip_fan_contour_hw_ratio_min = 1.2;
     _flow.flow_strip_fan_contour_area_ratio_max = 0.55;
     _flow.flow_strip_fan_contour_area_ratio_min = 0.20;
@@ -83,19 +83,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.Strip_Fan_Distance_min = 28;
 
 ///流动条相关参数筛选
-    _flow.flow_strip_contour_area_max = 1000;
-    _flow.flow_strip_contour_area_min = 200;
-    _flow.flow_strip_contour_length_max = 55;
-    _flow.flow_strip_contour_length_min = 10;//32
-    _flow.flow_strip_contour_width_max = 20;
-    _flow.flow_strip_contour_width_min = 4;
-    _flow.flow_strip_contour_hw_ratio_min = 3;
-    _flow.flow_strip_contour_hw_ratio_max = 7;
-    _flow.flow_strip_contour_area_ratio_min = 0.6;
-    _flow.flow_strip_contour_intersection_area_min = 100;
-
     _flow.target_intersection_contour_area_min = 40/4;//重合面积
-    _flow.twin_point_max = 20;
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
     _flow.Center_R_Control_area_max = 400;
@@ -146,7 +134,7 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
         output_pts = pts;
     } else {
         misscount++;
-        if(misscount>5){ //连续5帧丢目标
+        if(misscount>2){ //连续5帧丢目标
             misscount = 0;
             detect_flag = false;
         }
@@ -185,9 +173,13 @@ Mat EnergyDetector::preprocess(Mat &src) {
  //
     Mat gray,binary;
     cvtColor(src,gray, COLOR_BGR2GRAY);
-    threshold(gray,binary,70,255,THRESH_BINARY);
-    //Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
-    //dilate(binary, binary, element_dilate_1);
+    threshold(gray,binary,90,255,THRESH_BINARY);
+    Mat element_dilate_1;
+    if(blueTarget)
+        element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
+    else
+        element_dilate_1 = getStructuringElement(MORPH_RECT, Size(5, 5));
+    dilate(binary, binary, element_dilate_1);
     //morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
     //threshold(binary, binary, 0, 255, THRESH_BINARY);
 
@@ -520,6 +512,7 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
     double cur_contour_area = contourArea(armor_contour);
 //    LOGW("============Vaild Armor=================");
 //    LOGW("Count : %d\t Area : %lf", debug_cur_count++, cur_contour_area);
+
     if (cur_contour_area > _flow.armor_contour_area_max ||
         cur_contour_area < _flow.armor_contour_area_min) {
         //TODO
@@ -532,6 +525,7 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
     float length = cur_size.height > cur_size.width ? cur_size.height : cur_size.width;
     float width = cur_size.height < cur_size.width ? cur_size.height : cur_size.width;
 //    LOGW("Length : %f\t Width : %f", length, width);
+
     if (length < _flow.armor_contour_length_min || width < _flow.armor_contour_width_min ||
         length > _flow.armor_contour_length_max || width > _flow.armor_contour_width_max) {
         //TODO
@@ -548,6 +542,7 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
         //cout << "armor_contour_hw_ratio" << length_width_ratio <<endl;
         return false;
     }
+
     //cout << "right armor area : " << cur_contour_area << endl;
     //cout << "armor ratio : " << length_width_ratio << endl;
     return true;
@@ -567,10 +562,9 @@ bool EnergyDetector::isValidFlowStripFanContour(cv::Mat &src, const vector<cv::P
     if (cur_contour_area > _flow.flow_strip_fan_contour_area_max ||
         cur_contour_area < _flow.flow_strip_fan_contour_area_min) {
         //TODO
-        //cout << "flow_strip_fan_contour_area" << cur_contour_area << endl;
+        //cout << "flow_strip_fan_contour_area : " << cur_contour_area << endl;
         return false;
     }
-
     RotatedRect cur_rect = minAreaRect(flow_strip_fan_contour);
     Size2f cur_size = cur_rect.size;
 

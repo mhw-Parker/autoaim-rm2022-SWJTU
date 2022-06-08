@@ -353,16 +353,15 @@ namespace RMTools {
     }
 
     /**
-     * @brief 用坐标系 xyz 计算 yaw pitch dist
+     * @brief 获得四舍五入int值
      * */
-    inline Eigen::Vector3f calXYZ2YPD(Eigen::Vector3f xyz){
-        float yaw, pitch, dist;
-        Eigen::Vector3f ypd;
-        yaw = atan2(xyz[0],xyz[2]) / CV_PI * 180;
-        pitch = - atan2(xyz[1], sqrt(xyz[0]*xyz[0] + xyz[2]*xyz[2])) / CV_PI * 180;
-        dist = sqrt(pow(xyz[0],2) + pow(xyz[1],2) + pow(xyz[2],2));
-        ypd << yaw, pitch, dist;
-        return ypd;
+    inline int get4Left5int(float f) {
+        int int_f = f;
+        float d = f - int_f;
+        if(d >= 0.5) return int_f+1;
+        else if(d>0 && d < 0.5) return int_f;
+        else if(d<0 && d > -0.5) return int_f;
+        else return int_f - 1;
     }
     /**
      * @brief 将陀螺仪角度 total 值转化为 0 ~ 360°
