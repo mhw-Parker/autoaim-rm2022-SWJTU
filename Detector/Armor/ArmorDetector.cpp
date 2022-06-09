@@ -382,7 +382,8 @@ namespace rm
                 // 面积，高宽比，高，宽，角度，通道相减图平均权值
                 for (int j = 0; j < data.size(); j++) {
                     putText(img, to_string(data[j]), corner + Point2f(0, 20 * j),
-                            FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
+                            FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
+                            2);
                 }
             }
         }

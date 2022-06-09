@@ -54,7 +54,7 @@ namespace rm
         // 灯条高宽比
         // 哨兵巡逻会模糊，要调低此数值
         float minLightH2W = 2.5;
-        float maxLightH2W = 7.5;
+        float maxLightH2W = 6;
         // 灯条宽度
         float maxLightW = 22;
         // 灯条高度
