@@ -390,7 +390,7 @@ namespace rm
                 }
                 // 读取视频空格暂停
                 if (carName == VIDEO) {
-                    if (waitKey(30) == 32) {
+                    if (waitKey(25) == 32) {
                         while (waitKey() != 32) {}
                     }
                 }
@@ -482,7 +482,7 @@ namespace rm
                 double st = (double) getTickCount();
                 // 录制视频则不从电控读数据
                 if (carName != VIDEO && serialPtr->ReadData(receiveData)) {
-                    //curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
+                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
                     v_bullet = receiveData.bulletSpeed;
                     blueTarget = receiveData.targetColor;
                 }

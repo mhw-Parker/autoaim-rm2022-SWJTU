@@ -145,6 +145,22 @@ namespace rm
         armorNumber = 0;
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
         lossCnt = 0;
+        switch (carName) {
+            case VIDEO:
+            case IMAGE:
+
+            case HERO:
+            case INFANTRY_MELEE0:
+            case INFANTRY_MELEE1:
+
+                break;
+            case INFANTRY_TRACK:
+                break;
+            case SENTRY:
+            case SENTRYDOWN:
+                param.minLightH2W = 2;
+                break;
+        }
 
 //        cfgPath = "../Detector/resource/conf.cfg";
 //        weightPath = "../Detector/resource/528.weights";
@@ -332,10 +348,10 @@ namespace rm
 
 #pragma omp parallel for  // enable multi-thread run for "for"
         for (auto &i: contoursLight) {
-            if (i.size() < 20) continue;
-            double length = arcLength(i, true);
+            if (i.size() < param.minPointNum) continue;
             // 1：灯条周长
-            if (length < 20 || length > 800) continue;
+//            double length = arcLength(i, true);
+//            if (length < 10 || length > 800) continue;
             possibleLamp = fitEllipse(i); //用椭圆近似形状
             //ellipse(img, possibleLamp, Scalar::all(255));
             // 2：面积
@@ -422,12 +438,12 @@ namespace rm
 
                 /*the difference ratio of the two lights' height 灯条长度比例差 */
                 contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) /
-                              max(lights[i].rect.size.height, lights[j].rect.size.height);
+                                    (lights[i].rect.size.height + lights[j].rect.size.height) / 2;
                 if (contourLen1 > param.maxLengthError) continue;
 
                 /*the difference ratio of the two lights' width 灯条宽度比 */
-                contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) /
-                              max(lights[i].rect.size.width, lights[j].rect.size.width);
+//                contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) /
+//                              max(lights[i].rect.size.width, lights[j].rect.size.width);
 
                 /*the average height of two lights(also the height of the armor defined by these two lights)*/
                 nH = (lights[i].rect.size.height + lights[j].rect.size.height) / 2;
@@ -454,11 +470,27 @@ namespace rm
                 if (yDiff > param.maxYDiff) continue;
 
                 /*difference of average brightness*/
-                dAvgB = abs(lights[i].avgRSubBVal - lights[j].avgRSubBVal);
+                dAvgB = abs(lights[i].avgRSubBVal - lights[j].avgRSubBVal) /
+                            (lights[i].avgRSubBVal + lights[j].avgRSubBVal) / 2;
+
+                // 距离目标中心点的距离
+                auto center = (lights[i].rect.center + lights[j].rect.center) / 2;
+                float center_distance = sqrt(pow(fabs(center.x - FRAMEWIDTH / 2), 2) +
+                                        pow(fabs(center.y - FRAMEHEIGHT / 2), 2));
+                float center_ratio = center_distance / sqrt(pow(FRAMEHEIGHT / 2, 2) +
+                                                               pow(FRAMEWIDTH / 2, 2));
 
                 /*The match factor is still rough now. A formula is more reasonable. */
-                match_factor_ = contourLen1 + dAvgB + exp(dAngle + deviationAngle + MIN(fabs(ratio - 1.5),
-                                                                                        fabs(ratio - 3.5)));
+                if (carName == SENTRY || carName == SENTRYDOWN) {
+                    match_factor_ = contourLen1 + dAvgB +
+                                    dAngle / param.maxAngleError + deviationAngle / param.maxDeviationAngle +
+                                    exp(MIN(fabs(ratio - 1.2), fabs(ratio - 2.2)));
+                } else {
+                    match_factor_ = center_ratio + contourLen1 + dAvgB +
+                                    dAngle / param.maxAngleError + deviationAngle / param.maxDeviationAngle +
+                                    MIN(fabs(ratio - 1.2), fabs(ratio - 2.2));
+                }
+                cout << match_factor_ << endl;
 
                 matchLight = MatchLight(i, j, match_factor_, nH);
                 matchLights.emplace_back(matchLight);

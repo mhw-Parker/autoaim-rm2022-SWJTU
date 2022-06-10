@@ -86,7 +86,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.target_intersection_contour_area_min = 40/4;//重合面积
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
-    _flow.Center_R_Control_area_max = 400;
+    _flow.Center_R_Control_area_max = 500;
     _flow.Center_R_Control_area_min = 150;
     _flow.Center_R_Control_length_max = 70;
     _flow.Center_R_Control_length_min = 6;
@@ -342,6 +342,7 @@ bool EnergyDetector::getCircleCenter(Mat &src){
                 //cout << "circle area : " << area << endl;
                 continue; //中心轮廓图像面积
             }
+            //cout << "circle area : " << area << endl;
             Rect rect = boundingRect( circle_contours[t]);
             float ratio = float(rect.width) / float(rect.height);
             if (ratio < 4 && ratio > 0.8) { //近似正方形

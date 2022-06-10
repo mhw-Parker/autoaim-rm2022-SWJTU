@@ -22,6 +22,7 @@
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/ml.hpp>
 #include <opencv2/dnn.hpp>
+#include <Eigen/Dense>
 
 #include <iostream>
 #include <cmath>
@@ -38,6 +39,7 @@ using namespace std;
 using namespace cv;
 using namespace ml;
 using namespace cv::dnn;
+using namespace Eigen;
 
 namespace rm
 {
@@ -46,20 +48,18 @@ namespace rm
      */
     struct ArmorParam {
         /// 灯条识别参数
+        // 灯条点集数量
+        float minPointNum = 7;
         // 灯条面积
         float minLightArea = 10;
         float maxLightArea = 2100;
         // 灯条角度
-        float maxLightAngle = 35;
+        float maxLightAngle = 18;
         // 灯条高宽比
-        // 哨兵巡逻会模糊，要调低此数值
-        float minLightH2W = 2.5;
+        float minLightH2W = 1.2;
         float maxLightH2W = 6;
         // 灯条宽度
         float maxLightW = 22;
-        // 灯条高度
-        float maxLightH = 85;
-        float minLightH = 15;
         // 通道相减图中平均权值，场地
         float minAverageBrightness = 20;
         // 哨兵抖起来会画面糊，应调高此数值；
@@ -75,7 +75,7 @@ namespace rm
         float minRatio = 0.8;
         float maxRatio = 3;
         // 平均角度
-        float maxArmorAngle = 33;
+        float maxArmorAngle = 15;
         //
         float maxDeviationAngle = 45;
         // 灯条中心的竖直距离差 / 装甲板高度
