@@ -153,7 +153,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 哨兵射击命令
     if (carName == SENTRY || carName == SENTRYDOWN) {
         shootCmd = CheckShoot(gimbal_ypd, offset, armor_type);
-        cout << "Latency: " << latency << '\n';
+        //cout << "Latency: " << latency << '\n';
     }
     // 更新last值
     last_xyz = target_xyz;
@@ -310,11 +310,11 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
 bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
                            const int& armor_type) {
     float distance = predict_ypd[2];
-    float armor_width = (armor_type == 1 ? 230.0f : 135.0f) * 1.5;
-    float armor_height = 126 * 1.5;
+    float armor_width = (armor_type == 1 ? 230.0f : 135.0f) * 4;
+    float armor_height = 126.0f * 4;
     float yaw_error_threshold = atan(armor_width / 2 / distance) / degree2rad;
     float pitch_error_threshold = atan(armor_height / 2 / distance) / degree2rad;
-    printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
+    //printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
     if (fabs(gimbal_ypd[0] - predict_ypd[0] - offset[0]) < yaw_error_threshold &&
         fabs(gimbal_ypd[1] - predict_ypd[1] - offset[1]) < pitch_error_threshold) {
         return true;

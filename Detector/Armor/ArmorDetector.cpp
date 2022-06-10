@@ -364,7 +364,8 @@ namespace rm
             if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue;
             // 3：高，宽
             if (possibleLamp.size.width > param.maxLightW ||
-                possibleLamp.size.height > param.maxLightH) continue;
+                possibleLamp.size.height > param.maxLightH ||
+                possibleLamp.size.height < param.minLightH) continue;
             // 4：长宽比例
             float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
             if ((rate_height2width < param.minLightH2W) || (rate_height2width > param.maxLightH2W)) continue;
@@ -496,7 +497,6 @@ namespace rm
                                     dAngle / param.maxAngleError + deviationAngle / param.maxDeviationAngle +
                                     MIN(fabs(ratio - 1.2), fabs(ratio - 2.2));
                 }
-                cout << match_factor_ << endl;
 
                 matchLight = MatchLight(i, j, match_factor_, nH);
                 matchLights.emplace_back(matchLight);
