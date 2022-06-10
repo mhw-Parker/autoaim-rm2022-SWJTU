@@ -59,8 +59,9 @@ namespace rm
         // 哨兵巡逻会模糊，要调低此数值
         float minLightH2W = 1.8;
         float maxLightH2W = 7;
-        // 灯条宽度
-        float maxLightW = 22;
+        // 灯条宽，高
+        float maxLightW = 25;
+        float maxLightH = 85;
         // 通道相减图中平均权值，场地
         float minAverageBrightness = 20;
         // 哨兵抖起来会画面糊，应调高此数值；
