@@ -587,12 +587,13 @@ namespace rm
                     videoWriter.write(frame);
                     //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
                     //else cout << "txt close\n" ;
-                    // 每五分钟自动保存
+                    // 每3分钟自动保存
                     if (RMTools::CalWasteTime(startT, freq) / 1000 > 3 * 60) {
                         startT = getTickCount();
                         videoWriter.release();
                         saveVideoPath = ( string(OUTPUT_PATH + getSysTime()).append(".avi") );
-                        videoWriter.open(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+                        videoWriter.open(saveVideoPath,
+                                         cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
                                          70.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
                     }
                     saveMission = false;

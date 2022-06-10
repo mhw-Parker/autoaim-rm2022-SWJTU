@@ -328,7 +328,7 @@ namespace rm
         threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
         colorMap = Mat_<int>(sub);
         //imshow("channels-sub-binary",sub);
-        //imshow("gray-binary",thresholdMap);
+//        imshow("gray-binary",thresholdMap);
     }
 
     /**
@@ -358,7 +358,8 @@ namespace rm
             float lampArea = possibleLamp.size.width * possibleLamp.size.height;
             if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea)) continue;
             // 3：高，宽
-            if (possibleLamp.size.width > param.maxLightW) continue; //限制
+            if (possibleLamp.size.width > param.maxLightW ||
+                possibleLamp.size.height > param.maxLightH) continue;
             // 4：长宽比例
             float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
             if ((rate_height2width < param.minLightH2W) || (rate_height2width > param.maxLightH2W)) continue;

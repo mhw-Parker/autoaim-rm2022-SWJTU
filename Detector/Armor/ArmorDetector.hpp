@@ -56,8 +56,9 @@ namespace rm
         // 灯条角度
         float maxLightAngle = 18;
         // 灯条高宽比
-        float minLightH2W = 1.2;
-        float maxLightH2W = 6;
+        // 哨兵巡逻会模糊，要调低此数值
+        float minLightH2W = 1.8;
+        float maxLightH2W = 7;
         // 灯条宽度
         float maxLightW = 22;
         // 通道相减图中平均权值，场地
@@ -68,14 +69,14 @@ namespace rm
 
         /// 灯条匹配参数
         // 角度差
-        float maxAngleError = 5;
+        float maxAngleError = 4;
         // 高度差
         float maxLengthError = 0.3;
         // 装甲板长宽比
-        float minRatio = 0.8;
-        float maxRatio = 3;
+        float minRatio = 0.68;
+        float maxRatio = 2.5;
         // 平均角度
-        float maxArmorAngle = 15;
+        float maxArmorAngle = 13;
         //
         float maxDeviationAngle = 45;
         // 灯条中心的竖直距离差 / 装甲板高度

@@ -256,7 +256,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.process_noise_ *= 1;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 5;
+    RMKF.measure_noise_ *= 10;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     // 后验估计
@@ -310,8 +310,8 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
 bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
                            const int& armor_type) {
     float distance = predict_ypd[2];
-    float armor_width = (armor_type == 1 ? 230.0f : 135.0f);
-    float armor_height = 126 / 1.4;
+    float armor_width = (armor_type == 1 ? 230.0f : 135.0f) * 1.5;
+    float armor_height = 126 * 1.5;
     float yaw_error_threshold = atan(armor_width / 2 / distance) / degree2rad;
     float pitch_error_threshold = atan(armor_height / 2 / distance) / degree2rad;
     printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
