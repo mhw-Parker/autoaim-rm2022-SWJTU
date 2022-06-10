@@ -148,17 +148,22 @@ namespace rm
         switch (carName) {
             case VIDEO:
             case IMAGE:
-
+                break;
             case HERO:
             case INFANTRY_MELEE0:
             case INFANTRY_MELEE1:
-
                 break;
             case INFANTRY_TRACK:
                 break;
             case SENTRY:
             case SENTRYDOWN:
+                param.maxLightAngle = 18;
                 param.minLightH2W = 2;
+                param.maxLightH2W = 6;
+                param.minLightH = 12;
+                param.maxAverageBrightness = 120;
+
+                param.maxArmorAngle = 15;
                 break;
         }
 
