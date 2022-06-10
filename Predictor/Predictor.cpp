@@ -180,7 +180,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    waveClass.displayWave(target_v_xyz[0], 0, "y");
+    //waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
 }
 
 /**

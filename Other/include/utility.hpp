@@ -236,7 +236,7 @@ namespace RMTools {
                 max_v = 16;
                 break;
             case INFANTRY_MELEE0:
-                min_v = 15;
+                min_v = 10;
                 max_v = 30;
                 break;
             case INFANTRY_MELEE1:
@@ -271,6 +271,8 @@ namespace RMTools {
                 offset[0] = -0.4;
                 break;
             case INFANTRY_MELEE0:
+                offset[0] = -1.5;
+                offset[1] = -2;
                 break;
             case INFANTRY_MELEE1:
                 offset[0] = -1;

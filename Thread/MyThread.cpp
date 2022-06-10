@@ -465,6 +465,7 @@ namespace rm
                 cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
                 if(showArmorBox || showEnergy || showOrigin)
                     cout << "Show Image Cost : " << showImgTime << " ms" << endl;
+                cout<<"color"<< (int)receiveData.targetColor;
                 cout << endl;
 #endif
                 //
