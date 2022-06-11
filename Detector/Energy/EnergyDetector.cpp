@@ -57,25 +57,25 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
     // area change to 1/3
 ///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 2800;//1500
-    _flow.armor_contour_area_min = 200;//400
-    _flow.armor_contour_length_max = 110;//50
-    _flow.armor_contour_length_min = 25;//25
+    _flow.armor_contour_area_max = 1500;//1500
+    _flow.armor_contour_area_min = 500;//400
+    _flow.armor_contour_length_max = 80;//50
+    _flow.armor_contour_length_min = 20;//25
     _flow.armor_contour_width_max = 80;//30
-    _flow.armor_contour_width_min = 8;//15
+    _flow.armor_contour_width_min = 15;//15
     _flow.armor_contour_hw_ratio_max = 3;//3
-    _flow.armor_contour_hw_ratio_min = 1;//1
+    _flow.armor_contour_hw_ratio_min = 1.5;//1
 
 ///流动条所在扇叶的相关筛选参数
-    _flow.flow_strip_fan_contour_area_max = 5000;
-    _flow.flow_strip_fan_contour_area_min = 1500;
-    _flow.flow_strip_fan_contour_length_max = 320;
-    _flow.flow_strip_fan_contour_length_min = 50;
+    _flow.flow_strip_fan_contour_area_max = 5500;
+    _flow.flow_strip_fan_contour_area_min = 2500;
+    _flow.flow_strip_fan_contour_length_max = 220;
+    _flow.flow_strip_fan_contour_length_min = 80;
     _flow.flow_strip_fan_contour_width_max = 140;
-    _flow.flow_strip_fan_contour_width_min = 25;
+    _flow.flow_strip_fan_contour_width_min = 50;
     _flow.flow_strip_fan_contour_hw_ratio_max = 3;
     _flow.flow_strip_fan_contour_hw_ratio_min = 1.2;
-    _flow.flow_strip_fan_contour_area_ratio_max = 0.55;
+    _flow.flow_strip_fan_contour_area_ratio_max = 0.65;
     _flow.flow_strip_fan_contour_area_ratio_min = 0.20;
 
 ///流动条到装甲板距离参数
@@ -133,13 +133,10 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
         detect_flag = true;
         output_pts = pts;
     } else {
-        misscount++;
-        if(misscount>2){ //连续5帧丢目标
-            misscount = 0;
-            detect_flag = false;
-        }
+        detect_flag = false;
     }
-    imshow("outline",outline);
+    if(debug)
+        imshow("outline",outline);
 }
 /**
  * @brief EnergyDetector::preprocess
@@ -148,41 +145,22 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
  * @remark 图像预处理，完成二值化
  */
 Mat EnergyDetector::preprocess(Mat &src) {
-//    Mat blue_binary, red_binary, binary;
-//    //cvtColor(src, dst, COLOR_BGR2GRAY);
-//    Mat single, blue_c, red_c;
-//    vector<Mat> channels;
-//
-//    split(src, channels);
-//
-//    if (blueTarget) {
-//        single = channels.at(0);
-//        threshold(single,binary,120,255,THRESH_BINARY);
-//    } else {
-//        single = channels.at(2);
-//        threshold(single,binary,50,255,THRESH_BINARY);
-//    }
-//    blue_c = channels.at(0);
-//    red_c = channels.at(2);
-//    threshold(single, binary, 150, 255, THRESH_BINARY);
-//    threshold(blue_c,blue_binary,150,255,THRESH_BINARY);
-//    threshold(red_c,red_binary,50,255,THRESH_BINARY);
-//
-//    binary = blueTarget ? blue_binary - red_binary : red_binary - blue_binary; //滤掉白光
+    Mat gray,binary,sub_mat;
+    if(blueTarget) {
+        cvtColor(src,gray, COLOR_BGR2GRAY);
+        threshold(gray,binary,100,255,THRESH_BINARY);
+    }
+    else {
+        vector<Mat> channels;
+        split(src, channels);
+        subtract(channels[2],channels[0],sub_mat);
+        threshold(sub_mat,binary,110,255,THRESH_BINARY);
+    }
 
- //
-    Mat gray,binary;
-    cvtColor(src,gray, COLOR_BGR2GRAY);
-    threshold(gray,binary,90,255,THRESH_BINARY);
-    Mat element_dilate_1;
-    if(blueTarget)
-        element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
-    else
-        element_dilate_1 = getStructuringElement(MORPH_RECT, Size(5, 5));
-    dilate(binary, binary, element_dilate_1);
-    //morphologyEx(binary, binary, MORPH_CLOSE, element_dilate_1);
-    //threshold(binary, binary, 0, 255, THRESH_BINARY);
-        GaussianBlur(binary,binary,Size(3,3),0);
+    //imshow("sub mat", sub_mat);
+     Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
+     dilate(binary, binary, element_dilate_1);
+     GaussianBlur(binary,binary,Size(3,3),0);
 
     if(showBinaryImg)
         imshow("binary",binary);
@@ -542,6 +520,13 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
         //cout << "armor_contour_hw_ratio" << length_width_ratio <<endl;
         return false;
     }
+    if(debug) {
+        printf("----- energy armor param -----\n");
+        printf("armor_contour_area : %f\n", cur_contour_area);
+        printf("armor_contour_hw_ratio : %f\n", length_width_ratio);
+        printf("armor_contour_length : %f\n", length);
+        printf("armor_contour_width : %f\n", width);
+    }
 
     //cout << "right armor area : " << cur_contour_area << endl;
     //cout << "armor ratio : " << length_width_ratio << endl;
@@ -597,6 +582,14 @@ bool EnergyDetector::isValidFlowStripFanContour(cv::Mat &src, const vector<cv::P
         //cout << "flow_strip_fan_contour_area_ratio" << cur_contour_area / cur_size.area() << endl; //流动条轮廓占总面积的比例
         return false;
     }
+    if(debug) {
+        printf("flow_strip_fan_contour_length : %f\n", length);
+        printf("flow_strip_fan_contour_width : %f\n", width);
+        printf("flow_strip_fan_contour_hw_ratio : %f\n", length_width_ratio);
+        printf("flow_strip_fan_contour_area_ratio : %f\n", cur_contour_area / cur_size.area());
+        printf("flow_strip_fan_contour_area : %f\n", cur_contour_area);
+    }
+
 
     return true;
 }

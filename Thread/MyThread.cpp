@@ -567,8 +567,7 @@ namespace rm
             }
             /**press key 'space' to pause or continue task**/
             if (debug) {
-                if (!pauseFlag && waitKey(30) == 32) { pauseFlag = true; }
-
+                if (!pauseFlag && waitKey(10) == 32) { pauseFlag = true; }
                 if (pauseFlag) {
                     while (waitKey() != 32) {}
                     pauseFlag = false;
