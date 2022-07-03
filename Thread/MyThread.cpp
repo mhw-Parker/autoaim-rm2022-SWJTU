@@ -390,7 +390,7 @@ namespace rm
                 }
                 // 读取视频空格暂停
                 if (carName == VIDEO) {
-                    if (waitKey(25) == 32) {
+                    if (waitKey(10) == 32) {
                         while (waitKey() != 32) {}
                     }
                 }
@@ -465,7 +465,6 @@ namespace rm
                 cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
                 if(showArmorBox || showEnergy || showOrigin)
                     cout << "Show Image Cost : " << showImgTime << " ms" << endl;
-                cout<<"color"<< (int)receiveData.targetColor;
                 cout << endl;
 #endif
                 //
@@ -504,35 +503,6 @@ namespace rm
             if (showArmorBox || showEnergy) {
                 circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2,
                        Scalar(0, 255, 255), 3);
-
-//                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
-//                        2,
-//                        8, 0);
-//                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(255, 255, 255), 2, 8, 0);
-//
-//                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-//                        8,
-//                        0);
-//                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(255, 255, 255), 2, 8, 0);
-//
-//                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-//                        8,
-//                        0);
-//                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(255, 255, 255), 2, 8, 0);
-//
-//                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
-//                        Scalar(255, 255, 255),
-//                        2, 8, 0);
-//
-//                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
-//                        Scalar(0, 255, 0),
-//                        1, 8, 0);
-//                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
-//                        Scalar(0, 255, 0), 1, 8, 0);
-
                 if (showEnergy) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
                     for (int i = 0; i < 4; i++) {

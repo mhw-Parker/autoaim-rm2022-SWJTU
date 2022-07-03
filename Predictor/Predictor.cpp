@@ -50,6 +50,8 @@ void Predictor::Refresh() {
     KalmanRefresh();
     /**--------- 能量机关预测部分清空 ---------**/
     EnergyRefresh();
+    /**--------- 射击命令清零 ---------**/
+    shootCmd = 0;
 }
 void Predictor::EnergyRefresh(){
     angle.clear();
@@ -307,7 +309,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * 哨兵射击命令
  * @brief 直接用装甲板长度的1/1.4倍作为垂直于相机的长度分量
  */
-bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
+uint8_t Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
                            const int& armor_type) {
     float distance = predict_ypd[2];
     float armor_width = (armor_type == 1 ? 230.0f : 135.0f) * 4;
@@ -317,9 +319,9 @@ bool Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
     //printf("yaw_error_threshold: %.2f\npitch_error_threshold: %.2f\n", yaw_error_threshold, pitch_error_threshold);
     if (fabs(gimbal_ypd[0] - predict_ypd[0] - offset[0]) < yaw_error_threshold &&
         fabs(gimbal_ypd[1] - predict_ypd[1] - offset[1]) < pitch_error_threshold) {
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 /******************************************************************************************/
 

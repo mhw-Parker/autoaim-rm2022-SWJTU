@@ -125,7 +125,7 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
             }
                   }},
     {"-sentrydown", {
-                        "SENTRY SET SAIL! COMMANDER!",[]() {
+                        "SENTRYDOWN SET SAIL! COMMANDER!",[]() {
                 carName = SENTRYDOWN;
                 LOGM("SENTRY SET SAIL! COMMANDER!");
             }

@@ -71,9 +71,9 @@ public:
                         const Vector3f &gimbal_ypd, float v_, float dt,
                         int lost_cnt);
     // 哨兵自动射击
-    bool CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
+    uint8_t CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
                     const int& armor_type);
-    bool shootCmd;
+    uint8_t shootCmd{};
 
     Vector3f target_v_xyz{};
     Vector3f target_a_xyz{};

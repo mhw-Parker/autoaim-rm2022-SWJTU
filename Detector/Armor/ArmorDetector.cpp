@@ -146,7 +146,6 @@ namespace rm
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
         lossCnt = 0;
         switch (carName) {
-            case VIDEO:
             case IMAGE:
                 break;
             case HERO:
@@ -155,15 +154,18 @@ namespace rm
                 break;
             case INFANTRY_TRACK:
                 break;
+            case VIDEO:
             case SENTRY:
             case SENTRYDOWN:
                 param.maxLightAngle = 18;
                 param.minLightH2W = 2;
-                param.maxLightH2W = 6;
                 param.minLightH = 12;
-                param.maxAverageBrightness = 120;
+                param.maxLightH = 80;
+                param.maxAverageBrightness = 255;
 
                 param.maxArmorAngle = 15;
+                break;
+            default:
                 break;
         }
 
