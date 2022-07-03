@@ -34,7 +34,7 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0.2;
+            fit_gun_error = 0.15;
             coeff = 0.028;
             break;
         case INFANTRY_TRACK:

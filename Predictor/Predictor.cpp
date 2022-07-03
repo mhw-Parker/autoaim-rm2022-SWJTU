@@ -230,8 +230,8 @@ Vector3f Predictor::KalmanPredict(float v_, float t) {
         InitKfAcceleration(delta_t);
     }
     Vector3f pre_xyz;
-    pre_xyz = PredictKF(RMKF, step);
-    //pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
+    //pre_xyz = PredictKF(RMKF, step);
+    pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
     return pre_xyz;
 }
 
@@ -255,12 +255,15 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
     RMKF.process_noise_.setIdentity();
-    RMKF.process_noise_ *= 1;
+    RMKF.process_noise_ *= 0.01;
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 10;
+    RMKF.measure_noise_ *= 0.05;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
+    for (int i = 3; i < 9; ++i) {
+        RMKF.error_post_(i, i) *= 100;
+    }
     // 后验估计
     RMKF.state_post_ << target_xyz[0],target_xyz[1],target_xyz[2],
                         0,0,0,
