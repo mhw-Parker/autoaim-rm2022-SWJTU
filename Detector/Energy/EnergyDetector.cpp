@@ -3,7 +3,7 @@
   *FileName:  EnergyDetector.cpp
   *Author:  黄冬婷 罗俊辉 田翊扬 徐润泽
   *Version: 1.4
-  *Date:  2021.08.05
+  *Date:  2022.07.05
   *Description: 能量机关识别及预测
   *Function List:
      1.EnergyTask   能量机关任务执行接口
