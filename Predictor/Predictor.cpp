@@ -71,6 +71,7 @@ void Predictor::TimeRefresh() {
  */
 inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
+    target_xyz << 0, 0, 4000;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
 }
@@ -121,9 +122,16 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 通过目标xyz坐标计算yaw pitch distance
     target_xyz = GetGyroXYZ();
     // 识别到
-    if (target_xyz != last_xyz) {
-        // 和上一次target的距离大于某个阈值，则认为更换目标（小陀螺场景）
-        if (RMTools::GetDistance(last_xyz, target_xyz) > 250) {
+    //if (target_xyz != last_xyz) {
+    if (lost_cnt == 0) {
+        float distance = RMTools::GetDistance(last_xyz, target_xyz);
+        // 大范围更换目标认为是切换机器人
+        if (distance > 1000) {
+            // 深重置
+            Refresh();
+        }
+        // 小范围更换目标认为是小陀螺场景
+        else if (distance > 250) {
             // 进行浅重置，保留速度
             KalmanShallowRefresh();
         }
@@ -159,6 +167,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     }
     // 更新last值
     last_xyz = target_xyz;
+//    cout << RMKF.error_post_ << '\n';
 
     // 以下为debug显示数据
     if (showArmorBox) {
@@ -254,15 +263,18 @@ void Predictor::InitKfAcceleration(const float dt) {
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
+    float temp[9] = {1, 1, 1, 1, 1, 1, 5, 5, 5};
     RMKF.process_noise_.setIdentity();
-    RMKF.process_noise_ *= 0.01;
+    for (int i = 0; i < 9; i++) {
+        RMKF.process_noise_(i, i) *= temp[i];
+    }
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 0.05;
+    RMKF.measure_noise_ *= 2.5;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     for (int i = 3; i < 9; ++i) {
-        RMKF.error_post_(i, i) *= 100;
+        RMKF.error_post_(i, i) *= 1000;
     }
     // 后验估计
     RMKF.state_post_ << target_xyz[0],target_xyz[1],target_xyz[2],

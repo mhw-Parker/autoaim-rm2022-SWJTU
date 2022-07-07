@@ -141,7 +141,7 @@ namespace rm
         roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         findState = false;
         detectCnt = 0;
-        lostCnt = 10;
+        lostCnt = 15;
         armorNumber = 0;
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
         lossCnt = 0;
@@ -155,13 +155,15 @@ namespace rm
             case INFANTRY_TRACK:
                 break;
             case VIDEO:
+                param.maxAverageBrightness = 255;
+                break;
             case SENTRY:
             case SENTRYDOWN:
                 param.maxLightAngle = 18;
                 param.minLightH2W = 2;
                 param.minLightH = 12;
                 param.maxLightH = 80;
-                param.maxAverageBrightness = 255;
+                param.maxAverageBrightness = 120;// 120
 
                 param.maxArmorAngle = 15;
                 break;
@@ -578,74 +580,6 @@ namespace rm
     bool compMatchFactor(const MatchLight a, const MatchLight b)
     {
         return a.matchFactor < b.matchFactor;
-    }
-
-    /**
-    * @brief detect and filter lights in img
-    * @param img
-    * @return a vector of possible led object
-    **/
-    vector<Lamp> ArmorDetector::LightDetection(Mat& img)
-    {
-        Mat_<int> lampImage;
-        float angle_ = 0;
-        Scalar_<double> avg,avgBrightness;
-        float lampArea;
-
-        RotatedRect possibleLamp;
-        Rect rectLamp;
-        vector<Lamp> lampVector;
-
-        vector<vector<Point>> contoursLight;
-
-        findContours(img, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-
-#pragma omp parallel for
-        for (auto & i : contoursLight)
-        {
-            if (i.size() < 20)
-                continue;
-
-            double length = arcLength(i, true);
-
-            //cout << length << endl;
-            if (length > 20 && length < 800) //条件1：灯条周长
-            {
-                //cout << "周长：" << length << endl;
-                possibleLamp = fitEllipse(i); //用椭圆近似形状
-                //possibleLamp = minAreaRect(i);
-                lampArea = possibleLamp.size.width * possibleLamp.size.height;
-                //LOGM("lampArea : %f\n",lampArea);
-                if((lampArea > param.maxLightArea) || (lampArea < param.minLightArea))continue; //条件2：面积
-                float rate_height2width = possibleLamp.size.height / possibleLamp.size.width;
-                //LOGM("rate_height2width : %f\n",rate_height2width);
-                if((rate_height2width < param.minLightH2W) || (rate_height2width > param.maxLightH2W))continue; //条件3：长宽比例
-                angle_ = (possibleLamp.angle > 90.0f) ? (possibleLamp.angle - 180.0f) : (possibleLamp.angle);
-                //LOGM("angle_ : %f\n",angle_);
-                if(fabs(angle_) >= param.maxLightAngle)continue; //由于灯条形状大致为矩形，将矩形角度限制在 0 ~ 90°
-
-                rectLamp = possibleLamp.boundingRect(); //根据椭圆得出最小正矩形
-                MakeRectSafe(rectLamp,colorMap.size()); //防止灯条矩形越出画幅边界
-                mask = Mat::ones(rectLamp.height,rectLamp.width,CV_8UC1); //矩形灯条大小的全1灰度图
-
-                /* Add this to make sure numbers on armors will not be recognized as lamps */
-                lampImage = colorMap(rectLamp);
-                avgBrightness = mean(lampImage, mask); //求两者均值
-
-                avg = Scalar_<float>(avgBrightness);
-                //cout<<avg<<endl;
-
-                if((blueTarget && avg[0] < -10) || (!blueTarget && avg[0] > 10)) //灯条和数字的重叠面积有较大差别
-                {
-                    Lamp buildLampInfo(possibleLamp, angle_, avg[0]);
-                    lampVector.emplace_back(buildLampInfo);
-                }
-            }
-        }
-
-        //LOGM("SIZE OF lampVector : %d\n", lampVector.size());
-
-        return lampVector;
     }
 
     /**

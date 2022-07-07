@@ -47,10 +47,12 @@ public:
     ~Predictor();
     void Refresh();
     cv::Point2f predict_point;
-    float latency = 0.5, fly_t = 0.2, react_t = 0.15;
+    float latency = 0.5, fly_t = 0.2, react_t = 0.3;
     Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
     Vector3f target_xyz{}, predict_xyz{};
     Vector3f last_xyz{};
+    Vector3f target_v_xyz{};
+    Vector3f target_a_xyz{};
     // 弹速相关
     float average_v_bullet;
     float v_vec[4]{};
@@ -74,9 +76,6 @@ public:
     uint8_t CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
                     const int& armor_type);
     uint8_t shootCmd{};
-
-    Vector3f target_v_xyz{};
-    Vector3f target_a_xyz{};
 
 private:
     Vector3f KalmanPredict(float v_, float t);

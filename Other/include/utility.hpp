@@ -271,7 +271,7 @@ namespace RMTools {
                 offset[0] = -0.4;
                 break;
             case INFANTRY_MELEE0:
-                offset[0] = -1.5;
+                offset[0] = -1.7;
                 offset[1] = -2;
                 break;
             case INFANTRY_MELEE1:

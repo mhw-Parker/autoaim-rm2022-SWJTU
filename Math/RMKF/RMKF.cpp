@@ -27,8 +27,7 @@ void EigenKalmanFilter::Init(int state_param, int measure_param, int control_par
     temp1.setZero(state_param, state_param);
     temp2.setZero(measure_param, state_param);
     temp3.setZero(measure_param, measure_param);
-    temp4.setZero(measure_param, state_param);
-    temp5.setZero(measure_param, 1);
+    temp4.setZero(measure_param, 1);
 }
 
 MatrixXf EigenKalmanFilter::predict(const MatrixXf& control) {
@@ -43,10 +42,9 @@ MatrixXf EigenKalmanFilter::predict(const MatrixXf& control) {
 MatrixXf EigenKalmanFilter::correct(const VectorXf& measurement) {
     temp2 = error_pre_ * measure_mat_.transpose();
     temp3 = measure_mat_ * temp2 + measure_noise_;
-    temp4 = temp2 * temp3.inverse();
-    gain_ = temp4;
-    temp5 = measurement - measure_mat_ * state_pre_;
-    state_post_ = state_pre_ + gain_ * temp5;
+    gain_ = temp2 * temp3.inverse();
+    temp4 = measurement - measure_mat_ * state_pre_;
+    state_post_ = state_pre_ + gain_ * temp4;
     error_post_ = error_pre_ - gain_ * measure_mat_ * error_pre_;
     return state_post_;
 }

@@ -62,7 +62,7 @@ namespace rm
         float maxLightW = 25;
         float minLightH = 0;
         float maxLightH = 85;
-        // 通道相减图中平均权值，场地
+        // 通道相减图中平均权值
         float minAverageBrightness = 20;
         // 哨兵抖起来会画面糊，应调高此数值；
         // 场地要调低此数值
@@ -206,8 +206,6 @@ namespace rm
 
         void MaxMatch(vector<Lamp> &lights);
 
-        vector<Lamp> LightDetection(Mat& img);
-
         void LoadSvmModel(const char *model_path, const Size& armorImgSize = Size(40, 40));
 
         void SetSVMRectPoints(Point2f& lt, Point2f& rt, Point2f& lb, Point2f& rb);
@@ -297,17 +295,6 @@ namespace rm
         // 灯条匹配和识别参数
         struct ArmorParam param;
 
-        float averageRSubBVal = 0;
-        /**tracking member variables **/
-    public:
-        /*an instance of tracker*/
-        cv::Ptr<cv::Tracker> tracker;
-
-        /*if the tracer found the target, return true, otherwise return false*/
-        bool trackingTarget(Mat &src, Rect target);
-
-        /*armor number recogniztion*/
-    private:
         Ptr<SVM> svm;  //svm model svm模型
         Size svmArmorSize;
         Mat svmBinaryImage;
