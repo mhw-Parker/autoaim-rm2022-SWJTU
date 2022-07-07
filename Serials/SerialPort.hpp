@@ -69,7 +69,6 @@ struct ReceiveData
 
     float yawAngle = 0;
     float pitchAngle = 0;
-    float yawSpeed = 0;
     float bulletSpeed = 0;
     float pitchSpeed = 0;
     uint8_t targetMode = 0;

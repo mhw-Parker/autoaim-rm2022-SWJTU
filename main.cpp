@@ -20,10 +20,11 @@ int main(int argc, char** argv)
 
     /**  multi thread  **/
     pro.Init();
-    std::thread receiveThread(&rm::ImgProdCons::Receive, &pro);   //接收数据线程
-    std::thread frameThread(&rm::ImgProdCons::Produce, &pro);     //图像采集线程
-    std::thread detectThread(&rm::ImgProdCons::Detect, &pro);     //检测线程
-    std::thread feedbackThread(&rm::ImgProdCons::Feedback, &pro); //反馈线程
+
+    std::thread receiveThread(&rm::ImgProdCons::Receive, &pro);   // 接收数据线程
+    std::thread frameThread(&rm::ImgProdCons::Produce, &pro);     // 图像采集线程
+    std::thread detectThread(&rm::ImgProdCons::Detect, &pro);     // 检测线程
+    std::thread feedbackThread(&rm::ImgProdCons::Feedback, &pro); // 反馈线程
 
     if(saveVideo) {
         std::thread recordThread(&rm::ImgProdCons::Record, &pro);

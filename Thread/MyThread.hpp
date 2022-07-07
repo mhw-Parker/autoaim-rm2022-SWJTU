@@ -24,7 +24,7 @@
 #include "ImageWriter.hpp"
 #include "utility.hpp"
 #include "Predictor/Predictor.h"
-
+#include "Fifo.h"
 
 #ifdef DAHUA
 #include "Media/RMDriver.h"
@@ -44,27 +44,14 @@ using namespace V4L2KAS;
 
 namespace rm
 {
-
-    /*min unit to describe figure*/
-    struct Frame
-    {
-        cv::Mat img;
-        uint32_t seq;         //count from 0
-
-        Frame()=default;
-
-        Frame(const Mat& img_, uint32_t seq_)
-        {
-            img = img_.clone();
-            seq = seq_;
-        }
-
-        Frame clone() const
-        {
-            return Frame(img,seq);
-        }
-
-    };
+    /** create a new structure in order to synchronize the imu data **/
+     class timeStampMat {
+     public:
+         timeStampMat(Mat src, float t, ReceiveData data) : frame(src),stamp(t), mcuData(data){};
+         Mat frame;
+         float stamp;
+         ReceiveData mcuData;
+     };
 
     class ImgProdCons
     {
@@ -135,6 +122,10 @@ namespace rm
         vector<double> whole_time_arr;
         int time_cnt;
         /***/
+        /** new add thread fifo **/
+        FIFO<timeStampMat> frame_fifo;
+        FIFO<ReceiveData> receive_fifo;
+        FIFO<Mat> show_fifo;
 
         /* 保存图像相关 */
         string saveVideoPath;
@@ -203,11 +194,7 @@ namespace rm
         double startT;
         vector<float> time_stamp;
         long int cnt = 0, last_cnt = 0;
-        struct timeStampMat{
-            Mat frame;
-            float stamp;
-        }timeStampMat;
-        struct timeStampMat time_stamp_mat;
+
         vector<Point2f> target_pts;
         Point2f rotate_center;
     };

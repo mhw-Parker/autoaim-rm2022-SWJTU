@@ -4,11 +4,9 @@
 
 #include <csignal>
 #include <opencv2/opencv.hpp>
-#include <fstream>
 #include <chrono>
 #include <iostream>
 #include <memory>
-#include <sys/stat.h>
 #include <sys/types.h>
 
 #include "MyThread.hpp"
@@ -144,6 +142,7 @@ namespace rm
             driver(),
             missCount(0),
             showWave(100,300,500)
+            //stamp_mat(Mat::zeros(FRAMEWIDTH,FRAMEHEIGHT,CV_32FC1),0,receiveData)
     {
 
 //#if SAVE_LOG == 1
@@ -315,33 +314,33 @@ namespace rm
     void ImgProdCons::Produce()
     {
         do {
-            if(!produceMission) {
-                double st = (double) getTickCount();
-                if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH) {
-                    missCount++;
-                    //LOGW("FRAME GRAB FAILED!\n");
-                    if (missCount > 5) {
-                        driver->StopGrab();
-                        GrabFlag = false;
-                        quitFlag = true;
-                        cout << "Exit for grabbing fail." << '\n';
-                        raise(SIGINT);
-                        break;
-                    }
-                } else {
-                    //if(carName != VIDEO)
-                        time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000;
-                    //else {
-                    //    readTimeTxt >> time_stamp[++cnt%6000];
-                    //}
-                    saveMission = true;
+            double st = (double) getTickCount();
+            if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH) {
+                missCount++;
+                //LOGW("FRAME GRAB FAILED!\n");
+                if (missCount > 5) {
+                    driver->StopGrab();
+                    GrabFlag = false;
+                    quitFlag = true;
+                    cout << "Exit for grabbing fail." << '\n';
+                    raise(SIGINT);
+                    break;
                 }
-//                if (carName != VIDEO && saveVideo) {
-//                    videoWriter.write(frame);
-//                    //if(timeWrite.is_open()) timeWrite << time_stamp[cnt] << "\n";
-//                }
-                produceTime = CalWasteTime(st, freq);
-                produceMission = true;
+            } else {
+                time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000; // save logs which include time_stamp, yaw, pitch
+                saveMission = true;
+            }
+            // put new frame which grab from camera in Fifo
+            //double s = getTickCount();
+            timeStampMat temp(frame,time_stamp[cnt],receive_fifo.wait_and_pop());
+            frame_fifo.push(temp);
+            //printf("fifo time ： %f\n", CalWasteTime(s,getTickFrequency()));
+            produceTime = CalWasteTime(st, freq);
+            // 读取视频空格暂停
+            if (carName == VIDEO) {
+                if (waitKey(10) == 32) {
+                    while (waitKey() != 32) {}
+                }
             }
         }while(!quitFlag);
     }
@@ -349,117 +348,98 @@ namespace rm
     void ImgProdCons::Detect()
     {
         do {
-            if (!detectMission && produceMission) {
-                double st = (double)getTickCount();
-                last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //两次图片时间间隔 用当次时间序列值 - 上次时间序列值
-                last_cnt = cnt; //更新当次时间序列序号
-                // 读图片模式应该单线程执行Detect
-                if (carName == IMAGE) {
-                    driver->Grab(frame);
-                    FRAMEWIDTH = frame.cols;
-                    FRAMEHEIGHT = frame.rows;
-                    armorDetectorPtr->Init();
-                }
-                detectFrame = frame.clone();
-                produceMission = false;
-                /** 计算上一次源图像执行耗时 **/
-                cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
-                /** ** **/
-                if (lastControlState == curControlState) {
-                    lastControlState = curControlState;
-                } else {
-                    predictPtr->Refresh();
-                }
-                lastControlState = curControlState; //更新上一次的状态值
-                switch (curControlState) {
-                    case AUTO_SHOOT_STATE:
-                        Armor();
-                        break;
-                    case BIG_ENERGY_STATE:
-                    case SMALL_ENERGY_STATE:
-                        Energy();
-                        break;
-                    default:
-                        Armor();
-                }
-                // 读图片模式单线程，识别完按空格退出
-                if (carName == IMAGE) {
-                    show_img = detectFrame.clone();
-                    ShowImage();
-                    if (waitKey() == 32) exit(0);
-                }
-                // 读取视频空格暂停
-                if (carName == VIDEO) {
-                    if (waitKey(10) == 32) {
-                        while (waitKey() != 32) {}
-                    }
-                }
-                detectMission = true;
-                detectTime = CalWasteTime(st,freq);
+            double st = (double)getTickCount();
+            last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //两次检测时间间隔 用当次时间序列值 - 上次时间序列值
+            last_cnt = cnt; //更新当次时间序列序号
+            /** 计算上一次源图像执行耗时 **/
+            cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
+            timeStampMat detect_stamp = frame_fifo.wait_and_pop();
+            detectFrame = detect_stamp.frame.clone();
+            //printf("time : %f\n",detect_stamp.stamp);
+            Vector3f gimbal_ypd;
+            if(carName == VIDEO) {
+                gimbal_ypd << 0,0,0;
             }
+            else
+                gimbal_ypd << detect_stamp.mcuData.yawAngle,
+                        detect_stamp.mcuData.pitchAngle,
+                        0;
+
+            /** ** **/
+            if(lastControlState != curControlState) {   // if state change, refresh state
+                predictPtr->Refresh();
+                lastControlState = curControlState;
+            }
+            switch (curControlState) {
+                case AUTO_SHOOT_STATE:
+                    Armor();
+                    find_state = armorDetectorPtr->findState;
+                    predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
+                                               armorDetectorPtr->targetArmor.armorType,
+                                               gimbal_ypd,v_bullet,tmp_t,
+                                               armorDetectorPtr->lostCnt);
+                    break;
+                case BIG_ENERGY_STATE:
+                case SMALL_ENERGY_STATE:
+                    Energy();
+                    find_state = energyPtr->detect_flag;
+                    predictPtr->EnergyPredictor(curControlState,
+                                                energyPtr->pts,rotate_center,
+                                                gimbal_ypd,
+                                                v_bullet,tmp_t);
+                    break;
+                default:
+                    Armor();
+            }
+            // 读图片模式单线程，识别完按空格退出
+            if (carName == IMAGE) {
+                show_img = detectFrame.clone();
+                ShowImage();
+                if (waitKey() == 32) exit(0);
+            }
+            show_fifo.push(detectFrame);
+            detectTime = CalWasteTime(st,freq);
         }while (!quitFlag);
     }
 
     void ImgProdCons::Feedback() {
         do {
-            if (detectMission && receiveMission) {
-                double st = (double) getTickCount();
-
-                Vector3f gimbal_ypd;
-                if(carName == VIDEO)
-                    gimbal_ypd << 0, 0, 0;
-                else
-                    gimbal_ypd << receiveData.yawAngle, receiveData.pitchAngle, 0;
-                receiveMission = false;
-
-                tmp_t = last_mission_time; //同步时间
-                if(carName != IMAGE && (showArmorBox || showEnergy)) {
-                    show_img = detectFrame.clone();
+            double st = (double) getTickCount();
+            if (curControlState == AUTO_SHOOT_STATE) {
+                if (find_state) {
+                    Vector2f offset = RMTools::GetOffset(carName);
+                    yaw_abs = predictPtr->predict_ypd[0] + offset[0];
+                    pitch_abs = predictPtr->predict_ypd[1] + offset[1];
                 }
-                find_state = (curControlState == AUTO_SHOOT_STATE) ? (!armorDetectorPtr->lostState) : energyPtr->detect_flag;
-                if(curControlState != AUTO_SHOOT_STATE)
-                    rotate_center = energyPtr->circle_center_point;
-                detectMission = false;
-
-                if (curControlState == AUTO_SHOOT_STATE) {
-                    if (find_state) {
-                        predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts, armorDetectorPtr->targetArmor.armorType,
-                                                   gimbal_ypd,v_bullet,tmp_t, armorDetectorPtr->lostCnt);
-                        Vector2f offset = RMTools::GetOffset(carName);
-                        yaw_abs = predictPtr->predict_ypd[0] + offset[0];
-                        pitch_abs = predictPtr->predict_ypd[1] + offset[1];
-                    }
-                }
-                else {
-                    predictPtr->EnergyPredictor(curControlState,energyPtr->pts,rotate_center,gimbal_ypd,
-                                                   v_bullet,tmp_t);
-                    yaw_abs = predictPtr->predict_ypd[0];
-                    pitch_abs = predictPtr->predict_ypd[1];
-                }
-                /** package data and prepare for sending data to lower-machine **/
-                serialPtr->pack(yaw_abs,
-                                pitch_abs,
-                                predictPtr->predict_ypd[2],
-                                predictPtr->shootCmd,
-                                find_state,
-                                curControlState,
-                                0);
+            }
+            else {
+                yaw_abs = predictPtr->predict_ypd[0];
+                pitch_abs = predictPtr->predict_ypd[1];
+            }
+            /** package data and prepare for sending data to lower-machine **/
+            serialPtr->pack(yaw_abs,
+                            pitch_abs,
+                            predictPtr->predict_ypd[2],
+                            predictPtr->shootCmd,
+                            find_state,
+                            curControlState,
+                            0);
 #if SAVE_TEST_DATA == 1
-                if(dataWrite.is_open())
+            if(dataWrite.is_open())
                     dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << endl;
 #endif
-                /// 发送数据，除了读取视频模式
-                if (carName != VIDEO && serialPtr->WriteData()) {
+            /// 发送数据，除了读取视频模式
+            if (carName != VIDEO && serialPtr->WriteData()) {
 #if SAVE_LOG == 1
-                    logWrite<<"[Write Data to USB2TTL SUCCEED]"<<endl;
+                logWrite<<"[Write Data to USB2TTL SUCCEED]"<<endl;
 #endif
-                } else {
-                    //logWrite<<"[Write Data to USB2TTL FAILED]"<<endl;
-                }
-                feedbackTime = CalWasteTime(st,freq);
-                /** Receive data from low-end machine to update parameters(the color of robot, the task mode, etc) **/
+            } else {
+                //logWrite<<"[Write Data to USB2TTL FAILED]"<<endl;
+            }
+            feedbackTime = CalWasteTime(st,freq);
+            /** Receive data from low-end machine to update parameters(the color of robot, the task mode, etc) **/
 #if SHOWTIME == 1
-                cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
+            cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
                 cout << "Detect Mission Cost : " << detectTime << " ms" << endl;
                 cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << endl;
                 cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
@@ -467,10 +447,9 @@ namespace rm
                     cout << "Show Image Cost : " << showImgTime << " ms" << endl;
                 cout << endl;
 #endif
-                //
-                if (carName != IMAGE && (showArmorBox || showEnergy || showOrigin)) {
-                    ShowImage();
-                }
+            //
+            if (carName != IMAGE && (showArmorBox || showEnergy || showOrigin)) {
+                ShowImage();
             }
         }while (!quitFlag);
     }
@@ -478,31 +457,55 @@ namespace rm
     void ImgProdCons::Receive()
     {
         do{
-            if(produceMission && !receiveMission){
-                double st = (double) getTickCount();
-                // 录制视频则不从电控读数据
-                if (carName != VIDEO && serialPtr->ReadData(receiveData)) {
-                    curControlState = receiveData.targetMode; //由电控确定当前模式 0：自瞄装甲板 1：小幅 2：大幅
-                    v_bullet = receiveData.bulletSpeed;
-                    blueTarget = receiveData.targetColor;
-                }
-                receiveTime = CalWasteTime(st, freq);
-                receiveMission = true;
-            }
+            double st = (double) getTickCount();
+            // 读取视频则不从电控读数据
+//            if (carName != VIDEO && serialPtr->ReadData(receiveData)) {
+//                receive_fifo.push(receiveData);
+//            }
+            serialPtr->ReadData(receiveData);
+            receive_fifo.push(receiveData);
+            receiveTime = CalWasteTime(st, freq);
 #if SHOWTIME == 1
             //
 #endif
-
         } while (!quitFlag);
     }
 
     void ImgProdCons::ShowImage() {
         double st = (double) getTickCount();
+        show_img = show_fifo.wait_and_pop().clone();
         if (!show_img.empty()) {
             //Mat show_img = detectFrame.clone();
             if (showArmorBox || showEnergy) {
                 circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2,
                        Scalar(0, 255, 255), 3);
+                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
+                        2,
+                        8, 0);
+                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
+                        8,
+                        0);
+                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
+                        8,
+                        0);
+                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(255, 255, 255), 2, 8, 0);
+
+                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
+                        Scalar(255, 255, 255),
+                        2, 8, 0);
+
+                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
+                        Scalar(0, 255, 0),
+                        1, 8, 0);
+                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
+                        Scalar(0, 255, 0), 1, 8, 0);
                 if (showEnergy) {
                     circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
                     for (int i = 0; i < 4; i++) {
@@ -535,6 +538,7 @@ namespace rm
                 imshow("detect", frame);
                 waitKey(3);
             }
+
             /**press key 'space' to pause or continue task**/
             if (debug) {
                 if (!pauseFlag && waitKey(10) == 32) { pauseFlag = true; }
