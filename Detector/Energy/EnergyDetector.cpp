@@ -57,7 +57,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
     // area change to 1/3
 ///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 1500;//1500
+    _flow.armor_contour_area_max = 2800;//1500
     _flow.armor_contour_area_min = 500;//400
     _flow.armor_contour_length_max = 80;//50
     _flow.armor_contour_length_min = 20;//25
@@ -86,7 +86,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.target_intersection_contour_area_min = 40/4;//重合面积
 
 ///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
-    _flow.Center_R_Control_area_max = 500;
+    _flow.Center_R_Control_area_max = 800;
     _flow.Center_R_Control_area_min = 150;
     _flow.Center_R_Control_length_max = 70;
     _flow.Center_R_Control_length_min = 6;
@@ -122,7 +122,7 @@ void EnergyDetector::clearAll() {
     armor_centers.clear();
     output_pts.clear(); //输出4点
 }
-void EnergyDetector::EnergyDetectTask(const Mat &src) {
+void EnergyDetector::EnergyDetectTask(Mat &src) {
     clearAll();
     Mat img = src.clone();
     Mat binary;
@@ -135,6 +135,18 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
     } else {
         detect_flag = false;
     }
+    if(showEnergy && detect_flag) {
+        circle(src, circle_center_point, 3, Scalar(255, 255, 255), 2);
+        float c2c = pointDistance(circle_center_point,target_point);
+        for (int i = 0; i < 4; i++) {
+            line(src, pts[i], pts[(i + 1) % (4)],Scalar(0, 255, 0), 1, LINE_8);
+            float p2c = pointDistance(pts[i], circle_center_point);
+            if(p2c < c2c) {
+                line(src,pts[i],circle_center_point,Scalar(0, 255, 0), 1, LINE_8);
+            }
+        }
+        //circle(src, target_point, 2, Scalar(0, 255, 0), 3);
+    }
     if(debug)
         imshow("outline",outline);
 }
@@ -145,22 +157,18 @@ void EnergyDetector::EnergyDetectTask(const Mat &src) {
  * @remark 图像预处理，完成二值化
  */
 Mat EnergyDetector::preprocess(Mat &src) {
-    Mat gray,binary,sub_mat;
-    if(blueTarget) {
-        cvtColor(src,gray, COLOR_BGR2GRAY);
-        threshold(gray,binary,100,255,THRESH_BINARY);
-    }
-    else {
-        vector<Mat> channels;
-        split(src, channels);
+    Mat gray, binary, sub_mat;
+    vector<Mat> channels;
+    split(src, channels);
+    if(blueTarget)
+        subtract(channels[0],channels[2],sub_mat);
+    else
         subtract(channels[2],channels[0],sub_mat);
-        threshold(sub_mat,binary,110,255,THRESH_BINARY);
-    }
+    threshold(sub_mat,binary,80,255,THRESH_BINARY);
 
-    //imshow("sub mat", sub_mat);
-     Mat element_dilate_1 = getStructuringElement(MORPH_RECT, Size(3, 3));
-     dilate(binary, binary, element_dilate_1);
-     GaussianBlur(binary,binary,Size(3,3),0);
+    Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));
+    morphologyEx(sub_mat,sub_mat,MORPH_CLOSE,element_close);
+    GaussianBlur(sub_mat,sub_mat,Size(5,5),0);
 
     if(showBinaryImg)
         imshow("binary",binary);
@@ -413,6 +421,8 @@ bool EnergyDetector::getTargetPoint(Mat &src) {
         target_armor_centers.push_back(target_point);
     } else if (target_armor_centers.empty())
         target_armor_centers.push_back(target_point);
+    /**---------**/
+
     return true;
 }
 
@@ -473,12 +483,7 @@ Point2f EnergyDetector::calR3P() {
     circle(outline,Point2f (result(1,0),result(0,0)),3,Scalar(200,200,50),2);
     return Point2f (result(1,0),result(0,0));
 }
-void EnergyDetector::updateLastValues() {
-    last_target_armor = target_armor;
-    last_target_point = target_point;
-    last_circle_center_point = circle_center_point;
-    last_frame_time = frame_time;
-}
+
 
 /**
  * @brief EnergyDetector::isValidArmorContour

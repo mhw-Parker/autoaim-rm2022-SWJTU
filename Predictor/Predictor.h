@@ -64,7 +64,7 @@ private:
     void UpdateTimeStamp(float &dt);
     void TimeRefresh();
     SolveAngle solveAngle;
-    vector<float> time_series;
+    vector<float> t_list, time_series;
     float total_t = 0;
     float degree2rad = CV_PI / 180;
 
@@ -96,30 +96,37 @@ private:
     float predict_dt = 0.05; // 预测时拉长步长节省计算，sentry:0.03
 
 public:
-    void EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt);
+    void EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float t_stamp);
     void EnergyRefresh();
     vector<Point2f> predict_pts;
 
 private:
     /** energy machine common function **/
-    bool JudgeFanRotation();
+    void JudgeFanRotation();
     float CalOmegaNStep(int step, float &total_theta);
     bool EnergyStateSwitch();
+
+    float IdealOmega(float &t_);
+    float IdealRad(float t1, float t2);
 
     float total_theta = 0;
     float current_theta = 0;
     float current_omega = 0;
-    vector<float> angle;
-    vector<float> omega;
+    vector<float> angle, omega;
 
     Point2f last_point;
-    float dt_ = 0.01;
+    float dt_ = 0.012;
     float iterate_pitch ;
+
+    int differ_step = 2;
+    bool peak_flag = false;
 
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
     u_int8_t ctrl_mode = STANDBY;
 
     RMTools::DisPlayWaveCLASS omegaWave;
+
+    int clockwise_cnt = 0;
 
     /**---- energy machine kalman filter ----**/
     void FilterOmega(const float &dt);
@@ -133,9 +140,10 @@ private:
 
     /**---- estimate big fan rotation speed parameters ----**/
     void estimateParam(vector<float> &omega_, vector<float> &t_);
+    int fit_cnt = 0;
     ceres::Problem problem;
     double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值
-    int st = 0;
+    int st_ = 0;
     struct SinResidual{
         SinResidual(double t, double omega): omega_(omega), t_(t) {}
 

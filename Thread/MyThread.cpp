@@ -338,7 +338,7 @@ namespace rm
             produceTime = CalWasteTime(st, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(10) == 32) {
+                if (waitKey(12) == 32) {
                     while (waitKey() != 32) {}
                 }
             }
@@ -352,7 +352,7 @@ namespace rm
             last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //两次检测时间间隔 用当次时间序列值 - 上次时间序列值
             last_cnt = cnt; //更新当次时间序列序号
             /** 计算上一次源图像执行耗时 **/
-            cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
+            //cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
             timeStampMat detect_stamp = frame_fifo.wait_and_pop();
             detectFrame = detect_stamp.frame.clone();
             //printf("time : %f\n",detect_stamp.stamp);
@@ -382,11 +382,18 @@ namespace rm
                 case BIG_ENERGY_STATE:
                 case SMALL_ENERGY_STATE:
                     Energy();
+                    detectTime = CalWasteTime(st,freq);
                     find_state = energyPtr->detect_flag;
-                    predictPtr->EnergyPredictor(curControlState,
-                                                energyPtr->pts,rotate_center,
-                                                gimbal_ypd,
-                                                v_bullet,tmp_t);
+                    if(find_state) {
+                        double pre_t = getTickCount();
+                        predictPtr->EnergyPredictor(BIG_ENERGY_STATE,
+                                                    energyPtr->pts,
+                                                    energyPtr->circle_center_point,
+                                                    gimbal_ypd,
+                                                    v_bullet,
+                                                    detect_stamp.stamp);
+                        printf("predict time : %f\n\n", CalWasteTime(pre_t,freq));
+                    }
                     break;
                 default:
                     Armor();
@@ -398,7 +405,8 @@ namespace rm
                 if (waitKey() == 32) exit(0);
             }
             show_fifo.push(detectFrame);
-            detectTime = CalWasteTime(st,freq);
+
+            printf("detect time : %f\n",detectTime);
         }while (!quitFlag);
     }
 
@@ -479,47 +487,25 @@ namespace rm
             if (showArmorBox || showEnergy) {
                 circle(show_img, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 2,
                        Scalar(0, 255, 255), 3);
-                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),
-                        2,
-                        8, 0);
-                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,
-                        Scalar(255, 255, 255), 2, 8, 0);
+                putText(show_img, "distance: ", Point(0, 30), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255),2,8, 0);
+                putText(show_img, to_string(predictPtr->delta_ypd[2]), Point(150, 30), cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-                        8,
-                        0);
-                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,
-                        Scalar(255, 255, 255), 2, 8, 0);
+                putText(show_img, "yaw: ", Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,8,0);
+                putText(show_img, to_string(predictPtr->delta_ypd[0]), Point(80, 60), cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,
-                        8,
-                        0);
-                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,
-                        Scalar(255, 255, 255), 2, 8, 0);
+                putText(show_img, "pitch: ", Point(0, 90), cv::FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2,8,0);
+                putText(show_img, to_string(predictPtr->delta_ypd[1]), Point(100, 90), cv::FONT_HERSHEY_PLAIN, 2,Scalar(255, 255, 255), 2, 8, 0);
 
-                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,
-                        Scalar(255, 255, 255),
-                        2, 8, 0);
+                putText(show_img, "detecting:  ", Point(0, 120), cv::FONT_HERSHEY_SIMPLEX, 1,Scalar(255, 255, 255),2, 8, 0);
 
-                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,
-                        Scalar(0, 255, 0),
-                        1, 8, 0);
-                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,
-                        Scalar(0, 255, 0), 1, 8, 0);
-                if (showEnergy) {
-                    circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                    for (int i = 0; i < 4; i++) {
-                        line(show_img, energyPtr->pts[i], energyPtr->pts[(i + 1) % (4)],
-                             Scalar(255, 255, 255), 2, LINE_8);
-                        line(show_img, predictPtr->predict_pts[i], predictPtr->predict_pts[(i + 1) % (4)],
-                             Scalar(0, 255, 255), 2, LINE_8);
-                    }
-                    circle(show_img, energyPtr->target_point, 2, Scalar(0, 0, 255), 3);
-                    circle(show_img, energyPtr->circle_center_point, 3, Scalar(255, 255, 255), 3);
-                }
+                putText(show_img, "cost:", Point(1060, 28), cv::FONT_HERSHEY_SIMPLEX, 1,Scalar(0, 255, 0),1, 8, 0);
+                putText(show_img, to_string(last_mission_time*1000), Point(1140, 30), cv::FONT_HERSHEY_PLAIN, 2,Scalar(0, 255, 0), 1, 8, 0);
+
                 if (find_state) {
-                    circle(show_img, Point(165, 115), 4, Scalar(255, 255, 255), 3);
-                    circle(show_img, predictPtr->predict_point, 5, Scalar(100, 240, 15), 2);
+                    for (int i = 0; i < 4; i++) {
+                        line(show_img, predictPtr->predict_pts[i], predictPtr->predict_pts[(i + 1) % (4)],Scalar(180, 105, 255), 1, LINE_8);
+                    }
+                    circle(show_img, predictPtr->predict_point, 4, Scalar(180, 105, 255), 2);
                 }
                 imshow("Detect Frame", show_img);
                 if (carName == IMAGE) {

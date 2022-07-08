@@ -62,7 +62,7 @@ class EnergyDetector{
 public:
     explicit EnergyDetector();//构造函数
     ~EnergyDetector();//析构函数
-    void EnergyDetectTask(const Mat &src);
+    void EnergyDetectTask(Mat &src);
 
     vector<Point2f> output_pts;
     vector<Point2f> pts;
@@ -75,12 +75,7 @@ public:
 
 private:
     std::vector<cv::Point2f> target_armor_centers;//get
-
-    const float R = 168;
     const float K = 11; //半径倍数
-
-    cv::Point2f last_circle_center_point;//上一次风车圆心坐标
-    cv::Point2f last_target_point;//上一次目标装甲板坐标
 
     WindmillParamFlow _flow;
 
@@ -101,8 +96,6 @@ private:
     Point2f calR1P();
     Point2f calR3P();
 
-    void findROI(Mat &src, Mat &dst);
-    void roiPoint2src();
     Point2f roi_sp; //roi的左上角起始点
 
     bool isValidArmorContour(const vector<cv::Point>& armor_contour) const;//装甲板矩形尺寸要求

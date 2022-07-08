@@ -50,14 +50,14 @@ bool MindDriver::Grab(Mat &src) {
     if (CameraGetImageBuffer(hCamera, &sFrameInfo, &pbyBuffer, 1000) == CAMERA_STATUS_SUCCESS) {
 
         CameraImageProcess(hCamera, pbyBuffer, g_pRgbBuffer, &sFrameInfo);
-        //cout << "get camera buffer: " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
+        //cout << "get camera buffer: " << RMTools::CalWasteTime(st_,getTickFrequency()) << endl;
         /// it takes almost 99.7% of the whole produce time !
         src = cv::Mat(
                 cvSize(sFrameInfo.iWidth, sFrameInfo.iHeight),
                 sFrameInfo.uiMediaType == CAMERA_MEDIA_TYPE_MONO8 ? CV_8UC1 : CV_8UC3,
                 g_pRgbBuffer
         );
-        //cout << "convert to cv mat: " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
+        //cout << "convert to cv mat: " << RMTools::CalWasteTime(st_,getTickFrequency()) << endl;
         CameraReleaseImageBuffer(hCamera, pbyBuffer);
         return true;
     } else

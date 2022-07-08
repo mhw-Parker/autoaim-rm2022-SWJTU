@@ -36,6 +36,7 @@ Predictor::Predictor() : waveClass(2000,300,1000),
         case NOTDEFINED:
             break;
     }
+    Refresh();
 }
 
 Predictor::~Predictor() = default;
@@ -57,9 +58,15 @@ void Predictor::EnergyRefresh(){
     angle.clear();
     omega.clear();
     filter_omega.clear();
+    time_series.clear();
+    t_list.clear();
     ctrl_mode = STANDBY;
     total_theta = 0;
     energy_flag = false;
+    clockwise_cnt = 0;
+    fit_cnt = 0;    // curve fitting times
+    initFanRadKalman();
+    initFanRotateKalman();
 }
 void Predictor::TimeRefresh() {
     total_t = 0;
@@ -350,16 +357,16 @@ uint8_t Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset
  * @param center 旋转中心
  * @param gimbal_ypd 云台陀螺仪角度
  * @param v_ 弹速
- * @param dt 两次处理源图像时间间隔
+ * @param t_stamp 当次时间戳
  * */
-void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float dt) {
-    total_t += dt; //时间戳正常累加
+void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float t_stamp) {
+    t_list.push_back(t_stamp); // 更新时间戳 单位：s
     bool check = RMTools::CheckBulletVelocity(carName, v_);
     // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均；数组满则覆盖头部
     if (check && v_vec[(v_vec_pointer + 3) % 4] != v_) {
         v_vec[v_vec_pointer++ % 4] = v_;
     }
-    // 取弹速平均值
+    /// average bullet speed
     average_v_bullet = RMTools::average(v_vec, 4);
     //average_v_bullet = v_;
     Point2f target_point;
@@ -367,32 +374,49 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
     else
         return;
-    if(last_point == target_point) return; //如果目标没有更新
-    last_point = target_point; //目标更新
-    time_series.push_back(total_t); //更新时间序列
-
-    Point2f p = target_point - center; //圆心指向目标的向量
-    current_theta = atan2(p.y,p.x);     //当前角度 弧度制
-    //cout << "+++ " << current_theta << endl;
-    angle.push_back(current_theta);    //存放对应的角度序列
-    //cout << "----" << endl;
-    if(JudgeFanRotation()) {
+    if(last_point == target_point) return; // if the target didn't refresh
+    last_point = target_point;
+    /// calculate current fan angle rad
+    Point2f p = target_point - center;  // vector from center to target point
+    current_theta = atan2(p.y,p.x);
+    angle.push_back(current_theta);     // a condition used to store angle
+    /// estimate and predict
+    if(angle.size() <= differ_step) {   // if differ_step = n, angle condition minimum size is n+1, so that we can get 4 time gap
+        predict_pts = target_pts;
+    }
+    else {
+        current_omega = CalOmegaNStep(differ_step, total_theta);
+        time_series.push_back(t_list[t_list.size()-1-differ_step/2]);
+        omega.push_back(current_omega);
+        JudgeFanRotation();
         if(mode == BIG_ENERGY_STATE) {
-            FilterOmega(dt);
-            if(EnergyStateSwitch()){
-                FilterRad(latency);
+            FilterOmega(dt_);
+            if(EnergyStateSwitch()) {
+                float wt = IdealOmega(time_series.back());
+                float d_w = wt - filter_omega.back();
+                if(fabs(d_w) > 0.3 && fit_cnt < 3) {                   // if the difference value between ideal omega and filter omega is too big
+                    ctrl_mode = ESTIMATE;
+                    st_ = filter_omega.size() - 200;    // use 200 points refit the ideal omega
+                    predict_rad = filter_omega.back() * latency;
+                    fit_cnt++;
+                }
+                else {
+                    predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.35);
+                    printf("time: %f\tfit times: %d\n",t_list.back(),fit_cnt);
+                    omegaWave.displayWave(filter_omega.back(), d_w, "omega");
+                    //FilterRad(latency);
+                }
             }
-            else
-                predict_rad = 0;
+            else {
+                predict_rad = filter_omega.back() * latency;
+            }
         }
         else
-            predict_rad = energy_rotation_direction * 1.05 * latency; //小幅
-        predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
-        getPredictRect(center, target_pts, predict_rad); //获得预测矩形
+            predict_rad = energy_rotation_direction * 1.05 * latency;
     }
-    else
-        predict_pts = target_pts;
-    solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); ///测试弹道 predict_pts -> target_pts
+    predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
+    getPredictRect(center, target_pts, predict_rad); //获得预测矩形
+    solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
@@ -402,28 +426,19 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
         predict_ypd[1] = iterate_pitch + 1.9;
     else
         predict_ypd[1] = iterate_pitch + 3;
-//    Vector2f offset = RMTools::GetOffset(carName);
-//    predict_ypd[0] += offset[0];
-//    float y_max = 1580, y_min = 260;
-//    float delta_y_max = y_max - y_min;
-//    float strange_coeff = (-predict_xyz[1] * 0.00038) + 0.9;
-//    predict_ypd[1] = iterate_pitch + offset[1] * strange_coeff;
-    //predict_ypd[1] = solveAngle.CalPitch(predict_xyz,v_,fly_t) + 3.3;
     latency = react_t + fly_t;
 }
 
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
         case STANDBY:
-            if(fabs(filter_omega.back()) > 2.05) {
-                st = filter_omega.size() - 1;
-                phi_ = CV_PI / 2;
-                ctrl_mode = BEGIN;
+            if(fabs(current_omega) > 2.05) {
+                peak_flag = true; // which means we get a wave peak
+                phi_ = CV_PI/2 - w_*time_series.back(); // initial phi
             }
-            return false;
-        case BEGIN:
-            if(time_series.back() - time_series[st] > 3)
+            if(time_series.back() - time_series.front() > 2 && peak_flag) {
                 ctrl_mode = ESTIMATE;
+            }
             return false;
         case ESTIMATE:
             estimateParam(filter_omega,time_series);
@@ -434,26 +449,9 @@ bool Predictor::EnergyStateSwitch() {
         default: return true;
     }
 }
-bool Predictor::JudgeFanRotation() {
-    if(angle.size() > 4 && angle.size() < 19){
-        current_omega = CalOmegaNStep(3, total_theta);
-        omega.push_back(current_omega);
-        if(angle.size() == 18) {
-            int clockwise_cnt = 0; //顺时针旋转计数器
-            for(auto &i : omega)
-                if(i>0) clockwise_cnt++;
-            energy_rotation_direction = clockwise_cnt > omega.size()/2 ? 1 : -1;
-            total_theta = current_theta; //将当前累积角度更新为当前角度
-            initFanRotateKalman();
-            initFanRadKalman();
-            return true;
-        }
-        else return false;
-    }
-    else {
-        energy_flag = true;
-        return true;
-    }
+void Predictor::JudgeFanRotation() {
+    clockwise_cnt = (current_omega > 0) ? clockwise_cnt+1 : clockwise_cnt-1;// clockwise counter
+    energy_rotation_direction = (clockwise_cnt > 0) ? 1 : -1;// anticlockwise counter
 }
 /**
  * @brief 计算能量机关旋转角速度
@@ -466,27 +464,26 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
         return 0;
     } else {
         float d_theta = angle.back() - angle[angle.size()-step_];
-        float dt = time_series.back() - time_series[time_series.size()-step_];
+        float dt = t_list.back() - t_list[t_list.size()-step_];
         if(d_theta > 6)
             d_theta -= CV_2PI;
         if(d_theta < -6)
             d_theta += CV_2PI;
-        /** ********* new ************ **/
-        float last_d_theta = angle.back() - angle[angle.size()-2]; //与上一次差
-        int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); //1.2566 = 2*pi/4  四舍五入
+        /** new logic in order to solve the change fan problem **/
+        float last_d_theta = angle.back() - angle[angle.size()-2]; // delta value between last time
+        int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); // 1.2566 = 2*pi/5  四舍五入
         if(abs(d_fan) >= 1) {
-            //cout << d_fan << endl;
             for(int i = 2;i <= step_;i++) {
                 angle[angle.size()-i] += d_fan * 1.2566;
                 if(angle[angle.size()-i] < CV_2PI) angle[angle.size()-i] += CV_2PI;
                 if(angle[angle.size()-i] > CV_2PI) angle[angle.size()-i] += -CV_2PI;
-                //cout << angle[angle.size()-i] << "\t" ;
             }
             d_theta = angle.back() - angle[angle.size()-step_];
         }
-        /** ************************* **/
+        /**------------------------------------------------------**/
         total_theta += d_theta;
         float tmp_omega = d_theta / dt;
+        printf("omega: %f\tdt: %f\n",tmp_omega,dt);
         if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
             if(energy_flag) //该次omega用kalman插值
             {
@@ -500,7 +497,15 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
         //omegaWave.displayWave(d_theta,0,"d_theta");
         return tmp_omega;
     }
-
+}
+float Predictor::IdealOmega(float &t_) {
+    return a_ * sin( w_ * t_ + phi_) + 2.09 - a_;
+}
+/**
+ * @brief integral from t1 to t2
+ * */
+float Predictor::IdealRad(float t1, float t2) {
+    return -a_/w_ * (cos(w_*t2+phi_) - cos(w_*t1+phi_)) + (2.09-a_)*(t2-t1);
 }
 /**
  * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
@@ -509,21 +514,20 @@ void Predictor::FilterOmega(const float& dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
                             0, 1, dt,
                             0, 0, 1;
-    current_omega = CalOmegaNStep(3, total_theta);
     VectorXf measure_vec(2,1);
     measure_vec <<  total_theta,
                     current_omega;
     omega_kf.predict();
     omega_kf.correct(measure_vec);
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
-    if(showEnergy){
-        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
-        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
-                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
-        RMTools::showData(data,str,"energy param");
-        omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
-        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
-    }
+//    if(showEnergy){
+//        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
+//        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
+//                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
+//        RMTools::showData(data,str,"energy param");
+//        omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+//        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
+//    }
 }
 void Predictor::FilterRad(const float& latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
@@ -591,10 +595,10 @@ void Predictor::initFanRadKalman() {
  * @param times 用于曲线拟合的数据点数量
  * */
 void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
-    for(int i = st; i < omega_.size(); i++){
+    for(int i = st_; i < omega_.size(); i++){
         ceres::CostFunction* cost_func =
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
-                        new SinResidual(t_[i]-t_[st],omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
+                        new SinResidual(t_[i], omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
         problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
     }
     ceres::Solver::Options options;
@@ -608,11 +612,11 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     std::cout << summary.BriefReport() << "\n";
     std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
     std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
-    //cout << "拟合数据下标起点：" << st << " " << omega_[st] << " 拟合数据点数 ： " << omega.size() - st << " 函数中值：" << (2.09-min_w)/2 << endl;
+    //cout << "拟合数据下标起点：" << st_ << " " << omega_[st_] << " 拟合数据点数 ： " << omega.size() - st_ << " 函数中值：" << (2.09-min_w)/2 << endl;
 
     float sim_omega;
-    for(int i=st;i < omega_.size(); i++){
-        sim_omega = a_ * sin(w_*(t_[i]-t_[st])+phi_) + 2.09-a_;
+    for(int i=st_; i < omega_.size(); i++){
+        sim_omega = IdealOmega(t_[i]);
         omegaWave.displayWave(omega_[i],sim_omega,"curve fitting");
     }
 
