@@ -113,8 +113,8 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             //printf("-- Big Armor ! --\n");
             break;
         case ENERGY_ARMOR:
-            targetHeight3D = 130;
-            targetWidth3D = 225;
+            targetHeight3D = 155; // 130
+            targetWidth3D = 245; // 225
             //printf("-- Energy Armor ! --\n");
             break;
         default:
@@ -238,7 +238,7 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     float pitch_;
     float v_x0, v_y0;
     int i = 0;
-    while(fabs(dh) > 1e-06){
+    while(fabs(dh) > 1e-03){
         i++;
         pitch_ = atan2(h_,d_);
         v_x0 = v * cos(pitch_);

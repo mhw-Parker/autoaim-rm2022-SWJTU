@@ -57,25 +57,25 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
     // area change to 1/3
 ///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 2800;//1500
+    _flow.armor_contour_area_max = 2000;//1500
     _flow.armor_contour_area_min = 500;//400
-    _flow.armor_contour_length_max = 80;//50
-    _flow.armor_contour_length_min = 20;//25
-    _flow.armor_contour_width_max = 80;//30
+    _flow.armor_contour_length_max = 90;//50
+    _flow.armor_contour_length_min = 40;//25
+    _flow.armor_contour_width_max = 50;//30
     _flow.armor_contour_width_min = 15;//15
-    _flow.armor_contour_hw_ratio_max = 3;//3
-    _flow.armor_contour_hw_ratio_min = 1.4;//1
+    _flow.armor_contour_hw_ratio_max = 2.5;//3
+    _flow.armor_contour_hw_ratio_min = 1.3;//1
 
 ///流动条所在扇叶的相关筛选参数
-    _flow.flow_strip_fan_contour_area_max = 5500;
+    _flow.flow_strip_fan_contour_area_max = 6500; // 5500
     _flow.flow_strip_fan_contour_area_min = 2500;
-    _flow.flow_strip_fan_contour_length_max = 220;
+    _flow.flow_strip_fan_contour_length_max = 250;
     _flow.flow_strip_fan_contour_length_min = 80;
     _flow.flow_strip_fan_contour_width_max = 140;
     _flow.flow_strip_fan_contour_width_min = 50;
-    _flow.flow_strip_fan_contour_hw_ratio_max = 3;
+    _flow.flow_strip_fan_contour_hw_ratio_max = 2.5;
     _flow.flow_strip_fan_contour_hw_ratio_min = 1.2;
-    _flow.flow_strip_fan_contour_area_ratio_max = 0.65;
+    _flow.flow_strip_fan_contour_area_ratio_max = 0.75; // 0.65
     _flow.flow_strip_fan_contour_area_ratio_min = 0.20;
 
 ///流动条到装甲板距离参数
@@ -160,7 +160,7 @@ Mat EnergyDetector::preprocess(Mat &src) {
     Mat gray, sub_mat;
     vector<Mat> channels;
     split(src, channels);
-    if(blueTarget)
+    if(!blueTarget)
         subtract(channels[0],channels[2],sub_mat);
     else
         subtract(channels[2],channels[0],sub_mat);
@@ -168,6 +168,7 @@ Mat EnergyDetector::preprocess(Mat &src) {
 
     Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));
     morphologyEx(sub_mat,sub_mat,MORPH_CLOSE,element_close);
+    dilate(sub_mat,sub_mat,element_close);
     //GaussianBlur(sub_mat,sub_mat,Size(5,5),0);
 
     if(showBinaryImg)

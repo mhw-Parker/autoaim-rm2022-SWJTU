@@ -143,7 +143,7 @@ private:
     void estimateParam(vector<float> &omega_, vector<float> &t_);
     int fit_cnt = 0;
     ceres::Problem problem;
-    double a_ = 0.780, w_ = 1.9, phi_ = 0; //参数初值
+    double a_ = 0.85, w_ = 1.9, phi_ = CV_PI/2; //参数初值
     int st_ = 0;
     struct SinResidual{
         SinResidual(double t, double omega): omega_(omega), t_(t) {}

@@ -239,7 +239,7 @@ namespace rm
             saveTimeSeriesPath = ( string(OUTPUT_PATH + now_time).append(".txt") );
             //timeWrite = ofstream (saveTimeSeriesPath, ios::out);
             videoWriter = VideoWriter(saveVideoPath, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
-                                      70.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
+                                      85.0, cv::Size(FRAMEWIDTH, FRAMEHEIGHT));
         }
         /// 设置对应视频的每帧对应时间的 txt 路径
         if(carName == VIDEO){
@@ -371,6 +371,7 @@ namespace rm
             // 用于计算只含有Armor和Energy任务的时间
             double recognitionSt = getTickCount();
             double predictionSt;
+            curControlState = BIG_ENERGY_STATE;
             switch (curControlState) {
                 case AUTO_SHOOT_STATE:
                     Armor();
@@ -394,7 +395,7 @@ namespace rm
                     find_state = energyPtr->detect_flag;
                     predictionSt = getTickCount();
                     if (find_state) {
-                        predictPtr->EnergyPredictor(BIG_ENERGY_STATE,
+                        predictPtr->EnergyPredictor(curControlState,
                                                     energyPtr->pts,
                                                     energyPtr->circle_center_point,
                                                     gimbal_ypd,

@@ -51,8 +51,6 @@ void Predictor::Refresh() {
     KalmanRefresh();
     /**--------- 能量机关预测部分清空 ---------**/
     EnergyRefresh();
-    /**--------- 射击命令清零 ---------**/
-    shootCmd = 0;
 }
 
 void Predictor::EnergyRefresh(){
@@ -82,7 +80,6 @@ void Predictor::TimeRefresh() {
 inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
     // z不置零，初始化为一个大概的距离
-    target_xyz << 0, 0, 3000;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
 }
@@ -132,17 +129,19 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     target_ypd = gimbal_ypd + delta_ypd;
     // 通过目标xyz坐标计算yaw pitch distance
     target_xyz = GetGyroXYZ();
+    printf("lost: %d\n", lost_cnt);
     // 识别到
     if (last_xyz != target_xyz) {
         float distance = RMTools::GetDistance(last_xyz, target_xyz);
+        printf("Distance: %d\n", (int)distance);
         // 大范围更换目标认为是切换机器人
         if (distance > 1000) {
             // 深重置
-            Refresh();
+            KalmanRefresh();
         }
         // 小范围更换目标认为是小陀螺场景
         ///TODO 同时考虑数字识别的结果更合理，距离参数待修改
-        else if (distance > 250 && distance < 450) {
+        else if (distance > 250 && distance < 550) {
             // 进行浅重置，保留速度
             KalmanShallowRefresh();
         }
@@ -169,7 +168,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
     } else {
-        Refresh();
+        target_xyz << 0, 0, 3000;
+        // 自动射击命令
+        shootCmd = 0;
+        KalmanRefresh();
     }
     // 哨兵射击命令
     if (carName == SENTRY || carName == SENTRYDOWN) {
@@ -178,28 +180,28 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 更新last值
     last_xyz = target_xyz;
 
-    // 显示数据，会耗时5ms左右，一般关掉
-//    if (showArmorBox) {
-//        vector<float> data2;
-//        for (int len = 0; len < target_xyz.size(); len++)
-//            data2.push_back(target_xyz[len]);
-//        for (int len = 0; len < RMKF.state_post_.rows(); len++)
-//            data2.push_back(RMKF.state_post_[len]);
-//        for (int i = 0; i < 3; i++)
-//            data2.push_back(predict_ypd[i]);
-//        vector<string> str2 = {"m_x","m_y","m_z",
-//                               "kf_x","kf_y","kf_z",
-//                               "kf_vx","kf_vy","kf_vz",
-//                               "kf_ax","kf_ay","kf_az",
-//                               "pre_yaw","pre_pitch","pre_dist"};
-//        RMTools::showData(data2, str2, "data window");
-//        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
-//                               "v bullet","Average v","latency"};
-//        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
-//                               gimbal_ypd[1],predict_ypd[1] + offset[1],
-//                               v_,average_v_bullet,latency};
-//        RMTools::showData(data1,str1,"abs degree");
-//    }
+    // 显示数据，会耗时17ms左右，一般关掉
+    if (showArmorBox) {
+        vector<float> data2;
+        for (int len = 0; len < target_xyz.size(); len++)
+            data2.push_back(target_xyz[len]);
+        for (int len = 0; len < RMKF.state_post_.rows(); len++)
+            data2.push_back(RMKF.state_post_[len]);
+        for (int i = 0; i < 3; i++)
+            data2.push_back(predict_ypd[i]);
+        vector<string> str2 = {"m_x","m_y","m_z",
+                               "kf_x","kf_y","kf_z",
+                               "kf_vx","kf_vy","kf_vz",
+                               "kf_ax","kf_ay","kf_az",
+                               "pre_yaw","pre_pitch","pre_dist"};
+        RMTools::showData(data2, str2, "data window");
+        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
+                               "v bullet","Average v","latency"};
+        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
+                               gimbal_ypd[1],predict_ypd[1] + offset[1],
+                               v_,average_v_bullet,latency};
+        RMTools::showData(data1,str1,"abs degree");
+    }
     //waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
 }
 
@@ -361,7 +363,8 @@ uint8_t Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset
  * @param v_ 弹速
  * @param t_stamp 当次时间戳
  * */
-void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float t_stamp) {
+void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd,
+                                float v_, float t_stamp) {
     t_list.push_back(t_stamp); // 更新时间戳 单位：s
     bool check = RMTools::CheckBulletVelocity(carName, v_);
     // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均；数组满则覆盖头部
@@ -398,18 +401,18 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 float d_w = wt - filter_omega.back();
                 if(fabs(d_w) > 0.3 && fit_cnt < 3) {
                     ctrl_mode = STANDBY; // if the difference value between ideal omega and filter omega is too big
-                    st_ = filter_omega.size() - 200;    // use 200 points refit the ideal omega
-                    predict_rad = filter_omega.back() * latency;
+                    st_ = omega.size();// use 200 points refit the ideal omega
+                    predict_rad = filter_omega.back() * 0.5;
                     fit_cnt++;
                 }
                 else {
-                    predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.35);
-                    omegaWave.displayWave(wt, current_omega, "omega");
+                    predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.4);
+                    omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
                     //FilterRad(latency);
                 }
             }
             else {
-                predict_rad = filter_omega.back() * latency;
+                predict_rad = 0;
             }
         }
         else
@@ -422,22 +425,24 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
     //predict_xyz = GetGyroXYZ();
-    iterate_pitch = solveAngle.iteratePitch(predict_xyz, v_, fly_t);
-    if(average_v_bullet > 25)
-        predict_ypd[1] = iterate_pitch + 1.9;
-    else
-        predict_ypd[1] = iterate_pitch + 3;
+    iterate_pitch = solveAngle.iteratePitch(predict_xyz, 28, fly_t);
+    predict_ypd[0] -= 1.1;
+    predict_ypd[1] += 1.9;
+//    if(average_v_bullet >= 25)
+//        predict_ypd[1] = iterate_pitch + 1.9;
+//    else
+//        predict_ypd[1] = iterate_pitch + 3;
     latency = react_t + fly_t;
 }
 
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
         case STANDBY:
-            if(fabs(current_omega) > 2.05) {
+            if(fabs(current_omega) > 2.08) {
                 peak_flag = true; // which means we get a wave peak
                 phi_ = CV_PI/2 - w_*time_series.back(); // initial phi
             }
-            if(time_series.back() - time_series.front() > 2 && peak_flag) {
+            if(time_series.back() - time_series.front() > 2 && peak_flag && omega.size() - st_ >= 200) {
                 ctrl_mode = ESTIMATE;
             }
             return false;
@@ -474,8 +479,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
             last_d_theta += CV_2PI;
         int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); // 1.2566 = 2*pi/5  四舍五入
         if(abs(d_fan) >= 1) {
-            printf("delta fan : %d\tdelta the: %f\tangle_2: %f\tangle_1: %f\n",d_fan,last_d_theta,angle.back()*180/CV_PI,angle[angle.size()-2]*180/CV_PI);
-
+            //printf("delta fan : %d\tdelta the: %f\tangle_2: %f\tangle_1: %f\n",d_fan,last_d_theta,angle.back()*180/CV_PI,angle[angle.size()-2]*180/CV_PI);
             for(int i = 2;i <= step_;i++) {
                 angle[angle.size()-i] += d_fan * 1.2566;
                 if(angle[angle.size()-i] < CV_2PI) angle[angle.size()-i] += CV_2PI;
@@ -606,6 +610,12 @@ void Predictor::initFanRadKalman() {
  * @param times 用于曲线拟合的数据点数量
  * */
 void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
+    problem.SetParameterLowerBound(&a_,0,0.780);
+    problem.SetParameterUpperBound(&a_,0,1.045);
+    problem.SetParameterLowerBound(&w_,0,1.884);
+    problem.SetParameterUpperBound(&w_,0,2.0);
+    problem.SetParameterLowerBound(&phi_,0,-CV_PI);
+    problem.SetParameterUpperBound(&phi_,0,CV_PI);
     for(int i = st_; i < omega_.size(); i++){
         ceres::CostFunction* cost_func =
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(

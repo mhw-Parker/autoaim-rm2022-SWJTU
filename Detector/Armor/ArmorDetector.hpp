@@ -66,7 +66,7 @@ namespace rm
         float minAverageBrightness = 20;
         // 哨兵抖起来会画面糊，应调高此数值；
         // 场地要调低此数值
-        float maxAverageBrightness = 140;
+        float maxAverageBrightness = 255;
 
         /// 灯条匹配参数
         // 角度差
