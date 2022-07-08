@@ -119,7 +119,7 @@ private:
     float dt_ = 0.012;
     float iterate_pitch ;
 
-    int differ_step = 2;
+    int differ_step = 4;
     bool peak_flag = false;
 
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针

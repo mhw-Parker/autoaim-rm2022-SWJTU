@@ -198,7 +198,7 @@ namespace rm
 
     private:
         double startT;
-        vector<float> time_stamp;
+        float time_stamp = 0 , last_stamp = 0;
         long int cnt = 0, last_cnt = 0;
 
         vector<Point2f> target_pts;

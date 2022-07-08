@@ -147,7 +147,7 @@ namespace rm
 
 //#if SAVE_LOG == 1
 //        logWrite<<"Find    "<<"TARGET X    "<<"TARGET Y    "<<"TARGET HEIGHT    "<<"TARGET WIDTH    "<<"YAW    "<<"PITCH    "\
-//    <<"SHOOT    "<<'\n';
+//    <<"SHOOT    "<<endl;
 //#endif
     }
     ImgProdCons::~ImgProdCons() {
@@ -209,7 +209,6 @@ namespace rm
         if((driver->InitCam() && driver->SetCam() && driver->StartGrab())){
             freq = getTickFrequency();
             startT = getTickCount();
-            time_stamp.assign(6000,0);
             /// log
         }
         else
@@ -293,7 +292,7 @@ namespace rm
                 break;
             }
         }
-        //cout << "Armor Detect Mission Cost : " << CalWasteTime(armorTime,freq) << " ms" << '\n';
+        //cout << "Armor Detect Mission Cost : " << CalWasteTime(armorTime,freq) << " ms" << endl;
     }
 
     void ImgProdCons::Energy()
@@ -303,10 +302,10 @@ namespace rm
         energyPtr->EnergyDetectTask(detectFrame);
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
-        dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << '\n';
+        dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
 #endif
 #if SHOWTIME == 1
-        //cout << "Energy Detect Mission Cost : " << CalWasteTime(energyTime,freq) << " ms" << '\n';
+        //cout << "Energy Detect Mission Cost : " << CalWasteTime(energyTime,freq) << " ms" << endl;
 #endif
     }
 
@@ -327,18 +326,17 @@ namespace rm
                     break;
                 }
             } else {
-                time_stamp[++cnt%6000] = CalWasteTime(startT,freq)/1000; // save logs which include time_stamp, yaw, pitch
+                time_stamp = CalWasteTime(startT,freq)/1000; // save logs which include time_stamp, yaw, pitch
                 saveMission = true;
             }
             // put new frame which grab from camera in Fifo
-            //double s = getTickCount();
-            timeStampMat temp(frame,time_stamp[cnt],receive_fifo.wait_and_pop());
+            timeStampMat temp(frame,time_stamp,receive_fifo.wait_and_pop());
             frame_fifo.push(temp);
             //printf("fifo time ： %f\n", CalWasteTime(s,getTickFrequency()));
             produceTime = CalWasteTime(st, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(10) == 32) {
+                if (waitKey(11) == 32) {
                     while (waitKey() != 32) {}
                 }
             }
@@ -349,12 +347,11 @@ namespace rm
     {
         do {
             double st = (double)getTickCount();
-            // 两次检测时间间隔 用当次时间序列值 - 上次时间序列值
-            last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000];
-            last_cnt = cnt; //更新当次时间序列序号
-            /** 计算上一次源图像执行耗时 **/
-            //cout << "last t = " << last_mission_time*1000 << "ms" <<'\n';
             timeStampMat detect_stamp = frame_fifo.wait_and_pop();
+            last_mission_time = detect_stamp.stamp - last_stamp; //两次检测时间间隔 用当次时间序列值 - 上次时间序列值
+            last_stamp = detect_stamp.stamp; //更新当次时间序列序号
+            /** 计算上一次源图像执行耗时 **/
+            //cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
             detectFrame = detect_stamp.frame.clone();
             //printf("time : %f\n",detect_stamp.stamp);
             Vector3f gimbal_ypd;
@@ -380,10 +377,12 @@ namespace rm
                     recognitionTime = CalWasteTime(recognitionSt, freq);
                     find_state = armorDetectorPtr->findState;
                     predictionSt = getTickCount();
-                    predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
-                                               armorDetectorPtr->targetArmor.armorType,
-                                               gimbal_ypd,v_bullet,tmp_t,
-                                               armorDetectorPtr->lostCnt);
+                    if(find_state) {
+                        predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
+                                                   armorDetectorPtr->targetArmor.armorType,
+                                                   gimbal_ypd,v_bullet,tmp_t,
+                                                   armorDetectorPtr->lostCnt);
+                    }
                     predictionTime = CalWasteTime(predictionSt, freq);
                     break;
                 case BIG_ENERGY_STATE:

@@ -4,7 +4,7 @@
 #include "Predictor.h"
 
 Predictor::Predictor() : waveClass(2000,300,1000),
-                         omegaWave(3,600,1000)
+                         omegaWave(1,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
     // TODO 通过各种优先模式设置初始弹速
@@ -396,16 +396,16 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
             if(EnergyStateSwitch()) {
                 float wt = IdealOmega(time_series.back());
                 float d_w = wt - filter_omega.back();
-                if(fabs(d_w) > 0.3 && fit_cnt < 3) {                   // if the difference value between ideal omega and filter omega is too big
-                    ctrl_mode = ESTIMATE;
+                if(fabs(d_w) > 0.3 && fit_cnt < 3) {
+                    ctrl_mode = STANDBY; // if the difference value between ideal omega and filter omega is too big
                     st_ = filter_omega.size() - 200;    // use 200 points refit the ideal omega
                     predict_rad = filter_omega.back() * latency;
                     fit_cnt++;
                 }
                 else {
                     predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.35);
-                    printf("time: %f\tfit times: %d\n",t_list.back(),fit_cnt);
-                    omegaWave.displayWave(filter_omega.back(), d_w, "omega");
+                    //printf("time: %f\tfit times: %d\n",t_list.back(),fit_cnt);
+                    //omegaWave.displayWave(filter_omega.back(), current_omega, "omega");
                     //FilterRad(latency);
                 }
             }
@@ -483,6 +483,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
             d_theta = angle.back() - angle[angle.size()-step_];
         }
         /**------------------------------------------------------**/
+        omegaWave.displayWave(d_theta,0,"d the");
         total_theta += d_theta;
         float tmp_omega = d_theta / dt;
         printf("omega: %f\tdt: %f\n",tmp_omega,dt);

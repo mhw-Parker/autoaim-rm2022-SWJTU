@@ -127,7 +127,9 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
     Mat img = src.clone();
     Mat binary;
     binary = preprocess(img);
+    double st = getTickCount();
     if(detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)){
+
         getPts(target_armor);
         getCircleCenter(binary);
         detect_flag = true;
@@ -147,6 +149,7 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
         }
         //circle(src, target_point, 2, Scalar(0, 255, 0), 3);
     }
+    printf("energy detect time: %f\n",RMTools::CalWasteTime(st));
     if(debug)
         imshow("outline",outline);
 }

@@ -186,7 +186,7 @@ namespace RMTools {
  * @param freq 内部频率，由 getTickFrequency() 获得
  * @return 耗时，单位 ms
  * */
-    inline double CalWasteTime(double BeginTime, double freq) {
+    inline double CalWasteTime(double BeginTime, double freq = getTickFrequency()) {
         return (getTickCount() - BeginTime) * 1000 / freq;
     }
 
