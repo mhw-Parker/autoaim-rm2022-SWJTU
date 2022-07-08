@@ -380,7 +380,9 @@ namespace rm
                     if(find_state) {
                         predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
                                                    armorDetectorPtr->targetArmor.armorType,
-                                                   gimbal_ypd,v_bullet,tmp_t,
+                                                   gimbal_ypd,
+                                                   v_bullet,
+                                                   last_mission_time,
                                                    armorDetectorPtr->lostCnt);
                     }
                     predictionTime = CalWasteTime(predictionSt, freq);
