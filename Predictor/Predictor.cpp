@@ -54,6 +54,7 @@ void Predictor::Refresh() {
     /**--------- 射击命令清零 ---------**/
     shootCmd = 0;
 }
+
 void Predictor::EnergyRefresh(){
     angle.clear();
     omega.clear();
@@ -68,17 +69,20 @@ void Predictor::EnergyRefresh(){
     initFanRadKalman();
     initFanRotateKalman();
 }
+
 void Predictor::TimeRefresh() {
     total_t = 0;
     time_series.clear();
     latency = 0.5;
 }
+
 /**
  * @brief 深重置，Kalman滤波器整个重置，目标速度加速度置零
  */
 inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
-    target_xyz << 0, 0, 4000;
+    // z不置零，初始化为一个大概的距离
+    target_xyz << 0, 0, 3000;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
 }
@@ -129,8 +133,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 通过目标xyz坐标计算yaw pitch distance
     target_xyz = GetGyroXYZ();
     // 识别到
-    //if (target_xyz != last_xyz) {
-    if (lost_cnt == 0) {
+    if (last_xyz != target_xyz) {
         float distance = RMTools::GetDistance(last_xyz, target_xyz);
         // 大范围更换目标认为是切换机器人
         if (distance > 1000) {
@@ -138,7 +141,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
             Refresh();
         }
         // 小范围更换目标认为是小陀螺场景
-        else if (distance > 250) {
+        ///TODO 同时考虑数字识别的结果更合理，距离参数待修改
+        else if (distance > 250 && distance < 450) {
             // 进行浅重置，保留速度
             KalmanShallowRefresh();
         }
@@ -170,34 +174,32 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 哨兵射击命令
     if (carName == SENTRY || carName == SENTRYDOWN) {
         shootCmd = CheckShoot(gimbal_ypd, offset, armor_type);
-        //cout << "Latency: " << latency << '\n';
     }
     // 更新last值
     last_xyz = target_xyz;
-//    cout << RMKF.error_post_ << '\n';
 
-    // 以下为debug显示数据
-    if (showArmorBox) {
-        vector<float> data2;
-        for (int len = 0; len < target_xyz.size(); len++)
-            data2.push_back(target_xyz[len]);
-        for (int len = 0; len < RMKF.state_post_.rows(); len++)
-            data2.push_back(RMKF.state_post_[len]);
-        for (int i = 0; i < 3; i++)
-            data2.push_back(predict_ypd[i]);
-        vector<string> str2 = {"m_x","m_y","m_z",
-                               "kf_x","kf_y","kf_z",
-                               "kf_vx","kf_vy","kf_vz",
-                               "kf_ax","kf_ay","kf_az",
-                               "pre_yaw","pre_pitch","pre_dist"};
-        RMTools::showData(data2, str2, "data window");
-        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
-                               "v bullet","Average v","latency"};
-        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
-                               gimbal_ypd[1],predict_ypd[1] + offset[1],
-                               v_,average_v_bullet,latency};
-        RMTools::showData(data1,str1,"abs degree");
-    }
+    // 显示数据，会耗时5ms左右，一般关掉
+//    if (showArmorBox) {
+//        vector<float> data2;
+//        for (int len = 0; len < target_xyz.size(); len++)
+//            data2.push_back(target_xyz[len]);
+//        for (int len = 0; len < RMKF.state_post_.rows(); len++)
+//            data2.push_back(RMKF.state_post_[len]);
+//        for (int i = 0; i < 3; i++)
+//            data2.push_back(predict_ypd[i]);
+//        vector<string> str2 = {"m_x","m_y","m_z",
+//                               "kf_x","kf_y","kf_z",
+//                               "kf_vx","kf_vy","kf_vz",
+//                               "kf_ax","kf_ay","kf_az",
+//                               "pre_yaw","pre_pitch","pre_dist"};
+//        RMTools::showData(data2, str2, "data window");
+//        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
+//                               "v bullet","Average v","latency"};
+//        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
+//                               gimbal_ypd[1],predict_ypd[1] + offset[1],
+//                               v_,average_v_bullet,latency};
+//        RMTools::showData(data1,str1,"abs degree");
+//    }
     //waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
 }
 
@@ -277,7 +279,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     }
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 2.5;
+    RMKF.measure_noise_ *= 1;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     for (int i = 3; i < 9; ++i) {

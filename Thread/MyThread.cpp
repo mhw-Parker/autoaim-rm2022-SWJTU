@@ -147,7 +147,7 @@ namespace rm
 
 //#if SAVE_LOG == 1
 //        logWrite<<"Find    "<<"TARGET X    "<<"TARGET Y    "<<"TARGET HEIGHT    "<<"TARGET WIDTH    "<<"YAW    "<<"PITCH    "\
-//    <<"SHOOT    "<<endl;
+//    <<"SHOOT    "<<'\n';
 //#endif
     }
     ImgProdCons::~ImgProdCons() {
@@ -293,7 +293,7 @@ namespace rm
                 break;
             }
         }
-        //cout << "Armor Detect Mission Cost : " << CalWasteTime(armorTime,freq) << " ms" << endl;
+        //cout << "Armor Detect Mission Cost : " << CalWasteTime(armorTime,freq) << " ms" << '\n';
     }
 
     void ImgProdCons::Energy()
@@ -303,10 +303,10 @@ namespace rm
         energyPtr->EnergyDetectTask(detectFrame);
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //
-        dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << endl;
+        dataWrite << energyPtr->cur_phi << " " << energyPtr->cur_omega << " " << energyPtr->predict_rad << '\n';
 #endif
 #if SHOWTIME == 1
-        //cout << "Energy Detect Mission Cost : " << CalWasteTime(energyTime,freq) << " ms" << endl;
+        //cout << "Energy Detect Mission Cost : " << CalWasteTime(energyTime,freq) << " ms" << '\n';
 #endif
     }
 
@@ -338,7 +338,7 @@ namespace rm
             produceTime = CalWasteTime(st, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(12) == 32) {
+                if (waitKey(10) == 32) {
                     while (waitKey() != 32) {}
                 }
             }
@@ -349,64 +349,73 @@ namespace rm
     {
         do {
             double st = (double)getTickCount();
-            last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000]; //两次检测时间间隔 用当次时间序列值 - 上次时间序列值
+            // 两次检测时间间隔 用当次时间序列值 - 上次时间序列值
+            last_mission_time = time_stamp[cnt%6000] - time_stamp[last_cnt%6000];
             last_cnt = cnt; //更新当次时间序列序号
             /** 计算上一次源图像执行耗时 **/
-            //cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
+            //cout << "last t = " << last_mission_time*1000 << "ms" <<'\n';
             timeStampMat detect_stamp = frame_fifo.wait_and_pop();
             detectFrame = detect_stamp.frame.clone();
             //printf("time : %f\n",detect_stamp.stamp);
             Vector3f gimbal_ypd;
             if(carName == VIDEO) {
                 gimbal_ypd << 0,0,0;
-            }
-            else
+            } else {
                 gimbal_ypd << detect_stamp.mcuData.yawAngle,
-                        detect_stamp.mcuData.pitchAngle,
-                        0;
+                              detect_stamp.mcuData.pitchAngle,
+                              0;
+            }
 
-            /** ** **/
-            if(lastControlState != curControlState) {   // if state change, refresh state
+            // if state change, refresh state
+            if(lastControlState != curControlState) {
                 predictPtr->Refresh();
                 lastControlState = curControlState;
             }
+            // 用于计算只含有Armor和Energy任务的时间
+            double recognitionSt = getTickCount();
+            double predictionSt;
             switch (curControlState) {
                 case AUTO_SHOOT_STATE:
                     Armor();
+                    recognitionTime = CalWasteTime(recognitionSt, freq);
                     find_state = armorDetectorPtr->findState;
+                    predictionSt = getTickCount();
                     predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
                                                armorDetectorPtr->targetArmor.armorType,
                                                gimbal_ypd,v_bullet,tmp_t,
                                                armorDetectorPtr->lostCnt);
+                    predictionTime = CalWasteTime(predictionSt, freq);
                     break;
                 case BIG_ENERGY_STATE:
                 case SMALL_ENERGY_STATE:
                     Energy();
-                    detectTime = CalWasteTime(st,freq);
+                    recognitionTime = CalWasteTime(recognitionSt, freq);
                     find_state = energyPtr->detect_flag;
-                    if(find_state) {
-                        double pre_t = getTickCount();
+                    predictionSt = getTickCount();
+                    if (find_state) {
                         predictPtr->EnergyPredictor(BIG_ENERGY_STATE,
                                                     energyPtr->pts,
                                                     energyPtr->circle_center_point,
                                                     gimbal_ypd,
                                                     v_bullet,
                                                     detect_stamp.stamp);
-                        printf("predict time : %f\n\n", CalWasteTime(pre_t,freq));
                     }
+                    predictionTime = CalWasteTime(predictionSt, freq);
                     break;
                 default:
                     Armor();
             }
+
             // 读图片模式单线程，识别完按空格退出
             if (carName == IMAGE) {
                 show_img = detectFrame.clone();
                 ShowImage();
                 if (waitKey() == 32) exit(0);
             }
+            //
             show_fifo.push(detectFrame);
 
-            printf("detect time : %f\n",detectTime);
+            detectTime = CalWasteTime(st, freq);
         }while (!quitFlag);
     }
 
@@ -434,30 +443,34 @@ namespace rm
                             0);
 #if SAVE_TEST_DATA == 1
             if(dataWrite.is_open())
-                    dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << endl;
+                    dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << '\n';
 #endif
             /// 发送数据，除了读取视频模式
             if (carName != VIDEO && serialPtr->WriteData()) {
 #if SAVE_LOG == 1
-                logWrite<<"[Write Data to USB2TTL SUCCEED]"<<endl;
+                logWrite<<"[Write Data to USB2TTL SUCCEED]"<<'\n';
 #endif
             } else {
-                //logWrite<<"[Write Data to USB2TTL FAILED]"<<endl;
+                //logWrite<<"[Write Data to USB2TTL FAILED]"<<'\n';
             }
             feedbackTime = CalWasteTime(st,freq);
-            /** Receive data from low-end machine to update parameters(the color of robot, the task mode, etc) **/
+
+            // 显示各任务耗时
 #if SHOWTIME == 1
-            cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
-                cout << "Detect Mission Cost : " << detectTime << " ms" << endl;
-                cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << endl;
-                cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
-                if(showArmorBox || showEnergy || showOrigin)
-                    cout << "Show Image Cost : " << showImgTime << " ms" << endl;
-                cout << endl;
+            cout << "Frame Produce Mission Cost : " << produceTime << " ms" << '\n';
+            cout << "Detect Mission Cost : " << detectTime << " ms" << '\n';
+            cout << "Armor/Energy Task Cost : " << recognitionTime << " ms" << '\n';
+            cout << "Prediction Task Cost : " << predictionTime << " ms" << '\n';
+            cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << '\n';
+            cout << "receive Mission Cost : " << receiveTime << " ms" << '\n';
 #endif
-            //
+            // 显示图像
             if (carName != IMAGE && (showArmorBox || showEnergy || showOrigin)) {
                 ShowImage();
+#if SHOWTIME == 1
+                cout << "Show Image Cost : " << showImgTime << " ms" << '\n';
+                cout << '\n';
+#endif
             }
         }while (!quitFlag);
     }

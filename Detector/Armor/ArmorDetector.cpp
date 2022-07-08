@@ -213,6 +213,60 @@ namespace rm
     }
 
     /**
+    * @brief get he region of interest
+    * @param [img] the image from camera or video that to be processed
+    * @return none
+    * @details none
+    */
+    void ArmorDetector::GetRoi() {
+        Rect rectTemp = roiRect;
+        if (!findState || rectTemp.width == 0 || rectTemp.height == 0) {
+            roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
+        } else if (detectCnt > 0) {
+            float scale = 3;
+            int w = int(rectTemp.width * scale);
+            int h = int(rectTemp.height * scale);
+            int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);
+            int y = int(rectTemp.y - (h - rectTemp.height) * 0.5);
+            roiRect = Rect(x, y, w, h);
+            if (!MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT))) {
+                roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
+            }
+        }
+    }
+
+    /**
+    * @brief pre-procession of an image captured
+    * @param img the ROI image that clipped by the GetRIO function
+    * @param type choose to Preprocess the current image or the lastest two images, when the type is true, parameter
+    * img must be the origin image but not the roi image
+    * @return none
+    * @details if average value in a region of the colorMap is larger than 0, then we can inference that in this region
+    * the light is more possible to be red; the reason for why we not just subtract the red channel with blue channel is
+    * that the center of lamps always be white and the result of the subtraction is always small. And we have tested that
+    * if we use canny to detect the edge of lamps for reducing the computing burden of findContours() function which works
+    * for GPU, the result shows that edge detection costs more time(using same video, without edge detection, task costs
+    * 4.19548ms;with edge detection, task costs 4.27403ms)
+    */
+    void ArmorDetector::Preprocess(Mat &img) {
+        Mat gray;
+        vector<Mat> channels;
+        split(img,channels);
+        cvtColor(img,gray,COLOR_BGR2GRAY);
+        if (blueTarget)
+            subtract(channels[0],channels[2],sub);
+        else
+            subtract(channels[2],channels[0],sub);
+        //imshow("channels-sub",sub);
+        threshold(sub, sub, 120, 255, THRESH_BINARY);
+        threshold(gray,thresholdMap,40,255,THRESH_BINARY);
+        threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
+        colorMap = Mat_<int>(sub);
+        //imshow("channels-sub-binary",sub);
+//        imshow("gray-binary",thresholdMap);
+    }
+
+    /**
     * @brief: detect possible armors
     * @param [img]  the image from camera or video that to be processed
     * @return: if ever found armors in this image, return true, otherwise return false
@@ -307,37 +361,6 @@ namespace rm
     bool ArmorDetector::IsSmall() const
     {
         return (targetArmor.armorType == SMALL_ARMOR);
-    }
-
-    /**
-    * @brief pre-procession of an image captured
-    * @param img the ROI image that clipped by the GetRIO function
-    * @param type choose to Preprocess the current image or the lastest two images, when the type is true, parameter
-    * img must be the origin image but not the roi image
-    * @return none
-    * @details if average value in a region of the colorMap is larger than 0, then we can inference that in this region
-    * the light is more possible to be red; the reason for why we not just subtract the red channel with blue channel is
-    * that the center of lamps always be white and the result of the subtraction is always small. And we have tested that
-    * if we use canny to detect the edge of lamps for reducing the computing burden of findContours() function which works
-    * for GPU, the result shows that edge detection costs more time(using same video, without edge detection, task costs
-    * 4.19548ms;with edge detection, task costs 4.27403ms)
-    */
-    void ArmorDetector::Preprocess(Mat &img) {
-        Mat gray;
-        vector<Mat> channels;
-        split(img,channels);
-        cvtColor(img,gray,COLOR_BGR2GRAY);
-        if (blueTarget)
-            subtract(channels[0],channels[2],sub);
-        else
-            subtract(channels[2],channels[0],sub);
-        //imshow("channels-sub",sub);
-        threshold(sub, sub, 120, 255, THRESH_BINARY);
-        threshold(gray,thresholdMap,40,255,THRESH_BINARY);
-        threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
-        colorMap = Mat_<int>(sub);
-        //imshow("channels-sub-binary",sub);
-//        imshow("gray-binary",thresholdMap);
     }
 
     /**
@@ -580,30 +603,6 @@ namespace rm
     bool compMatchFactor(const MatchLight a, const MatchLight b)
     {
         return a.matchFactor < b.matchFactor;
-    }
-
-    /**
-    * @brief get he region of interest
-    * @param [img] the image from camera or video that to be processed
-    * @return none
-    * @details none
-    */
-    void ArmorDetector::GetRoi() {
-        Rect rectTemp = roiRect;
-        if (lostCnt > 3 || rectTemp.width == 0 || rectTemp.height == 0) {
-            roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
-            findState = false;
-        } else if (detectCnt > 0) {
-            float scale = 3;
-            int w = int(rectTemp.width * scale);
-            int h = int(rectTemp.height * scale);
-            int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);
-            int y = int(rectTemp.y - (h - rectTemp.height) * 0.5);
-            roiRect = Rect(x, y, w, h);
-            if (!MakeRectSafe(roiRect, Size(FRAMEWIDTH, FRAMEHEIGHT))) {
-                roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
-            }
-        }
     }
 
     /**

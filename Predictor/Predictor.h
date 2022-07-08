@@ -92,7 +92,8 @@ private:
     EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);
     // flag为false则初始化Kalman，否则更新Kalman
     bool RMKF_flag = false;
-    float delta_t = 0.016; // s
+    // 状态转移方程中的dt
+    float delta_t = 0.016;
     float predict_dt = 0.05; // 预测时拉长步长节省计算，sentry:0.03
 
 public:

@@ -113,7 +113,13 @@ namespace rm
         static void InitSignals(void);
 
         double taskTime;
+        // 每个线程时间
         double produceTime, detectTime, feedbackTime, receiveTime, showImgTime;
+        // 纯识别时间
+        double recognitionTime;
+        // 纯预测时间
+        double predictionTime;
+        // getTickFrequency()
         double freq;
 
         /***/
