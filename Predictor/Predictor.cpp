@@ -4,7 +4,7 @@
 #include "Predictor.h"
 
 Predictor::Predictor() : waveClass(2000,300,1000),
-                         omegaWave(1,600,1000)
+                         omegaWave(3,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
     // TODO 通过各种优先模式设置初始弹速
@@ -404,8 +404,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
                 else {
                     predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.35);
-                    //printf("time: %f\tfit times: %d\n",t_list.back(),fit_cnt);
-                    //omegaWave.displayWave(filter_omega.back(), current_omega, "omega");
+                    omegaWave.displayWave(wt, current_omega, "omega");
                     //FilterRad(latency);
                 }
             }
@@ -416,8 +415,8 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
         else
             predict_rad = energy_rotation_direction * 1.05 * latency;
     }
-    predict_point = calPredict(target_point,center,predict_rad); //逆时针为负的预测弧度，顺时针为正 的预测弧度
-    getPredictRect(center, target_pts, predict_rad); //获得预测矩形
+    predict_point = calPredict(target_point,center,predict_rad); // 逆时针为负的预测弧度，顺时针为正 的预测弧度
+    getPredictRect(center, target_pts, predict_rad); // 获得预测矩形
     solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
@@ -465,29 +464,37 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
     if(angle.size() < step_) {
         return 0;
     } else {
-        float d_theta = angle.back() - angle[angle.size()-step_];
+        float d_theta;
         float dt = t_list.back() - t_list[t_list.size()-step_];
-        if(d_theta > 6)
-            d_theta -= CV_2PI;
-        if(d_theta < -6)
-            d_theta += CV_2PI;
-        /** new logic in order to solve the change fan problem **/
+        /** new logic in order to solve the changing fan problem **/
         float last_d_theta = angle.back() - angle[angle.size()-2]; // delta value between last time
+        if(last_d_theta > 6.1) // angle pass through the zero reference
+            last_d_theta -= CV_2PI;
+        else if(last_d_theta < -6.1)
+            last_d_theta += CV_2PI;
         int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); // 1.2566 = 2*pi/5  四舍五入
         if(abs(d_fan) >= 1) {
+            printf("delta fan : %d\tdelta the: %f\tangle_2: %f\tangle_1: %f\n",d_fan,last_d_theta,angle.back()*180/CV_PI,angle[angle.size()-2]*180/CV_PI);
+
             for(int i = 2;i <= step_;i++) {
                 angle[angle.size()-i] += d_fan * 1.2566;
                 if(angle[angle.size()-i] < CV_2PI) angle[angle.size()-i] += CV_2PI;
                 if(angle[angle.size()-i] > CV_2PI) angle[angle.size()-i] += -CV_2PI;
             }
-            d_theta = angle.back() - angle[angle.size()-step_];
         }
         /**------------------------------------------------------**/
-        omegaWave.displayWave(d_theta,0,"d the");
+        d_theta = angle.back() - angle[angle.size()-step_];
+        if(d_theta > 6) {
+            d_theta -= CV_2PI;
+        }
+        if(d_theta < -6) {
+            d_theta += CV_2PI;
+        }
+        //omegaWave.displayWave(d_theta,0,"d the");
         total_theta += d_theta;
         float tmp_omega = d_theta / dt;
-        printf("omega: %f\tdt: %f\n",tmp_omega,dt);
-        if(fabs(tmp_omega)>2.5) { //如果观测到的omega太离谱
+        //printf("omega: %f\tdt: %f\n",tmp_omega,dt);
+        if(fabs(tmp_omega)>2.1) { //如果观测到的omega太离谱
             if(energy_flag) //该次omega用kalman插值
             {
                 total_theta = omega_kf.state_post_[0];
@@ -522,6 +529,7 @@ void Predictor::FilterOmega(const float& dt) {
                     current_omega;
     omega_kf.predict();
     omega_kf.correct(measure_vec);
+    energy_flag = true;
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
 //    if(showEnergy){
 //        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};

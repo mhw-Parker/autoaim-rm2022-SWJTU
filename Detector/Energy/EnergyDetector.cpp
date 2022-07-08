@@ -64,7 +64,7 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.armor_contour_width_max = 80;//30
     _flow.armor_contour_width_min = 15;//15
     _flow.armor_contour_hw_ratio_max = 3;//3
-    _flow.armor_contour_hw_ratio_min = 1.5;//1
+    _flow.armor_contour_hw_ratio_min = 1.4;//1
 
 ///流动条所在扇叶的相关筛选参数
     _flow.flow_strip_fan_contour_area_max = 5500;
@@ -127,9 +127,7 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
     Mat img = src.clone();
     Mat binary;
     binary = preprocess(img);
-    double st = getTickCount();
     if(detectArmor(binary) && detectFlowStripFan(binary) && getTargetPoint(binary)){
-
         getPts(target_armor);
         getCircleCenter(binary);
         detect_flag = true;
@@ -149,7 +147,6 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
         }
         //circle(src, target_point, 2, Scalar(0, 255, 0), 3);
     }
-    printf("energy detect time: %f\n",RMTools::CalWasteTime(st));
     if(debug)
         imshow("outline",outline);
 }
@@ -160,45 +157,24 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
  * @remark 图像预处理，完成二值化
  */
 Mat EnergyDetector::preprocess(Mat &src) {
-    Mat gray, binary, sub_mat;
+    Mat gray, sub_mat;
     vector<Mat> channels;
     split(src, channels);
     if(blueTarget)
         subtract(channels[0],channels[2],sub_mat);
     else
         subtract(channels[2],channels[0],sub_mat);
-    threshold(sub_mat,binary,80,255,THRESH_BINARY);
+    threshold(sub_mat,sub_mat,80,255,THRESH_BINARY);
 
     Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));
     morphologyEx(sub_mat,sub_mat,MORPH_CLOSE,element_close);
-    GaussianBlur(sub_mat,sub_mat,Size(5,5),0);
+    //GaussianBlur(sub_mat,sub_mat,Size(5,5),0);
 
     if(showBinaryImg)
-        imshow("binary",binary);
-    return binary;
+        imshow("binary",sub_mat);
+    return sub_mat;
 }
 
-bool EnergyDetector::DetectAll(Mat &src) {
-    Mat dilate_mat = src.clone();
-    vector<vector<Point> > all_contours;
-    vector<vector<Point> > external_contours;
-    findContours(dilate_mat,all_contours,RETR_LIST,CHAIN_APPROX_NONE);
-    findContours(dilate_mat,external_contours,RETR_EXTERNAL,CHAIN_APPROX_NONE);
-
-    std::vector<vector<Point> > armor_contours;
-    for (auto &i : external_contours)//去除外轮廓
-    {
-        auto external_size = i.size();
-        for (auto &j : all_contours) {
-            auto all_size = j.size();
-            if (external_size == all_size) {
-                swap(j, armor_contours[armor_contours.size() - 1]);
-                armor_contours.pop_back();//清除掉流动条
-                break;
-            }
-        }
-    }
-}
 /**
  * @brief EnergyDetector::detectArmor
  * @param Mat& src
@@ -341,7 +317,7 @@ bool EnergyDetector::getCircleCenter(Mat &src){
                 Point2f cal_center = calR1P(); //反解的圆心位置用于判断检测圆心的可信度
                 circle(outline, cal_center, 3, Scalar(238, 238, 0), 2, 8, 0);
                 //cout << "--" << pointDistance(cal_center,Point2f(x,y)) << endl;
-                if (pointDistance(cal_center,Point2f(x,y))< 50) {
+                if (pointDistance(cal_center,Point2f(x,y))< 100) {
                     circle_center_point = Point(x, y);
                     circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
                     //imshow("outline",outline);

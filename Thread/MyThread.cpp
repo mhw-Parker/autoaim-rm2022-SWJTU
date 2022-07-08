@@ -348,10 +348,10 @@ namespace rm
         do {
             double st = (double)getTickCount();
             timeStampMat detect_stamp = frame_fifo.wait_and_pop();
+            /** 计算上一次源图像执行耗时 **/
             last_mission_time = detect_stamp.stamp - last_stamp; //两次检测时间间隔 用当次时间序列值 - 上次时间序列值
             last_stamp = detect_stamp.stamp; //更新当次时间序列序号
-            /** 计算上一次源图像执行耗时 **/
-            //cout << "last t = " << last_mission_time*1000 << "ms" <<endl;
+            //cout << "t = " << detect_stamp.stamp << " s" <<endl;
             detectFrame = detect_stamp.frame.clone();
             //printf("time : %f\n",detect_stamp.stamp);
             Vector3f gimbal_ypd;
@@ -540,13 +540,6 @@ namespace rm
             }
 
             /**press key 'space' to pause or continue task**/
-            if (debug) {
-                if (!pauseFlag && waitKey(10) == 32) { pauseFlag = true; }
-                if (pauseFlag) {
-                    while (waitKey() != 32) {}
-                    pauseFlag = false;
-                }
-            }
 #if SHOWTIME == 1
 
 #endif
