@@ -256,6 +256,8 @@ namespace rm
 
         /** variables would be used in functions**/
     private:
+        // gray input
+        Mat gray;
 
         /*a gray image, the difference between rSubB and bSubR*/
         Mat_<int> colorMap;

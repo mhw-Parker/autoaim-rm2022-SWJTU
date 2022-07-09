@@ -249,7 +249,6 @@ namespace rm
     * 4.19548ms;with edge detection, task costs 4.27403ms)
     */
     void ArmorDetector::Preprocess(Mat &img) {
-        Mat gray;
         vector<Mat> channels;
         split(img,channels);
         cvtColor(img,gray,COLOR_BGR2GRAY);
@@ -260,7 +259,6 @@ namespace rm
         //imshow("channels-sub",sub);
         threshold(sub, sub, 120, 255, THRESH_BINARY);
         threshold(gray,thresholdMap,40,255,THRESH_BINARY);
-        threshold(gray,svmBinaryImage,10,255,THRESH_BINARY);
         colorMap = Mat_<int>(sub);
         //imshow("channels-sub-binary",sub);
 //        imshow("gray-binary",thresholdMap);
@@ -700,7 +698,9 @@ namespace rm
             dstPoints[2] = Point2f(2*SVM_IMAGE_SIZE, SVM_IMAGE_SIZE);
             dstPoints[3] = Point2f(0, SVM_IMAGE_SIZE);
             warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
-            warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat,Size(2*SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //warpPerspective to get armorImage
+            //warpPerspective to get armorImage
+            warpPerspective(gray, warpPerspective_dst, warpPerspective_mat,
+                            Size(2*SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
             warpPerspective_dst = warpPerspective_dst.colRange(12,68).clone();
         } else {
             dstPoints[0] = Point2f(0, 0);
@@ -708,9 +708,14 @@ namespace rm
             dstPoints[2] = Point2f(SVM_IMAGE_SIZE, SVM_IMAGE_SIZE);
             dstPoints[3] = Point2f(0, SVM_IMAGE_SIZE);
             warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints);
-            warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat, Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE), INTER_NEAREST, BORDER_CONSTANT, Scalar(0)); //warpPerspective to get armorImage
+            //warpPerspective to get armorImage
+            warpPerspective(gray, warpPerspective_dst, warpPerspective_mat,
+                            Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE),
+                            INTER_NEAREST, BORDER_CONSTANT, Scalar(0));
             warpPerspective_dst = warpPerspective_dst.colRange(8,32).clone();
         }
+        threshold(warpPerspective_dst, warpPerspective_dst, 4, 255,
+                  THRESH_BINARY | THRESH_OTSU);
         resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //把svm图像缩放到 40 * 40
         pyrDown(warpPerspective_dst,warpPerspective_dst,Size(20,20)); //下采样为20*20
 

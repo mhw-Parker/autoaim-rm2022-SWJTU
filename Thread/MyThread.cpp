@@ -321,7 +321,7 @@ namespace rm
                     driver->StopGrab();
                     GrabFlag = false;
                     quitFlag = true;
-                    cout << "Exit for grabbing fail." << '\n';
+                    cout << "Exit for grabbing fail." << endl;
                     raise(SIGINT);
                     break;
                 }
@@ -444,33 +444,33 @@ namespace rm
                             );
 #if SAVE_TEST_DATA == 1
             if(dataWrite.is_open())
-                    dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << '\n';
+                    dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << endl;
 #endif
             /// 发送数据，除了读取视频模式
             if (carName != VIDEO && serialPtr->WriteData()) {
 #if SAVE_LOG == 1
-                logWrite<<"[Write Data to USB2TTL SUCCEED]"<<'\n';
+                logWrite<<"[Write Data to USB2TTL SUCCEED]"<<endl;
 #endif
             } else {
-                //logWrite<<"[Write Data to USB2TTL FAILED]"<<'\n';
+                //logWrite<<"[Write Data to USB2TTL FAILED]"<<endl;
             }
             feedbackTime = CalWasteTime(st,freq);
 
             // 显示各任务耗时
 #if SHOWTIME == 1
-            cout << "Frame Produce Mission Cost : " << produceTime << " ms" << '\n';
-            cout << "Detect Mission Cost : " << detectTime << " ms" << '\n';
-            cout << "Armor/Energy Task Cost : " << recognitionTime << " ms" << '\n';
-            cout << "Prediction Task Cost : " << predictionTime << " ms" << '\n';
-            cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << '\n';
-            cout << "receive Mission Cost : " << receiveTime << " ms" << '\n';
+            cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
+            cout << "Detect Mission Cost : " << detectTime << " ms" << endl;
+            cout << "Armor/Energy Task Cost : " << recognitionTime << " ms" << endl;
+            cout << "Prediction Task Cost : " << predictionTime << " ms" << endl;
+            cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << endl;
+            cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
 #endif
             // 显示图像
             if (carName != IMAGE && (showArmorBox || showEnergy || showOrigin)) {
                 ShowImage();
 #if SHOWTIME == 1
-                cout << "Show Image Cost : " << showImgTime << " ms" << '\n';
-                cout << '\n';
+                cout << "Show Image Cost : " << showImgTime << " ms" << endl;
+                cout << endl;
 #endif
             }
         }while (!quitFlag);

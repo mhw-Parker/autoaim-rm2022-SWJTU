@@ -129,11 +129,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     target_ypd = gimbal_ypd + delta_ypd;
     // 通过目标xyz坐标计算yaw pitch distance
     target_xyz = GetGyroXYZ();
-    printf("lost: %d\n", lost_cnt);
+    cout << "lost: " << lost_cnt << endl;
     // 识别到
     if (last_xyz != target_xyz) {
         float distance = RMTools::GetDistance(last_xyz, target_xyz);
-        printf("Distance: %d\n", (int)distance);
         // 大范围更换目标认为是切换机器人
         if (distance > 1000) {
             // 深重置
