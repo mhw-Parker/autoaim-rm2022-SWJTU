@@ -425,7 +425,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
     //predict_xyz = GetGyroXYZ();
-    iterate_pitch = solveAngle.iteratePitch(predict_xyz, 28, fly_t);
+    iterate_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     predict_ypd[0] -= 1.1;
     predict_ypd[1] += 1.9;
 //    if(average_v_bullet >= 25)

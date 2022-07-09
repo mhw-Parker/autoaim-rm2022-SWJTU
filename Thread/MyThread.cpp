@@ -371,7 +371,6 @@ namespace rm
             // 用于计算只含有Armor和Energy任务的时间
             double recognitionSt = getTickCount();
             double predictionSt;
-            curControlState = BIG_ENERGY_STATE;
             switch (curControlState) {
                 case AUTO_SHOOT_STATE:
                     Armor();
