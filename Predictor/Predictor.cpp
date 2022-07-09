@@ -61,7 +61,7 @@ void Predictor::EnergyRefresh(){
     t_list.clear();
     ctrl_mode = STANDBY;
     total_theta = 0;
-    energy_flag = false;
+    omega_kf_flag = false;
     clockwise_cnt = 0;
     fit_cnt = 0;    // curve fitting times
     initFanRadKalman();
@@ -399,11 +399,13 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
             if(EnergyStateSwitch()) {
                 float wt = IdealOmega(time_series.back());
                 float d_w = wt - filter_omega.back();
-                if(fabs(d_w) > 0.3 && fit_cnt < 3) {
-                    ctrl_mode = STANDBY; // if the difference value between ideal omega and filter omega is too big
-                    st_ = omega.size();// use 200 points refit the ideal omega
-                    predict_rad = filter_omega.back() * 0.5;
+                if(fabs(d_w) > 0.5 && fit_cnt/30 < 3) {
                     fit_cnt++;
+                    if(fit_cnt%30 == 0){
+                        ctrl_mode = STANDBY; // if the difference value between ideal omega and filter omega is too big
+                        st_ = omega.size();// use 200 points refit the ideal omega
+                        predict_rad = filter_omega.back() * 0.5;
+                    }
                 }
                 else {
                     predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.4);
@@ -412,7 +414,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
             }
             else {
-                predict_rad = 0;
+                predict_rad = (omega_kf_flag) ? omega.back()*0.4 : 0;
             }
         }
         else
@@ -427,7 +429,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     //predict_xyz = GetGyroXYZ();
     iterate_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     predict_ypd[0] -= 1.1;
-    predict_ypd[1] += 1.9;
+    predict_ypd[1] += 2.7;
 //    if(average_v_bullet >= 25)
 //        predict_ypd[1] = iterate_pitch + 1.9;
 //    else
@@ -438,13 +440,23 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
         case STANDBY:
-            if(fabs(current_omega) > 2.08) {
-                peak_flag = true; // which means we get a wave peak
-                phi_ = CV_PI/2 - w_*time_series.back(); // initial phi
+            if(!fit_cnt) // first time estimate
+            {
+                if(fabs(current_omega) > 2.08) {
+                    peak_flag = true; // which means we get a wave peak
+                    phi_ = CV_PI/4; // initial phi
+                }
+                if(time_series.back() - time_series.front() > 2 && peak_flag && omega.size() - st_ >= 300) {
+                    //st_ = (st_ < 0) ? 0 : st_;
+                    ctrl_mode = ESTIMATE;
+                }
             }
-            if(time_series.back() - time_series.front() > 2 && peak_flag && omega.size() - st_ >= 200) {
-                ctrl_mode = ESTIMATE;
+            else
+            {
+                if(omega.size() - st_ >= 300)
+                    ctrl_mode = ESTIMATE;
             }
+
             return false;
         case ESTIMATE:
             estimateParam(filter_omega,time_series);
@@ -499,7 +511,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
         float tmp_omega = d_theta / dt;
         //printf("omega: %f\tdt: %f\n",tmp_omega,dt);
         if(fabs(tmp_omega)>2.1) { //如果观测到的omega太离谱
-            if(energy_flag) //该次omega用kalman插值
+            if(omega_kf_flag) //该次omega用kalman插值
             {
                 total_theta = omega_kf.state_post_[0];
                 tmp_omega = omega_kf.state_post_[1] + omega_kf.state_post_[2] * (dt/step);
@@ -533,16 +545,16 @@ void Predictor::FilterOmega(const float& dt) {
                     current_omega;
     omega_kf.predict();
     omega_kf.correct(measure_vec);
-    energy_flag = true;
+    omega_kf_flag = true;
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
-//    if(showEnergy){
-//        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
-//        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
-//                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
-//        RMTools::showData(data,str,"energy param");
-//        omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
-//        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
-//    }
+    if(showEnergy){
+        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
+        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
+                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
+        RMTools::showData(data,str,"energy param");
+        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
+    }
 }
 void Predictor::FilterRad(const float& latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
@@ -610,18 +622,18 @@ void Predictor::initFanRadKalman() {
  * @param times 用于曲线拟合的数据点数量
  * */
 void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
-    problem.SetParameterLowerBound(&a_,0,0.780);
-    problem.SetParameterUpperBound(&a_,0,1.045);
-    problem.SetParameterLowerBound(&w_,0,1.884);
-    problem.SetParameterUpperBound(&w_,0,2.0);
-    problem.SetParameterLowerBound(&phi_,0,-CV_PI);
-    problem.SetParameterUpperBound(&phi_,0,CV_PI);
     for(int i = st_; i < omega_.size(); i++){
         ceres::CostFunction* cost_func =
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
                         new SinResidual(t_[i], omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
         problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
     }
+    problem.SetParameterLowerBound(&a_,0,0.780);
+    problem.SetParameterUpperBound(&a_,0,1.045);
+    problem.SetParameterLowerBound(&w_,0,1.884);
+    problem.SetParameterUpperBound(&w_,0,2.0);
+    problem.SetParameterLowerBound(&phi_,0,-CV_PI);
+    problem.SetParameterUpperBound(&phi_,0,CV_PI);
     ceres::Solver::Options options;
     options.max_num_iterations = 25;
     options.linear_solver_type = ceres::DENSE_QR;

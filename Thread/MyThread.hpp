@@ -191,6 +191,7 @@ namespace rm
         RMTools::DisPlayWaveCLASS showWave;
 
         bool find_state;
+        uint8_t car_num = 0;
         struct ReceiveData receiveData;
         int armorType;
 

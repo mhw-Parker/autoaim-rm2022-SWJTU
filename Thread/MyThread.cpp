@@ -378,6 +378,7 @@ namespace rm
                     find_state = armorDetectorPtr->findState;
                     predictionSt = getTickCount();
                     if(find_state) {
+                        car_num = armorDetectorPtr->armorNumber;
                         predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
                                                    armorDetectorPtr->targetArmor.armorType,
                                                    gimbal_ypd,
@@ -437,11 +438,10 @@ namespace rm
             /** package data and prepare for sending data to lower-machine **/
             serialPtr->pack(yaw_abs,
                             pitch_abs,
-                            predictPtr->predict_ypd[2],
-                            predictPtr->shootCmd,
                             find_state,
-                            curControlState,
-                            0);
+                            car_num,
+                            predictPtr->shootCmd
+                            );
 #if SAVE_TEST_DATA == 1
             if(dataWrite.is_open())
                     dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << '\n';
@@ -486,7 +486,11 @@ namespace rm
 //            }
             serialPtr->ReadData(receiveData);
             receive_fifo.push(receiveData);
+            curControlState = receiveData.targetMode;
+            blueTarget = receiveData.targetColor;
+            v_bullet = receiveData.bulletSpeed;
             receiveTime = CalWasteTime(st, freq);
+            //printf("-- receiver time = %f\n",receiveTime);
 #if SHOWTIME == 1
             //
 #endif

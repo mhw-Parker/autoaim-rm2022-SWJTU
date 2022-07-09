@@ -72,25 +72,19 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
  * @brief package the data needed by lower computer
  * @param yaw yaw angle
  * @param pitch pitch angle
- * @param dist distance of target armor
- * @param shoot shoot or not
  * @param find found target armor or not
- * @param CmdID command id
- * @param timeStamp time stamp
- * @details CmdID and timeStamo not really used in current code
+ * @param CarID the ID number of the car
+ * @param shoot shoot or not
  * @return none
  */
-void Serial::pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t find, uint8_t CmdID, long long timeStamp) {
-    unsigned char *p;
+void Serial::pack(float yaw, float pitch, uint8_t find, uint8_t CarID, uint8_t shoot) {
     buff[0] = VISION_SOF;
-    memcpy(buff + 1, &CmdID, 1);
-    memcpy(buff + 2, &yaw, 4);
-    memcpy(buff + 6, &pitch, 4);
-    memcpy(buff + 10, &dist, 4);
-    memcpy(buff + 14, &shoot, 1);
-    memcpy(buff + 15, &find, 1);
-    memcpy(buff + 16, &timeStamp, 8);
-    buff[24] = static_cast<char>(VISION_TOF);
+    memcpy(buff + 1, &yaw, 4);
+    memcpy(buff + 5, &pitch, 4);
+    memcpy(buff + 9, &find, 1);
+    memcpy(buff + 10, &CarID, 1);
+    memcpy(buff + 11, &shoot, 1);
+    buff[SEND_LENGTH-1] = static_cast<char>(VISION_TOF);
 }
 
 /**
@@ -108,7 +102,7 @@ bool Serial::WriteData() {
     //cout<<"Write Begin to USB!!!!!!!!!!!!!!!!!"<<endl;
 
     tcflush(fd, TCOFLUSH);
-    curr = write(fd, buff, VISION_LENGTH);
+    curr = write(fd, buff, SEND_LENGTH);
 
     //cout<<"Write Over to USB!!!!!!!!!!!!!!!!!"<<endl;
     if (curr < 0) {
@@ -130,8 +124,8 @@ bool Serial::WriteData() {
  * @return on finding the right data in a limited length of received data, return true, if not, return false
  */
 bool Serial::ReadData(struct ReceiveData &buffer_) {
-    memset(buffRead, 0, VISION_LENGTH);
-    maxReadTime = VISION_LENGTH;
+    memset(buffRead, 0, RECEIVE_LENGTH);
+    maxReadTime = RECEIVE_LENGTH;
     static int onceReadCount = 0;
 
     tcflush(fd, TCIFLUSH);
@@ -144,9 +138,9 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
     if (maxReadTime == 0)return false;
 
     readCount = 1;
-    while (readCount < VISION_LENGTH - 1) {
+    while (readCount < RECEIVE_LENGTH - 1) {
         try {
-            onceReadCount = read(fd, (buffRead + readCount), VISION_LENGTH - readCount);
+            onceReadCount = read(fd, (buffRead + readCount), RECEIVE_LENGTH - readCount);
         }
         catch (exception e) {
             LOGE("Data Read Error!");
@@ -160,16 +154,14 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
         readCount += onceReadCount;
     }
 
-    if (buffRead[0] != VISION_SOF || buffRead[VISION_LENGTH - 1] != VISION_TOF) {
+    if (buffRead[0] != VISION_SOF || buffRead[RECEIVE_LENGTH - 1] != VISION_TOF) {
         return false;
     } else {
-        memcpy(&buffer_.yawAngle, buffRead + 2, 4);
-        memcpy(&buffer_.pitchAngle, buffRead + 6, 4);
-        memcpy(&buffer_.bulletSpeed, buffRead + 10, 4);
-        memcpy(&buffer_.pitchSpeed, buffRead + 14, 4);
-        memcpy(&buffer_.targetMode, buffRead + 18, 1);
-        memcpy(&buffer_.targetColor, buffRead + 19, 1);
-        memcpy(&buffer_.direction, buffRead + 20, 1);
+        memcpy(&buffer_.yawAngle, buffRead + 1, 4);
+        memcpy(&buffer_.pitchAngle, buffRead + 5, 4);
+        memcpy(&buffer_.bulletSpeed, buffRead + 9, 4);
+        memcpy(&buffer_.targetMode, buffRead + 13, 1);
+        memcpy(&buffer_.targetColor, buffRead + 14, 1);
         return true;
     }
 

@@ -21,8 +21,9 @@
 
 /*--------------------------------暂定协议-------------------------------------*/
 
-//暂定25字节,头1字节,数据18字节,尾1字节
-#define    VISION_LENGTH        25
+//
+#define     SEND_LENGTH        13
+#define     RECEIVE_LENGTH      16
 //起始字节,协议固定为0xA5
 #define    VISION_SOF         (0xA5)
 //end字节,协议固定为0xA5
@@ -64,22 +65,23 @@ using namespace std;
  */
 struct ReceiveData
 {
-    uint8_t head = 0;
-    uint8_t CmdID = 0;
+//    uint8_t head = 0;
+//    uint8_t CmdID = 0;
 
     float yawAngle = 0;
     float pitchAngle = 0;
     float bulletSpeed = 0;
-    float pitchSpeed = 0;
     uint8_t targetMode = 0;
-
     uint8_t targetColor = 0;// 0 red target, 1 blue target
-    uint8_t direction = 0;
-    uint8_t blankC = 0;
-    uint8_t blankD = 0;
-    uint8_t blankE = 0;
+    //uint8_t end;
 
-    uint8_t end;
+//    float pitchSpeed = 0;
+//    uint8_t direction = 0;
+//    uint8_t blankC = 0;
+//    uint8_t blankD = 0;
+//    uint8_t blankE = 0;
+
+
 };
 
 /**
@@ -95,7 +97,7 @@ private:
     char nEvent;
     int nBits;
     int nStop;
-    uint8_t buff[VISION_LENGTH];
+    uint8_t buff[SEND_LENGTH];
     uint8_t  buffRead[100];
     uint8_t curBuf;
     int readCount;
@@ -105,7 +107,7 @@ private:
 public:
     explicit Serial(int nSpeed = 115200, char nEvent = 'N', int nBits = 8, int nStop = 1);
     ~Serial();
-    void pack(float yaw, float pitch, float dist, uint8_t shoot, uint8_t find, uint8_t CmdID, long long timeStamp);
+    void pack(float yaw, float pitch, uint8_t find, uint8_t CarID, uint8_t shoot);
     bool InitPort(int nSpeed = 115200, char  nEvent = 'N', int nBits = 8, int nStop = 1);
     bool WriteData();
     bool ReadData(struct ReceiveData& buffer);
