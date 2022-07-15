@@ -14,10 +14,8 @@
 
 #include "ArmorDetector.hpp"
 #include "SerialPort.hpp"
-#include "SolveAngle.hpp"
 #include "preoptions.h"
 #include "mydefine.h"
-#include "Filter.h"
 #include "EnergyDetector.h"
 #include "V4L2KAS.h"
 #include "VideoDriver.hpp"
@@ -163,9 +161,6 @@ namespace rm
 
         /* Serial */
         std::unique_ptr<Serial> serialPtr;
-
-        /* Angle solver */
-        std::unique_ptr<SolveAngle> solverPtr;
 
         /* Armor detector */
         std::unique_ptr<ArmorDetector> armorDetectorPtr;

@@ -133,7 +133,6 @@ namespace rm
 
     ImgProdCons::ImgProdCons():
             serialPtr(unique_ptr<Serial>(new Serial())),
-            solverPtr(unique_ptr<SolveAngle>(new SolveAngle())),
             armorDetectorPtr(unique_ptr<ArmorDetector>(new ArmorDetector())),
             kalman(unique_ptr<Kalman>(new Kalman())),
             energyPtr(unique_ptr<EnergyDetector>(new EnergyDetector())),
@@ -171,12 +170,12 @@ namespace rm
                 driver = &mindCapture;
 #endif
                 break;
-            case INFANTRY_MELEE0:
+            case INFANTRY3:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
                 break;
-            case INFANTRY_MELEE1:
+            case INFANTRY4:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -184,7 +183,7 @@ namespace rm
             case INFANTRY_TRACK:
                 driver = &v4l2Capture;
                 break;
-            case SENTRY:
+            case SENTRYTOP:
             case SENTRYDOWN:
 #ifdef MIND
                 driver = &mindCapture;
@@ -285,7 +284,7 @@ namespace rm
                     }
                     curDetectMode = TRADITION_MODE;
                 } else {
-                    if (++armorDetectorPtr->lossCnt >= 2) {
+                    if (++armorDetectorPtr->lostCnt >= 2) {
                         //curDetectMode = MODEL_MODE;
                     }
                 }

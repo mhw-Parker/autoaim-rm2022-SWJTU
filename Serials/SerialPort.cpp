@@ -62,7 +62,6 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
     }
     if ((fd = open(name.data(), O_RDWR | O_APPEND | O_SYNC)) < 0) {
         LOGE("fd failed!");
-        //cout<<"fd failed!"<<endl;
         return false;
     }
     return set_opt(fd, nSpeed_, nEvent_, nBits_, nStop_) >= 0;
@@ -99,12 +98,10 @@ bool Serial::WriteData() {
         }
         return false;
     }
-    //cout<<"Write Begin to USB!!!!!!!!!!!!!!!!!"<<endl;
 
     tcflush(fd, TCOFLUSH);
     curr = write(fd, buff, SEND_LENGTH);
 
-    //cout<<"Write Over to USB!!!!!!!!!!!!!!!!!"<<endl;
     if (curr < 0) {
         raise(SIGINT);
         LOGW("Write Serial offline!");
@@ -144,7 +141,6 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
         }
         catch (exception e) {
             LOGE("Data Read Error!");
-            //cout << e.what() << endl;
             return false;
         }
 

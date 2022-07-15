@@ -86,7 +86,14 @@ private:
     void UpdateKF(const Vector3f& z_k);
     void InitKfAcceleration(const float dt);
 
-    RMTools::DisPlayWaveCLASS waveClass;
+    bool JudgeSpinning();
+    void AgainstSpinning();
+    float last_pose_yaw = - CV_PI / 2, last_t;
+    float middle_t;
+    bool spin_flag = false;
+    int spin_cnt = 0;
+
+    RMTools::DisPlayWaveCLASS waveClass, poseAngle;
 
     // 自瞄装甲板Kalman
     EigenKalmanFilter RMKF = EigenKalmanFilter(9, 3);

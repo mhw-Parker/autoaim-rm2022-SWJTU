@@ -235,15 +235,15 @@ namespace RMTools {
                 min_v = 10;
                 max_v = 16;
                 break;
-            case INFANTRY_MELEE0:
+            case INFANTRY3:
                 min_v = 10;
                 max_v = 30;
                 break;
-            case INFANTRY_MELEE1:
+            case INFANTRY4:
                 min_v = 15;
                 max_v = 30;
                 break;
-            case SENTRY:
+            case SENTRYTOP:
             case SENTRYDOWN:
                 min_v = 24;
                 max_v = 32;
@@ -270,17 +270,17 @@ namespace RMTools {
             case HERO:
                 offset[0] = -0.4;
                 break;
-            case INFANTRY_MELEE0:
+            case INFANTRY3:
                 offset[0] = -1.7;
                 offset[1] = -2;
                 break;
-            case INFANTRY_MELEE1:
+            case INFANTRY4:
                 offset[0] = -1.8;
                 offset[1] = 1;
                 break;
             case INFANTRY_TRACK:
                 break;
-            case SENTRY:
+            case SENTRYTOP:
                 offset[0] = -1.15;
                 offset[1] = -1.15;
                 break;
@@ -413,7 +413,7 @@ namespace RMTools {
             delta_yaw += CV_PI;
 
         // 计算delta_pitch
-        if (carName == SENTRY || carName == SENTRYDOWN) {
+        if (carName == SENTRYTOP || carName == SENTRYDOWN) {
             target_theta = asin(ly / ldist);
             predict_theta = asin(y / dist);
         } else {

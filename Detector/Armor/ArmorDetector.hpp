@@ -49,7 +49,7 @@ namespace rm
     struct ArmorParam {
         /// 灯条识别参数
         // 灯条点集数量
-        float minPointNum = 7;
+        float minPointNum = 0;
         // 灯条面积
         float minLightArea = 10;
         float maxLightArea = 2100;
@@ -143,8 +143,9 @@ namespace rm
         }
 
         Lamp(RotatedRect bar, float angle, float avgB) :lightAngle(angle),avgRSubBVal(avgB) {
-            // 高度乘2
-            cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2));
+            ///TODO高度系数待实测
+            // 高度乘2.3
+            cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2.3));
             rect = cv::RotatedRect(bar.center, exLSize, bar.angle);
         }
 
@@ -193,6 +194,8 @@ namespace rm
         /**core functions**/
         void Init();
 
+        void InitDetectionPrams();
+
         bool ArmorDetectTask(Mat &img);
 
     private:
@@ -210,8 +213,6 @@ namespace rm
 
         void SetSVMRectPoints(Point2f& lt, Point2f& rt, Point2f& lb, Point2f& rb);
         void SetSVMRectPoints(Point2f&& lt, Rect& rectArea);
-
-        int GetArmorNumber();
 
         int getArmorNumber(Armor &armor);
 
@@ -251,8 +252,7 @@ namespace rm
         //Mat img;
 
         /*loss cnt*/
-        int lostCnt = 130;
-        int lossCnt;
+        int lostCnt;
 
         /** variables would be used in functions**/
     private:
@@ -296,6 +296,8 @@ namespace rm
     private:
         // 灯条匹配和识别参数
         struct ArmorParam param;
+        // 参数文件目录
+        string param_file;
 
         Ptr<SVM> svm;  //svm model svm模型
         Size svmArmorSize;

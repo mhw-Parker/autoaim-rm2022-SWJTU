@@ -102,13 +102,13 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                 }},
     {"-melee0", {
                         "MELEE INFANTRY SET SAIL! COMMANDER!",[]() {
-                carName = INFANTRY_MELEE0;
+                carName = INFANTRY3;
                 LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
             }
                 }},
     {"-melee1", {
                         "MELEE INFANTRY SET SAIL! COMMANDER!",[]() {
-                carName = INFANTRY_MELEE1;
+                carName = INFANTRY4;
                 LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
             }
                 }},
@@ -119,15 +119,15 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
             }
                }},
     {"-sentry", {
-                          "SENTRY SET SAIL! COMMANDER!",[]() {
-                carName = SENTRY;
-                LOGM("SENTRY SET SAIL! COMMANDER!");
+                          "SENTRYTOP SET SAIL! COMMANDER!",[]() {
+                carName = SENTRYTOP;
+                LOGM("SENTRYTOP SET SAIL! COMMANDER!");
             }
                   }},
     {"-sentrydown", {
                         "SENTRYDOWN SET SAIL! COMMANDER!",[]() {
                 carName = SENTRYDOWN;
-                LOGM("SENTRY SET SAIL! COMMANDER!");
+                LOGM("SENTRYTOP SET SAIL! COMMANDER!");
             }
                 }},
     {"-binary", {

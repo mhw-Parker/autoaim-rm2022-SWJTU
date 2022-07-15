@@ -23,14 +23,14 @@ SolveAngle::SolveAngle() {
             fit_gun_error = 0.2;
             coeff = 0.035;
             break;
-        case INFANTRY_MELEE0:
+        case INFANTRY3:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             fit_gun_error = 0.2;
             coeff = 0.025;
             break;
-        case INFANTRY_MELEE1:
+        case INFANTRY4:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
@@ -53,7 +53,7 @@ SolveAngle::SolveAngle() {
             fit_gun_error = 0;
             coeff = 0.025;
             break;
-        case SENTRY:
+        case SENTRYTOP:
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
@@ -103,12 +103,12 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
     //because the armor is  incline,so the height of the armor should be smaller than reality.
     switch(targetSize) {
         case SMALL_ARMOR:
-            targetHeight3D = 125;
-            targetWidth3D = 135;
+            targetHeight3D = 126;
+            targetWidth3D = 131;
             //printf("-- Small Armor ! --\n");
             break;
         case BIG_ARMOR:
-            targetHeight3D = 140;
+            targetHeight3D = 126;
             targetWidth3D = 225;
             //printf("-- Big Armor ! --\n");
             break;
@@ -118,8 +118,8 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             //printf("-- Energy Armor ! --\n");
             break;
         default:
-            targetHeight3D = 125;
-            targetWidth3D = 135;
+            targetHeight3D = 126;
+            targetWidth3D = 131;
     };
     targetPoints3D.emplace_back(-targetWidth3D / 2, -targetHeight3D / 2, 0);
     targetPoints3D.emplace_back(targetWidth3D / 2, -targetHeight3D / 2, 0);
@@ -160,7 +160,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vect
     camXYZ2YPD(); //直接输出目标点 yaw pitch dist
     //GunXYZ2YPD(p_cam_xyz);
 
-//    if(carName == SENTRY)
+//    if(carName == SENTRYTOP)
 //        gimbal_ypd += Vector3f {-90,0,0};
 
     float sin_y = sin(gimbal_ypd[0] * degree2rad);

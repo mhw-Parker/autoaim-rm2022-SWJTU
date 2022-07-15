@@ -4,7 +4,8 @@
 #include "Predictor.h"
 
 Predictor::Predictor() : waveClass(2000,300,1000),
-                         omegaWave(3,600,1000)
+                         omegaWave(3,600,1000),
+                         poseAngle(CV_PI,600,1000)
 {
     predict_pts.assign(4,Point2f(0,0));
     // TODO 通过各种优先模式设置初始弹速
@@ -12,15 +13,15 @@ Predictor::Predictor() : waveClass(2000,300,1000),
         case HERO:
             average_v_bullet = v_vec[0] = 15;
             break;
-        case INFANTRY_MELEE0:
+        case INFANTRY3:
             average_v_bullet = v_vec[0] = 15;
             break;
-        case INFANTRY_MELEE1:
+        case INFANTRY4:
             average_v_bullet = v_vec[0] = 28;
             break;
         case INFANTRY_TRACK:
             break;
-        case SENTRY:
+        case SENTRYTOP:
             average_v_bullet = v_vec[0] = 26;
             react_t = 0.6;
             break;
@@ -125,11 +126,13 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 解算YPD
     //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
     solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
+    /** test against spinning **/
+    AgainstSpinning();
+    /****/
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     target_ypd = gimbal_ypd + delta_ypd;
     // 通过目标xyz坐标计算yaw pitch distance
     target_xyz = GetGyroXYZ();
-    cout << "lost: " << lost_cnt << endl;
     // 识别到
     if (last_xyz != target_xyz) {
         float distance = RMTools::GetDistance(last_xyz, target_xyz);
@@ -173,34 +176,34 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         KalmanRefresh();
     }
     // 哨兵射击命令
-    if (carName == SENTRY || carName == SENTRYDOWN) {
+    if (carName == SENTRYTOP || carName == SENTRYDOWN) {
         shootCmd = CheckShoot(gimbal_ypd, offset, armor_type);
     }
     // 更新last值
     last_xyz = target_xyz;
 
     // 显示数据，会耗时17ms左右，一般关掉
-    if (showArmorBox) {
-        vector<float> data2;
-        for (int len = 0; len < target_xyz.size(); len++)
-            data2.push_back(target_xyz[len]);
-        for (int len = 0; len < RMKF.state_post_.rows(); len++)
-            data2.push_back(RMKF.state_post_[len]);
-        for (int i = 0; i < 3; i++)
-            data2.push_back(predict_ypd[i]);
-        vector<string> str2 = {"m_x","m_y","m_z",
-                               "kf_x","kf_y","kf_z",
-                               "kf_vx","kf_vy","kf_vz",
-                               "kf_ax","kf_ay","kf_az",
-                               "pre_yaw","pre_pitch","pre_dist"};
-        RMTools::showData(data2, str2, "data window");
-        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
-                               "v bullet","Average v","latency"};
-        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
-                               gimbal_ypd[1],predict_ypd[1] + offset[1],
-                               v_,average_v_bullet,latency};
-        RMTools::showData(data1,str1,"abs degree");
-    }
+//    if (showArmorBox) {
+//        vector<float> data2;
+//        for (int len = 0; len < target_xyz.size(); len++)
+//            data2.push_back(target_xyz[len]);
+//        for (int len = 0; len < RMKF.state_post_.rows(); len++)
+//            data2.push_back(RMKF.state_post_[len]);
+//        for (int i = 0; i < 3; i++)
+//            data2.push_back(predict_ypd[i]);
+//        vector<string> str2 = {"m_x","m_y","m_z",
+//                               "kf_x","kf_y","kf_z",
+//                               "kf_vx","kf_vy","kf_vz",
+//                               "kf_ax","kf_ay","kf_az",
+//                               "pre_yaw","pre_pitch","pre_dist"};
+//        RMTools::showData(data2, str2, "data window");
+//        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
+//                               "v bullet","Average v","latency"};
+//        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
+//                               gimbal_ypd[1],predict_ypd[1] + offset[1],
+//                               v_,average_v_bullet,latency};
+//        RMTools::showData(data1,str1,"abs degree");
+//    }
     //waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
 }
 
@@ -348,6 +351,54 @@ uint8_t Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset
     }
     return 0;
 }
+
+/**
+ * @brief used to judge whether the enemy car is in spinning mode
+ * */
+bool Predictor::JudgeSpinning() {
+    // delta_yaw_ pose between last stamp and now stamp
+    float d_yaw = fabs(solveAngle.yaw_ - last_pose_yaw);
+    //poseAngle.displayWave(d_yaw, solveAngle.yaw_, "pose-yaw_");
+    last_pose_yaw = solveAngle.yaw_;
+    // while changing target armor the delta pose angle will meet a peak
+    if (d_yaw > CV_PI / 3) {
+        cout << d_yaw << endl;
+        if (!spin_flag) {
+            last_t = time_series.back();
+            spin_flag = true;
+        } else {
+            float spin_cycle_t = time_series.back() - last_t;
+            cout << "a quarter of spin cycle time: " << spin_cycle_t << endl;
+            if (spin_cycle_t < 1) {
+                middle_t = (time_series.back() + last_t) / 2; // the probably time while the armor locates in the middle
+                last_t = time_series.back();
+                spin_cnt++; // spin mode counter
+            } else {
+                spin_flag = false;
+                spin_cnt = 0;
+            }
+        }
+    } else {
+        // quit spin mode
+        if(time_series.back() - last_t > 1) {
+            spin_cnt = 0;
+            spin_flag = false;
+        }
+    }
+    if (spin_cnt > 1) { // detect more than twice
+        return true;
+    } else {
+        return false;
+    }
+}
+void Predictor::AgainstSpinning() {
+    if(JudgeSpinning()) {
+        cout << "spinning top mode" << endl;
+    } else {
+        return;
+    }
+}
+
 /******************************************************************************************/
 
 /**----------------------- Helios 2022赛季能量机关预测部分 ---------------------------------**/
@@ -413,7 +464,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
             }
             else {
-                predict_rad = (omega_kf_flag) ? omega.back()*0.4 : 0;
+                predict_rad = (omega_kf_flag) ? filter_omega.back()*0.4 : 0;
             }
         }
         else
@@ -591,7 +642,7 @@ void Predictor::initFanRotateKalman() {
     omega_kf.process_noise_.setIdentity();
     // 测量噪声协方差矩阵R
     omega_kf.measure_noise_.setIdentity();
-    omega_kf.measure_noise_ <<  50, 0,
+    omega_kf.measure_noise_ <<  20, 0,      // TODO improve rotate kalman noise parameters
                                 0, 50;
     // 误差估计协方差矩阵P
     omega_kf.error_post_.setIdentity();
@@ -633,6 +684,7 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     problem.SetParameterUpperBound(&w_,0,2.0);
     problem.SetParameterLowerBound(&phi_,0,-CV_PI);
     problem.SetParameterUpperBound(&phi_,0,CV_PI);
+
     ceres::Solver::Options options;
     options.max_num_iterations = 25;
     options.linear_solver_type = ceres::DENSE_QR;

@@ -134,8 +134,7 @@ namespace rm
      * @param none
      * @return none
     */
-    void ArmorDetector::Init()
-    {
+    void ArmorDetector::Init() {
         targetArmor.init();
         lastTarget.init();
         roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
@@ -144,32 +143,37 @@ namespace rm
         lostCnt = 15;
         armorNumber = 0;
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
-        lossCnt = 0;
+        // 初始化识别参数
+        string whose_params;
         switch (carName) {
-            case IMAGE:
-                break;
             case HERO:
-            case INFANTRY_MELEE0:
-            case INFANTRY_MELEE1:
+                whose_params = "Hero";
+                break;
+            case INFANTRY3:
+            case INFANTRY4:
+                whose_params = "Infantry";
                 break;
             case INFANTRY_TRACK:
+                whose_params = "Infantry_track";
+                break;
+            case SENTRYTOP:
+            case SENTRYDOWN:
+                whose_params = "Sentry";
+                break;
+            case UAV:
+                whose_params = "Uav";
                 break;
             case VIDEO:
-                param.maxAverageBrightness = 255;
+                whose_params = "Video";
                 break;
-            case SENTRY:
-            case SENTRYDOWN:
-                param.maxLightAngle = 18;
-                param.minLightH2W = 2;
-                param.minLightH = 12;
-                param.maxLightH = 80;
-                param.maxAverageBrightness = 120;// 120
-
-                param.maxArmorAngle = 15;
+            case IMAGE:
+                whose_params = "Image";
                 break;
-            default:
+            case NOTDEFINED:
                 break;
         }
+        param_file = "../Detector/Armor/Params/ArmorParams" + whose_params + ".xml";
+        InitDetectionPrams();
 
 //        cfgPath = "../Detector/resource/conf.cfg";
 //        weightPath = "../Detector/resource/528.weights";
@@ -184,6 +188,33 @@ namespace rm
 //        }
 
         find_not_engineer = false;
+    }
+
+    /**
+     * 初始化识别参数
+     */
+    void ArmorDetector::InitDetectionPrams() {
+        FileStorage fs(param_file, FileStorage::READ);
+        // 灯条识别参数
+        fs["minPointNum"] >> param.minPointNum;
+        fs["minLightArea"] >> param.minLightArea;
+        fs["maxLightArea"] >> param.maxLightArea;
+        fs["maxLightAngle"] >> param.maxLightAngle;
+        fs["minLightH2W"] >> param.minLightH2W;
+        fs["maxLightH2W"] >> param.maxLightH2W;
+        fs["maxLightW"] >> param.maxLightW;
+        fs["minLightH"] >> param.minLightH;
+        fs["maxLightH"] >> param.maxLightH;
+        fs["minAverageBrightness"] >> param.minAverageBrightness;
+        fs["maxAverageBrightness"] >> param.maxAverageBrightness;
+        // 灯条匹配参数
+        fs["maxAngleError"] >> param.maxAngleError;
+        fs["maxLengthError"] >> param.maxLengthError;
+        fs["minRatio"] >> param.minRatio;
+        fs["maxRatio"] >> param.maxRatio;
+        fs["maxArmorAngle"] >> param.maxArmorAngle;
+        fs["maxDeviationAngle"] >> param.maxDeviationAngle;
+        fs["maxYDiff"] >> param.maxYDiff;
     }
 
     /**
@@ -333,7 +364,7 @@ namespace rm
             detectCnt = 0;
             lostCnt++;
             if (lostCnt > maxLost) lostState = true;
-            cout << "Lost: " << lostCnt << '\n';
+            cout << "Lost: " << lostCnt << endl;
             return false;
         }
 
@@ -513,7 +544,7 @@ namespace rm
                                                                pow(FRAMEWIDTH / 2, 2));
 
                 /*The match factor is still rough now. A formula is more reasonable. */
-                if (carName == SENTRY || carName == SENTRYDOWN) {
+                if (carName == SENTRYTOP || carName == SENTRYDOWN) {
                     match_factor_ = contourLen1 + dAvgB +
                                     dAngle / param.maxAngleError + deviationAngle / param.maxDeviationAngle +
                                     exp(MIN(fabs(ratio - 1.2), fabs(ratio - 2.2)));
@@ -664,33 +695,10 @@ namespace rm
     }
 
     /**
-     * @brief recognize the number of target armor, only works when USEROI == 1
-     * @return if USEROI == 1 and recognizing number successfully, return the number of target armor, or return -1
+     *
+     * @param armor
+     * @return
      */
-    int ArmorDetector::GetArmorNumber()
-    {
-#if USEROI == 1
-        warpPerspective_mat = getPerspectiveTransform(srcPoints, dstPoints); //对 svm 矩形区域进行透视变换
-        warpPerspective(svmBinaryImage, warpPerspective_dst, warpPerspective_mat, Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE), INTER_NEAREST, BORDER_CONSTANT, Scalar(0)); //warpPerspective to get armorImage
-
-        warpPerspective_dst = warpPerspective_dst.colRange(6,34).clone();
-        resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
-
-        pyrDown(warpPerspective_dst,warpPerspective_dst);
-        // Canny(warpPerspective_dst,warpPerspective_dst, 0, 200);
-        if(showArmorBox)
-            imshow("svm",warpPerspective_dst);
-
-        svmParamMatrix = warpPerspective_dst.reshape(1, 1);
-        svmParamMatrix.convertTo(svmParamMatrix, CV_32FC1);
-
-        int number = (int)(svm->predict(svmParamMatrix) + 0.5 );
-
-        return number;
-#else
-        return 0;
-#endif
-    }
     int ArmorDetector::getArmorNumber(Armor &armor) {
         if(armor.armorType == BIG_ARMOR) {
             dstPoints[0] = Point2f(0, 0);
@@ -701,7 +709,7 @@ namespace rm
             //warpPerspective to get armorImage
             warpPerspective(gray, warpPerspective_dst, warpPerspective_mat,
                             Size(2*SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
-            warpPerspective_dst = warpPerspective_dst.colRange(12,68).clone();
+            warpPerspective_dst = warpPerspective_dst.colRange(6,38).clone();
         } else {
             dstPoints[0] = Point2f(0, 0);
             dstPoints[1] = Point2f(SVM_IMAGE_SIZE, 0);
@@ -716,15 +724,18 @@ namespace rm
         }
         threshold(warpPerspective_dst, warpPerspective_dst, 4, 255,
                   THRESH_BINARY | THRESH_OTSU);
-        resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE)); //把svm图像缩放到 40 * 40
+        // 设置尺寸为40x40，实测发现先放大再下采样有更好的效果
+        resize(warpPerspective_dst,warpPerspective_dst,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
+        // 下采样到20x20
         pyrDown(warpPerspective_dst,warpPerspective_dst,Size(20,20)); //下采样为20*20
 
         imshow("svm",warpPerspective_dst);
         //
-       warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
+        warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
         int number = lround(svm->predict(svmParamMatrix));
         return number;
     }
+
     /**
      * @brief this function shall to serve for building our own database, unfortunately the database built by this way is
      * not good.
