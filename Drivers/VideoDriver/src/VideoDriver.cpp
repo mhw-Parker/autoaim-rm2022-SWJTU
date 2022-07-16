@@ -11,7 +11,7 @@ bool VideoDriver::InitCam()
         perror("Video Open Failed!\n");
         return false;
     }else{
-        LOGM("Video Open Successfully!\n");
+
     }
     return true;
 }
@@ -35,5 +35,5 @@ bool VideoDriver::Grab(Mat& src)
 
 bool VideoDriver::StopGrab()
 {
-
+    return true;
 }

@@ -204,6 +204,7 @@ namespace V4L2KAS
     {
         delete b_Buffer;
         delete buffers;
+        return true;
     }
 
 }

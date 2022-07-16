@@ -25,14 +25,12 @@ string get_uart_dev_name() {
 Serial::Serial(int nSpeed, char nEvent, int nBits, int nStop) :
         nSpeed(nSpeed), nEvent(nEvent), nBits(nBits), nStop(nStop) {
     if (wait_uart) {
-        LOGA("Wait for serial be ready!");
         InitPort(nSpeed, nEvent, nBits, nStop);
-        LOGA("Port set successfully!");
     } else {
         if (InitPort(nSpeed, nEvent, nBits, nStop)) {
-            LOGA("Port set successfully!");
+
         } else {
-            LOGE("Port set fail!");
+
             //cout<<("Port set fail!")<<endl;
         }
     }
@@ -61,7 +59,7 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
         return false;
     }
     if ((fd = open(name.data(), O_RDWR | O_APPEND | O_SYNC)) < 0) {
-        LOGE("fd failed!");
+
         return false;
     }
     return set_opt(fd, nSpeed_, nEvent_, nBits_, nStop_) >= 0;
@@ -104,7 +102,7 @@ bool Serial::WriteData() {
 
     if (curr < 0) {
         raise(SIGINT);
-        LOGW("Write Serial offline!");
+
         close(fd);
         if (wait_uart) {
             InitPort(nSpeed, nEvent, nBits, nStop);
@@ -140,7 +138,7 @@ bool Serial::ReadData(struct ReceiveData &buffer_) {
             onceReadCount = read(fd, (buffRead + readCount), RECEIVE_LENGTH - readCount);
         }
         catch (exception e) {
-            LOGE("Data Read Error!");
+
             return false;
         }
 
@@ -176,7 +174,7 @@ int Serial::set_opt(int fd, int nSpeed, char nEvent, int nBits, int nStop) {
     termios newtio{}, oldtio{};
 
     if (tcgetattr(fd, &oldtio) != 0) {
-        perror("SetupSerial 1");
+
         return -1;
     }
     bzero(&newtio, sizeof(newtio));

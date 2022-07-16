@@ -25,5 +25,5 @@ bool ImageDriver::Grab(Mat& src)
 
 bool ImageDriver::StopGrab()
 {
-
+    return true;
 }

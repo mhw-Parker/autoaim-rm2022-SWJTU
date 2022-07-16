@@ -12,7 +12,6 @@
 #include <ceres/ceres.h>
 
 #include "mydefine.h"
-#include "log.h"
 #include "RMKF.hpp"
 
 #include"struct_define.h"

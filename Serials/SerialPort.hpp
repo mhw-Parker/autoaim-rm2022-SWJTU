@@ -14,8 +14,6 @@
 #include <cstring>
 #include <cstdio>
 
-#include "log.h"
-
 #define PC2STM32 "/dev/ttyUSB0"//串口位置
 
 
@@ -99,7 +97,7 @@ private:
     int nStop;
     uint8_t buff[SEND_LENGTH];
     uint8_t  buffRead[100];
-    uint8_t curBuf;
+
     int readCount;
     int maxReadTime;
     static int set_opt(int fd, int nSpeed, char nEvent, int nBits, int nStop);
