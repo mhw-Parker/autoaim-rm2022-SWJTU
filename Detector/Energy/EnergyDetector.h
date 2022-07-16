@@ -74,7 +74,7 @@ public:
 
 private:
     std::vector<cv::Point2f> target_armor_centers;//get
-    const float K = 8; //半径倍数 11
+    const float K = 8; //半倍数 11
 
     WindmillParamFlow _flow;
 

@@ -303,7 +303,8 @@ bool EnergyDetector::getCircleCenter(Mat &src){
         //Canny(img, CannyEdge, 30, 200);
         //imshow("canny",CannyEdge);
         findContours(src, circle_contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-
+        vector<float> p2c_dist;
+        vector<Point2f> p_vec;
         for (size_t t = 0; t <  circle_contours.size(); t++) {
             double area = contourArea( circle_contours[t]);
             if (area < _flow.Center_R_Control_area_min | area > _flow.Center_R_Control_area_max) {
@@ -312,28 +313,42 @@ bool EnergyDetector::getCircleCenter(Mat &src){
             }
             //cout << "circle area : " << area << endl;
             Rect rect = boundingRect( circle_contours[t]);
-            float ratio = float(rect.width) / float(rect.height);
-            if (ratio < 4 && ratio > 0.8) { //近似正方形
-                //cout << "ratio : " << ratio << endl;
-                int x = rect.x + rect.width / 2;
-                int y = rect.y + rect.height / 2;
-                Point2f cal_center = calR1P(); //反解的圆心位置用于判断检测圆心的可信度
-                circle(outline, cal_center, 3, Scalar(238, 238, 0), 2, 8, 0);
-                //cout << "--" << pointDistance(cal_center,Point2f(x,y)) << endl;
-                if (pointDistance(cal_center,Point2f(x,y))< 100) {
-                    circle_center_point = Point(x, y);
-                    circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
-                    //imshow("outline",outline);
-                    //cout << "area : " << area << "\n" ;
-                    return true;
-                }
-                //cout << area << '\t' << ratio << endl;
-            }
+            Point rect_center = 0.5*(rect.br() + rect.tl());
+            //float ratio = float(rect.width) / float(rect.height);
+            Point2f cal_center = calR1P();
+            float dist = pointDistance(cal_center, rect_center);
+            if(dist > 200) continue; // max point to point distance error
+            p2c_dist.push_back(dist);
+            p_vec.push_back(rect_center);
+//            if (ratio < 4 && ratio > 0.8) { //近似正方形
+//                //cout << "ratio : " << ratio << endl;
+//                int x = rect.x + rect.width / 2;
+//                int y = rect.y + rect.height / 2;
+//                Point2f cal_center = calR1P(); //反解的圆心位置用于判断检测圆心的可信度
+//                circle(outline, cal_center, 3, Scalar(238, 238, 0), 2, 8, 0);
+//                //cout << "--" << pointDistance(cal_center,Point2f(x,y)) << endl;
+//                if (pointDistance(cal_center,Point2f(x,y))< 100) {
+//                    circle_center_point = Point(x, y);
+//                    circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
+//                    //imshow("outline",outline);
+//                    //cout << "area : " << area << "\n" ;
+//                    return true;
+//                }
+//                //cout << area << '\t' << ratio << endl;
+//            }
             //else cout << "ratio = " << ratio << endl;
         }
-        //return false;
+        if(p_vec.size()) {
+            int min_loc = min_element(p2c_dist.begin(), p2c_dist.end()) - p2c_dist.begin();
+            circle_center_point = p_vec[min_loc];
+            return true;
+        } else {
+            return false;
+        }
+
     } else {
         circle_center_point = calR3P(); //当同时存在3个装甲板时，直接用三点定圆
+        return true;
     }
 }
 

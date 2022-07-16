@@ -36,7 +36,7 @@ private:
     MatrixXf temp4;
 };
 
-#endif KALMAN_RMKF_HPP
+#endif
 
 
 
