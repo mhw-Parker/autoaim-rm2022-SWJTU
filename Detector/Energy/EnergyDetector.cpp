@@ -97,16 +97,18 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.Center_R_Control_area_radio_min = 0.6;
     _flow.Center_R_Control_area_intersection_area_min = 10;
 
-///扇叶筛选相关参数
-    _flow.flow_area_max = 2000;
-    _flow.flow_area_min = 500;
-    _flow.flow_length_max = 100;
-    _flow.flow_length_min = 30;
-    _flow.flow_width_max = 52;
-    _flow.flow_width_min = 5;
-    _flow.flow_aim_max = 3.5;
-    _flow.flow_aim_min = 1.2;
-    _flow.flow_area_ratio_min = 0.6;
+
+    FileStorage fs("../Detector/Energy/fan_param.yaml", FileStorage::READ);
+    if(fs.isOpened()) {
+        fs["armor_contour_area_max"] >> _flow.armor_contour_area_max;
+        fs["armor_contour_area_min"] >> _flow.armor_contour_area_min;
+        fs["armor_contour_length_max"] >> _flow.armor_contour_length_max;
+        fs["armor_contour_length_min"] >> _flow.armor_contour_length_min;
+        fs["armor_contour_width_max"] >> _flow.armor_contour_width_max;
+        fs["armor_contour_width_min"] >> _flow.armor_contour_width_min;
+        fs["armor_contour_hw_ratio_max"] >> _flow.armor_contour_hw_ratio_max;
+        fs["armor_contour_hw_ratio_min"] >> _flow.armor_contour_hw_ratio_min;
+    }
 }
 
 /**

@@ -174,19 +174,6 @@ namespace rm
         }
         param_file = "../Detector/Armor/Params/ArmorParams" + whose_params + ".xml";
         InitDetectionPrams();
-
-//        cfgPath = "../Detector/resource/conf.cfg";
-//        weightPath = "../Detector/resource/528.weights";
-//
-//        net =Net(DetectionModel(cfgPath, weightPath));
-//        net.setPreferableBackend(DNN_BACKEND_CUDA);
-//        net.setPreferableTarget(DNN_TARGET_CUDA);
-//        outNames = net.getUnconnectedOutLayersNames();
-
-//        for (int i = 0; i < outNames.size(); i++) {
-//            printf("output layer name : %s\n", outNames[i].c_str());
-//        }
-
         find_not_engineer = false;
     }
 
