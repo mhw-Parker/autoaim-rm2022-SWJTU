@@ -143,36 +143,6 @@ namespace rm
         lostCnt = 15;
         armorNumber = 0;
         LoadSvmModel(SVM_PARAM_PATH,Size(SVM_IMAGE_SIZE,SVM_IMAGE_SIZE));
-        // 初始化识别参数
-        string whose_params;
-        switch (carName) {
-            case HERO:
-                whose_params = "Hero";
-                break;
-            case INFANTRY3:
-            case INFANTRY4:
-                whose_params = "Infantry";
-                break;
-            case INFANTRY_TRACK:
-                whose_params = "Infantry_track";
-                break;
-            case SENTRYTOP:
-            case SENTRYDOWN:
-                whose_params = "Sentry";
-                break;
-            case UAV:
-                whose_params = "Uav";
-                break;
-            case VIDEO:
-                whose_params = "Video";
-                break;
-            case IMAGE:
-                whose_params = "Image";
-                break;
-            case NOTDEFINED:
-                break;
-        }
-        param_file = "../Detector/Armor/Params/ArmorParams" + whose_params + ".xml";
         InitDetectionPrams();
         find_not_engineer = false;
     }
@@ -181,27 +151,35 @@ namespace rm
      * 初始化识别参数
      */
     void ArmorDetector::InitDetectionPrams() {
-        FileStorage fs(param_file, FileStorage::READ);
+        FileStorage fs("../Detector/Armor/Armor.yaml", FileStorage::READ);
+
+        string whose_param;
+        if (carName == SENTRYDOWN || carName == SENTRYTOP) {
+            whose_param = "sentry";
+        } else {
+            whose_param = "normal";
+        }
+        FileNode param_set = fs[whose_param];
         // 灯条识别参数
-        fs["minPointNum"] >> param.minPointNum;
-        fs["minLightArea"] >> param.minLightArea;
-        fs["maxLightArea"] >> param.maxLightArea;
-        fs["maxLightAngle"] >> param.maxLightAngle;
-        fs["minLightH2W"] >> param.minLightH2W;
-        fs["maxLightH2W"] >> param.maxLightH2W;
-        fs["maxLightW"] >> param.maxLightW;
-        fs["minLightH"] >> param.minLightH;
-        fs["maxLightH"] >> param.maxLightH;
-        fs["minAverageBrightness"] >> param.minAverageBrightness;
-        fs["maxAverageBrightness"] >> param.maxAverageBrightness;
+        param_set["minPointNum"] >> param.minPointNum;
+        param_set["minLightArea"] >> param.minLightArea;
+        param_set["maxLightArea"] >> param.maxLightArea;
+        param_set["maxLightAngle"] >> param.maxLightAngle;
+        param_set["minLightH2W"] >> param.minLightH2W;
+        param_set["maxLightH2W"] >> param.maxLightH2W;
+        param_set["maxLightW"] >> param.maxLightW;
+        param_set["minLightH"] >> param.minLightH;
+        param_set["maxLightH"] >> param.maxLightH;
+        param_set["minAverageBrightness"] >> param.minAverageBrightness;
+        param_set["maxAverageBrightness"] >> param.maxAverageBrightness;
         // 灯条匹配参数
-        fs["maxAngleError"] >> param.maxAngleError;
-        fs["maxLengthError"] >> param.maxLengthError;
-        fs["minRatio"] >> param.minRatio;
-        fs["maxRatio"] >> param.maxRatio;
-        fs["maxArmorAngle"] >> param.maxArmorAngle;
-        fs["maxDeviationAngle"] >> param.maxDeviationAngle;
-        fs["maxYDiff"] >> param.maxYDiff;
+        param_set["maxAngleError"] >> param.maxAngleError;
+        param_set["maxLengthError"] >> param.maxLengthError;
+        param_set["minRatio"] >> param.minRatio;
+        param_set["maxRatio"] >> param.maxRatio;
+        param_set["maxArmorAngle"] >> param.maxArmorAngle;
+        param_set["maxDeviationAngle"] >> param.maxDeviationAngle;
+        param_set["maxYDiff"] >> param.maxYDiff;
     }
 
     /**

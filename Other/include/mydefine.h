@@ -135,6 +135,8 @@ extern bool saveSVM;
 extern bool debug;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
+// 丢失目标阈值
+extern int max_lost;
 extern CARNAME carName;
 
 extern std::string srcPath;

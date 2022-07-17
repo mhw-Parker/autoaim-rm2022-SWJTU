@@ -261,43 +261,6 @@ namespace RMTools {
         return true;
     }
 
-    /**
-     * 针对每个车返回offset
-     */
-    inline Eigen::Vector2f GetOffset(CARNAME carName) {
-        Eigen::Vector2f offset;
-        switch (carName) {
-            case HERO:
-                offset[0] = -0.4;
-                break;
-            case INFANTRY3:
-                offset[0] = -1.7;
-                offset[1] = -2;
-                break;
-            case INFANTRY4:
-                offset[0] = -1.8;
-                offset[1] = 1;
-                break;
-            case INFANTRY_TRACK:
-                break;
-            case SENTRYTOP:
-                offset[0] = -1.15;
-                offset[1] = -1.15;
-                break;
-            case SENTRYDOWN:
-                offset[0] = -0.9;
-                offset[1] = -1;
-                break;
-            case UAV:
-                break;
-            case VIDEO:
-                break;
-            case NOTDEFINED:
-                break;
-        }
-        return offset;
-    }
-
 /**
  * 求平均值，为0的数据认为不可用
  */

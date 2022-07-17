@@ -47,8 +47,20 @@ public:
     ~Predictor();
     void Refresh();
     cv::Point2f predict_point;
-    float latency = 0.5, fly_t = 0.2, react_t = 0.3;
+    // 预测时长
+    float latency = 0.5;
+    // 子弹飞行时长
+    float fly_t = 0.2;
+    // 电机响应时间
+    float react_t{};
     Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
+    // 各车偏置补偿
+    Vector3f offset{};
+    // 打符专用补偿
+    Vector3f energy_offset{};
+    // 给电控发数据补偿
+    Vector3f back_ypd{};
+
     Vector3f target_xyz{}, predict_xyz{};
     Vector3f last_xyz{};
     Vector3f target_v_xyz{};
@@ -57,10 +69,9 @@ public:
     float average_v_bullet;
     float v_vec[4]{};
     int v_vec_pointer = 1;
-    // 丢失目标
-    short max_lost = showArmorBox ? 7 : 14;
 
 private:
+    void InitParams();
     void UpdateTimeStamp(float &dt);
     void TimeRefresh();
     SolveAngle solveAngle;
@@ -73,8 +84,7 @@ public:
                         const Vector3f &gimbal_ypd, float v_, float dt,
                         int lost_cnt);
     // 哨兵自动射击
-    uint8_t CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
-                    const int& armor_type);
+    uint8_t CheckShoot(const Vector3f& gimbal_ypd, const int& armor_type);
     uint8_t shootCmd{};
 
 private:

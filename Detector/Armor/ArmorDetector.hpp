@@ -49,12 +49,12 @@ namespace rm
     struct ArmorParam {
         /// 灯条识别参数
         // 灯条点集数量
-        float minPointNum = 0;
+        float minPointNum = 7;
         // 灯条面积
         float minLightArea = 10;
         float maxLightArea = 2100;
         // 灯条角度
-        float maxLightAngle = 25;
+        float maxLightAngle = 20;
         // 灯条高宽比
         float minLightH2W = 1.2;
         float maxLightH2W = 7;
@@ -296,8 +296,6 @@ namespace rm
     private:
         // 灯条匹配和识别参数
         struct ArmorParam param;
-        // 参数文件目录
-        string param_file;
 
         Ptr<SVM> svm;  //svm model svm模型
         Size svmArmorSize;

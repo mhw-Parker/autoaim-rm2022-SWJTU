@@ -13,6 +13,7 @@ bool blueTarget = false;
 bool saveVideo = false;
 bool saveSVM = false;
 bool debug = false;
+int max_lost = showArmorBox ? 7 : 14;
 
 int FRAMEWIDTH;
 int FRAMEHEIGHT;

@@ -1,0 +1,40 @@
+%YAML:1.0
+---
+normal:
+   minPointNum: 7
+   minLightArea: 10
+   maxLightArea: 2100
+   maxLightAngle: 25
+   minLightH2W: 1.2000000000000000e+00
+   maxLightH2W: 7
+   maxLightW: 25
+   minLightH: 0
+   maxLightH: 85
+   minAverageBrightness: 20
+   maxAverageBrightness: 255
+   maxAngleError: 5
+   maxLengthError: 2.9999999999999999e-01
+   minRatio: 6.8000000000000005e-01
+   maxRatio: 2.5000000000000000e+00
+   maxArmorAngle: 23
+   maxDeviationAngle: 45
+   maxYDiff: 2
+sentry:
+   minPointNum: 7
+   minLightArea: 10
+   maxLightArea: 2100
+   maxLightAngle: 18
+   minLightH2W: 2
+   maxLightH2W: 7
+   maxLightW: 25
+   minLightH: 12
+   maxLightH: 80
+   minAverageBrightness: 20
+   maxAverageBrightness: 120
+   maxAngleError: 5
+   maxLengthError: 2.9999999999999999e-01
+   minRatio: 6.8000000000000005e-01
+   maxRatio: 2.5000000000000000e+00
+   maxArmorAngle: 15
+   maxDeviationAngle: 45
+   maxYDiff: 2

@@ -5,39 +5,57 @@
 
 Predictor::Predictor() : waveClass(2000,300,1000),
                          omegaWave(3,600,1000),
-                         poseAngle(CV_PI,600,1000)
-{
+                         poseAngle(CV_PI,600,1000) {
     predict_pts.assign(4,Point2f(0,0));
-    // TODO 通过各种优先模式设置初始弹速
+    // 初始化参数：初始弹速，响应时间
+    InitParams();
+
+    Refresh();
+}
+
+/**
+ * 初始化参数
+ */
+void Predictor::InitParams() {
+    string whose_params;
     switch (carName) {
         case HERO:
-            average_v_bullet = v_vec[0] = 15;
+            whose_params = "Hero";
             break;
         case INFANTRY3:
-            average_v_bullet = v_vec[0] = 15;
+            whose_params = "Infantry3";
             break;
         case INFANTRY4:
-            average_v_bullet = v_vec[0] = 28;
+            whose_params = "Infantry4";
             break;
         case INFANTRY_TRACK:
             break;
         case SENTRYTOP:
-            average_v_bullet = v_vec[0] = 26;
-            react_t = 0.6;
+            whose_params = "SentryTop";
             break;
         case SENTRYDOWN:
-            average_v_bullet = v_vec[0] = 26;
-            react_t = 0.6;
+            whose_params = "SentryDown";
             break;
         case UAV:
             break;
         case VIDEO:
-            average_v_bullet = v_vec[0] = 15;
+        case IMAGE:
+            whose_params = "Video";
             break;
         case NOTDEFINED:
             break;
     }
-    Refresh();
+    FileStorage fs("../Predictor/Predictor.yaml", FileStorage::READ);
+    // 找到车名对应的参数
+    FileNode param_set = fs[whose_params];
+    param_set["average_v_bullet"] >> average_v_bullet;
+    param_set["react_t"] >> react_t;
+    param_set["yaw_offset"] >> offset[0];
+    param_set["pitch_offset"] >> offset[1];
+    v_vec[0] = average_v_bullet;
+    FileNode energy_params = fs["Energy"];
+    energy_params["yaw_offset"] >> energy_offset[0];
+    energy_params["pitch_offset"] >> energy_offset[1];
 }
 
 Predictor::~Predictor() = default;
@@ -113,8 +131,6 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                const Vector3f &gimbal_ypd, float v_, float dt,
                                int lost_cnt) {
     UpdateTimeStamp(dt);
-    // 静态偏置量
-    Vector2f offset = RMTools::GetOffset(carName);
     // 检查异常弹速数据
     bool check = RMTools::CheckBulletVelocity(carName, v_);
     // 如果弹速不等于上一次插入的值，说明接收到新弹速，应当插入数组取平均；数组满则覆盖头部
@@ -126,9 +142,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 解算YPD
     //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
     solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
-    /** test against spinning **/
-    AgainstSpinning();
-    /****/
+//    /** test against spinning **/
+//    AgainstSpinning();
+//    /****/
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     target_ypd = gimbal_ypd + delta_ypd;
     // 通过目标xyz坐标计算yaw pitch distance
@@ -177,10 +193,12 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     }
     // 哨兵射击命令
     if (carName == SENTRYTOP || carName == SENTRYDOWN) {
-        shootCmd = CheckShoot(gimbal_ypd, offset, armor_type);
+        shootCmd = CheckShoot(gimbal_ypd, armor_type);
     }
     // 更新last值
     last_xyz = target_xyz;
+    // 发回电控值加偏置
+    back_ypd = offset + back_ypd;
 
     // 显示数据，会耗时17ms左右，一般关掉
 //    if (showArmorBox) {
@@ -337,8 +355,7 @@ Vector3f Predictor::PredictKF(EigenKalmanFilter KF, const int &iterate_times) {
  * 哨兵射击命令
  * @brief 直接用装甲板长度的1/1.4倍作为垂直于相机的长度分量
  */
-uint8_t Predictor::CheckShoot(const Vector3f& gimbal_ypd, const Vector2f& offset,
-                           const int& armor_type) {
+uint8_t Predictor::CheckShoot(const Vector3f& gimbal_ypd, const int& armor_type) {
     float distance = predict_ypd[2];
     float armor_width = (armor_type == 1 ? 230.0f : 135.0f) * 4;
     float armor_height = 126.0f * 4;
@@ -478,12 +495,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     predict_xyz = solveAngle.world_xyz;
     //predict_xyz = GetGyroXYZ();
     iterate_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
-    predict_ypd[0] -= 1.1;
-    predict_ypd[1] += 2.7;
-//    if(average_v_bullet >= 25)
-//        predict_ypd[1] = iterate_pitch + 1.9;
-//    else
-//        predict_ypd[1] = iterate_pitch + 3;
+    back_ypd = predict_ypd + energy_offset;
     latency = react_t + fly_t;
 }
 

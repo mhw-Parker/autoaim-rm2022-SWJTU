@@ -97,18 +97,15 @@ void EnergyDetector::initEnergyPartParam() {
     _flow.Center_R_Control_area_radio_min = 0.6;
     _flow.Center_R_Control_area_intersection_area_min = 10;
 
-
     FileStorage fs("../Detector/Energy/fan_param.yaml", FileStorage::READ);
-    if(fs.isOpened()) {
-        fs["armor_contour_area_max"] >> _flow.armor_contour_area_max;
-        fs["armor_contour_area_min"] >> _flow.armor_contour_area_min;
-        fs["armor_contour_length_max"] >> _flow.armor_contour_length_max;
-        fs["armor_contour_length_min"] >> _flow.armor_contour_length_min;
-        fs["armor_contour_width_max"] >> _flow.armor_contour_width_max;
-        fs["armor_contour_width_min"] >> _flow.armor_contour_width_min;
-        fs["armor_contour_hw_ratio_max"] >> _flow.armor_contour_hw_ratio_max;
-        fs["armor_contour_hw_ratio_min"] >> _flow.armor_contour_hw_ratio_min;
-    }
+    fs["armor_contour_area_max"] >> _flow.armor_contour_area_max;
+    fs["armor_contour_area_min"] >> _flow.armor_contour_area_min;
+    fs["armor_contour_length_max"] >> _flow.armor_contour_length_max;
+    fs["armor_contour_length_min"] >> _flow.armor_contour_length_min;
+    fs["armor_contour_width_max"] >> _flow.armor_contour_width_max;
+    fs["armor_contour_width_min"] >> _flow.armor_contour_width_min;
+    fs["armor_contour_hw_ratio_max"] >> _flow.armor_contour_hw_ratio_max;
+    fs["armor_contour_hw_ratio_min"] >> _flow.armor_contour_hw_ratio_min;
 }
 
 /**

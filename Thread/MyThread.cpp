@@ -378,6 +378,11 @@ namespace rm
                     predictionSt = getTickCount();
                     if(find_state) {
                         car_num = armorDetectorPtr->armorNumber;
+                    } else {
+                        car_num = 0;
+                    }
+                    // 如果小于丢失的阈值则认为可以补帧预测
+                    if (armorDetectorPtr->lostCnt <= max_lost) {
                         predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
                                                    armorDetectorPtr->targetArmor.armorType,
                                                    gimbal_ypd,
@@ -423,21 +428,13 @@ namespace rm
     void ImgProdCons::Feedback() {
         do {
             double st = (double) getTickCount();
-            if (curControlState == AUTO_SHOOT_STATE) {
-                if (find_state) {
-                    Vector2f offset = RMTools::GetOffset(carName);
-                    yaw_abs = predictPtr->predict_ypd[0] + offset[0];
-                    pitch_abs = predictPtr->predict_ypd[1] + offset[1];
-                }
-            }
-            else {
-                yaw_abs = predictPtr->predict_ypd[0];
-                pitch_abs = predictPtr->predict_ypd[1];
-            }
+            // 给电控发数据
+            yaw_abs = predictPtr->back_ypd[0];
+            pitch_abs = predictPtr->back_ypd[1];
             /** package data and prepare for sending data to lower-machine **/
             serialPtr->pack(yaw_abs,
                             pitch_abs,
-                            find_state,
+                            armorDetectorPtr->lostCnt <= max_lost,
                             car_num,
                             predictPtr->shootCmd
                             );
