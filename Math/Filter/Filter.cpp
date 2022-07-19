@@ -204,6 +204,7 @@ namespace rm {
         }
         //ax = (v_tx_now - px[flag])/20;
         Vmean = Vmean * 0.8 + dx * 0.2;//todo update v
+        return true;
     }
 
     bool Kalman::JudgeArmor_v(int &flag) {
@@ -220,6 +221,7 @@ namespace rm {
         }
         ax = (v_tx_now - vx[flag]) / FLAME;
         Amean = Amean * 0.85 + ax * 0.15;//todo update a
+        return true;
     }
 
     void Kalman::FirstSetFilter(Point2f  targetPoint) {

@@ -158,11 +158,13 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
 Mat EnergyDetector::preprocess(Mat &src) {
     Mat gray, sub_mat;
     vector<Mat> channels;
-    split(src, channels);
-    if(!blueTarget)
-        subtract(channels[0],channels[2],sub_mat);
-    else
-        subtract(channels[2],channels[0],sub_mat);
+    gray = src.clone();
+    cvtColor(gray,sub_mat,COLOR_BGR2GRAY);
+//    split(src, channels);
+//    if(!blueTarget)
+//        subtract(channels[0],channels[2],sub_mat);
+//    else
+//        subtract(channels[2],channels[0],sub_mat);
     threshold(sub_mat,sub_mat,80,255,THRESH_BINARY);
 
     Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));

@@ -320,7 +320,7 @@ namespace RMTools {
     /**
      * @brief 获得四舍五入int值
      * */
-    inline int get4Left5int(float f) {
+    inline int round2int(float f) {
         int int_f = f;
         float d = f - int_f;
         if(d >= 0.5) return int_f+1;

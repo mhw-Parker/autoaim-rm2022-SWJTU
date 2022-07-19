@@ -134,7 +134,10 @@ namespace rm
     {
         /*initialize signal*/
         InitSignals();
-        whole_time_arr.resize(3);
+        if(!serialPtr->InitPort()){
+            com_flag = false;
+            cerr << "serial port set failed !" << endl;
+        }
         /*initialize camera*/
 #if SAVE_TEST_DATA == 1
         fout.close();
@@ -296,7 +299,7 @@ namespace rm
                     driver->StopGrab();
                     GrabFlag = false;
                     quitFlag = true;
-                    cout << "Exit for grabbing fail." << endl;
+                    cerr << "Exit for grabbing fail." << endl;
                     raise(SIGINT);
                     break;
                 }
@@ -305,7 +308,9 @@ namespace rm
                 saveMission = true;
             }
             // put new frame which grab from camera in Fifo
-            timeStampMat temp(frame,time_stamp,receive_fifo.wait_and_pop());
+            ReceiveData rd;
+            if(com_flag) rd = receive_fifo.wait_and_pop();
+            timeStampMat temp(frame,time_stamp,rd);
             frame_fifo.push(temp);
             //printf("fifo time ： %f\n", CalWasteTime(s,getTickFrequency()));
             produceTime = CalWasteTime(st, freq);
@@ -452,15 +457,17 @@ namespace rm
     {
         do{
             double st = (double) getTickCount();
-            // 读取视频则不从电控读数据
-//            if (carName != VIDEO && serialPtr->ReadData(receiveData)) {
-//                receive_fifo.push(receiveData);
-//            }
-            serialPtr->ReadData(receiveData);
-            receive_fifo.push(receiveData);
-            curControlState = receiveData.targetMode;
-            blueTarget = receiveData.targetColor;
-            v_bullet = receiveData.bulletSpeed;
+//            serialPtr->ReadData(receiveData);
+//            receive_fifo.push(receiveData);
+//            curControlState = receiveData.targetMode;
+//            blueTarget = receiveData.targetColor;
+//            v_bullet = receiveData.bulletSpeed;
+            if(serialPtr->ReadData(receiveData)) {
+                receive_fifo.push(receiveData);
+                curControlState = receiveData.targetMode;
+                blueTarget = receiveData.targetColor;
+                v_bullet = receiveData.bulletSpeed;
+            }
             receiveTime = CalWasteTime(st, freq);
             //printf("-- receiver time = %f\n",receiveTime);
 #if SHOWTIME == 1
@@ -506,11 +513,6 @@ namespace rm
             }
             if (showOrigin) {
                 circle(frame, Point(FRAMEWIDTH / 2, FRAMEHEIGHT / 2), 5, Scalar(255, 255, 255), -1);
-
-                if (FRAMEHEIGHT > 1000) {
-                    //pyrDown(detectFrame,detectFrame);
-                    //pyrDown(detectFrame,detectFrame);
-                }
                 imshow("detect", frame);
                 waitKey(3);
             }

@@ -121,15 +121,14 @@ namespace rm
         double freq;
 
         /***/
-        float tmp_t = 0;
         double last_mission_time = 0.025; //上一次任务总体耗时
-        vector<double> whole_time_arr;
         int time_cnt;
         /***/
         /** new add thread fifo **/
         FIFO<timeStampMat> frame_fifo;
         FIFO<ReceiveData> receive_fifo;
         FIFO<Mat> show_fifo;
+        bool com_flag = true;
 
         /* 保存图像相关 */
         string saveVideoPath;

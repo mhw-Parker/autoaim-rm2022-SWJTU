@@ -140,7 +140,7 @@ private:
     bool peak_flag = false;
 
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
-    u_int8_t ctrl_mode = STANDBY;
+    u_int8_t ctrl_mode = INIT;
 
     RMTools::DisPlayWaveCLASS omegaWave;
 
@@ -165,7 +165,7 @@ private:
     double a_ = 0.9125; // 0.78 ~ 1.045       middle value: 0.9125
     double w_ = 1.942;  // 1.884 ~ 2.0      middle: 1.942
     double phi_ = CV_PI/2; //参数初值
-    int st_ = 0, peak_st_ = 0;
+    int st_ = 15;
     struct SinResidual{
         SinResidual(double t, double omega): omega_(omega), t_(t) {}
 
@@ -187,7 +187,7 @@ private:
 
     int change_cnt;
     bool last_flag, flag = 1;
-    float predict_rad;
+    float predict_rad = 0;
 
 };
 

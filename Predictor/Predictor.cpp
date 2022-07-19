@@ -78,7 +78,7 @@ void Predictor::EnergyRefresh(){
     filter_omega.clear();
     time_series.clear();
     t_list.clear();
-    ctrl_mode = STANDBY;
+    ctrl_mode = INIT;
     total_theta = 0;
     omega_kf_flag = false;
     clockwise_cnt = 0;
@@ -470,12 +470,11 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                     fit_cnt++;
                     if(fit_cnt%30 == 0){
                         ctrl_mode = STANDBY; // if the difference value between ideal omega and filter omega is too big
-                        st_ = omega.size();// use 200 points refit the ideal omega
-                        predict_rad = filter_omega.back() * 0.5;
+                        st_ = filter_omega.size() - 50;// use 200 points refit the ideal omega
                     }
                 }
                 else {
-                    predict_rad = energy_rotation_direction * IdealRad(t_list.back(), t_list.back() + 0.4);
+                    predict_rad = IdealRad(t_list.back(), t_list.back() + 0.4);
                     omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
                     //FilterRad(latency);
                 }
@@ -485,9 +484,10 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
             }
         }
         else
-            predict_rad = energy_rotation_direction * 1.05 * latency;
+            predict_rad = 1.05 * latency;
     }
-    predict_point = calPredict(target_point,center,predict_rad); // 逆时针为负的预测弧度，顺时针为正 的预测弧度
+    predict_rad *= energy_rotation_direction;
+    predict_point = calPredict(target_point,center,predict_rad); // 逆时针为负的预测弧度，顺时针为正 预测弧度
     getPredictRect(center, target_pts, predict_rad); // 获得预测矩形
     solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
@@ -509,24 +509,11 @@ bool Predictor::EnergyStateSwitch() {
                 max_omega = 0;
                 min_omega = 5;
             }
+            return false;
         case STANDBY:
-            if(!fit_cnt) // first time estimate
-            {
-                if(fabs(current_omega) > 2.08) {
-                    peak_flag = true; // which means we get a wave peak
-                    phi_ = CV_PI/4; // initial phi
-                }
-                if(time_series.back() - time_series.front() > 2 && peak_flag && omega.size() - st_ >= 200) {
-                    //st_ = (st_ < 0) ? 0 : st_;
-                    ctrl_mode = ESTIMATE;
-                }
+            if(time_series.back() - time_series[st_] > 1 && time_series.size() - st_ > 150) {
+                ctrl_mode = ESTIMATE;
             }
-            else
-            {
-                if(omega.size() - st_ >= 200)
-                    ctrl_mode = ESTIMATE;
-            }
-
             return false;
         case ESTIMATE:
             estimateParam(filter_omega,time_series);
@@ -534,15 +521,16 @@ bool Predictor::EnergyStateSwitch() {
             return true;
         case PREDICT:
             return true;
-        default: return true;
+        default:
+            return true;
     }
 }
 
 bool Predictor::FindWavePeak() {
-    if(filter_omega.size() > 12) {
-        vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 kalman滤波角速度 的后 6 个数
+    if(filter_omega.size() > 15) {
+        vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); // 取 kalman滤波角速度 的后 6 个数
         vector<float> cut_time_series(time_series.end()-6,time_series.end());
-        Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘
+        Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); // 一元函数最小二乘
         fit_cnt = (rate(0,0) > 0) ? fit_cnt + 1 : fit_cnt - 1;
         if(fit_cnt > 5) {   // rise find peak
             if(fabs(filter_omega.back()) > max_omega) {
@@ -570,6 +558,11 @@ bool Predictor::FindWavePeak() {
             return false;
         }
         if(change_cnt > 5) {
+            if(fit_cnt >= 0) {
+                cout << "--- get peak omega : " << max_omega << "   init phi :" << phi_ << endl;
+            } else {
+                cout << "--- get valley omega : " << min_omega << "   init phi :" << phi_ << endl;
+            }
             return true;
         } else {
             return false;
@@ -605,7 +598,7 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
             last_d_theta -= CV_2PI;
         else if(last_d_theta < -6.1)
             last_d_theta += CV_2PI;
-        int d_fan = RMTools::get4Left5int(last_d_theta / 1.2566); // 1.2566 = 2*pi/5  四舍五入
+        int d_fan = RMTools::round2int(last_d_theta / 1.2566); // 1.2566 = 2*pi/5  四舍五入
         if(abs(d_fan) >= 1) {
             //printf("delta fan : %d\tdelta the: %f\tangle_2: %f\tangle_1: %f\n",d_fan,last_d_theta,angle.back()*180/CV_PI,angle[angle.size()-2]*180/CV_PI);
             for(int i = 2;i <= step_;i++) {
@@ -661,14 +654,14 @@ void Predictor::FilterOmega(const float& dt) {
     omega_kf.correct(measure_vec);
     omega_kf_flag = true;
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
-    if(showEnergy){
-        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
-        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
-                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
-        RMTools::showData(data,str,"energy param");
-        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
-        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
-    }
+//    if(showEnergy){
+//        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
+//        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
+//                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
+//        RMTools::showData(data,str,"energy param");
+//        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+//        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
+//    }
 }
 void Predictor::FilterRad(const float& latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
@@ -706,8 +699,8 @@ void Predictor::initFanRotateKalman() {
     omega_kf.process_noise_.setIdentity();
     // 测量噪声协方差矩阵R
     omega_kf.measure_noise_.setIdentity();
-    omega_kf.measure_noise_ <<  20, 0,      // TODO improve rotate kalman noise parameters
-                                0, 50;
+    omega_kf.measure_noise_ <<  50, 0,      // TODO improve rotate kalman noise parameters
+                                0, 100;
     // 误差估计协方差矩阵P
     omega_kf.error_post_.setIdentity();
     omega_kf.state_post_ << current_theta,
@@ -758,7 +751,7 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     ceres::Solve(options, &problem, &summary);
 
     std::cout << summary.BriefReport() << "\n";
-    std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
+    //std::cout << "Initial m: " << 0.0 << " c: " << 0.0 << "\n";
     std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
     //cout << "拟合数据下标起点：" << st_ << " " << omega_[st_] << " 拟合数据点数 ： " << omega.size() - st_ << " 函数中值：" << (2.09-min_w)/2 << endl;
 
