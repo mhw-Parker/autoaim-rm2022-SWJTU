@@ -501,6 +501,14 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
 
 bool Predictor::EnergyStateSwitch() {
     switch(ctrl_mode){
+        case INIT:
+            if(FindWavePeak()) {
+                ctrl_mode = STANDBY;
+                fit_cnt = 0;    // reset param
+                change_cnt = 0;
+                max_omega = 0;
+                min_omega = 5;
+            }
         case STANDBY:
             if(!fit_cnt) // first time estimate
             {
@@ -508,14 +516,14 @@ bool Predictor::EnergyStateSwitch() {
                     peak_flag = true; // which means we get a wave peak
                     phi_ = CV_PI/4; // initial phi
                 }
-                if(time_series.back() - time_series.front() > 2 && peak_flag && omega.size() - st_ >= 300) {
+                if(time_series.back() - time_series.front() > 2 && peak_flag && omega.size() - st_ >= 200) {
                     //st_ = (st_ < 0) ? 0 : st_;
                     ctrl_mode = ESTIMATE;
                 }
             }
             else
             {
-                if(omega.size() - st_ >= 300)
+                if(omega.size() - st_ >= 200)
                     ctrl_mode = ESTIMATE;
             }
 
@@ -529,6 +537,52 @@ bool Predictor::EnergyStateSwitch() {
         default: return true;
     }
 }
+
+bool Predictor::FindWavePeak() {
+    if(filter_omega.size() > 12) {
+        vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 kalman滤波角速度 的后 6 个数
+        vector<float> cut_time_series(time_series.end()-6,time_series.end());
+        Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘
+        fit_cnt = (rate(0,0) > 0) ? fit_cnt + 1 : fit_cnt - 1;
+        if(fit_cnt > 5) {   // rise find peak
+            if(fabs(filter_omega.back()) > max_omega) {
+                change_cnt = 0;
+                max_omega = filter_omega.back(); // reset max omega
+                phi_ = CV_PI / 2 - w_ * time_series.back();
+                while (phi_ < -CV_PI || phi_ > CV_PI) {
+                    phi_ += 2*CV_PI;
+                }
+            } else {
+                change_cnt++;
+            }
+        } else if(fit_cnt < -5) {
+            if(fabs(filter_omega.back()) < min_omega) {
+                change_cnt = 0;
+                min_omega = filter_omega.back(); // reset max omega
+                phi_ = -CV_PI / 2 - w_ * time_series.back();
+                while (phi_ < -CV_PI || phi_ > CV_PI) {
+                    phi_ += 2*CV_PI;
+                }
+            } else {
+                change_cnt++;
+            }
+        } else {
+            return false;
+        }
+        if(change_cnt > 5) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    else
+        return false;
+}
+
+
+/**
+ * @brief detect rotation
+ * */
 void Predictor::JudgeFanRotation() {
     clockwise_cnt = (current_omega > 0) ? clockwise_cnt+1 : clockwise_cnt-1;// clockwise counter
     energy_rotation_direction = (clockwise_cnt > 0) ? 1 : -1;// anticlockwise counter
@@ -568,10 +622,8 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
         if(d_theta < -6) {
             d_theta += CV_2PI;
         }
-        //omegaWave.displayWave(d_theta,0,"d the");
         total_theta += d_theta;
         float tmp_omega = d_theta / dt;
-        //printf("omega: %f\tdt: %f\n",tmp_omega,dt);
         if(fabs(tmp_omega)>2.1) { //如果观测到的omega太离谱
             if(omega_kf_flag) //该次omega用kalman插值
             {
@@ -687,7 +739,7 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     for(int i = st_; i < omega_.size(); i++){
         ceres::CostFunction* cost_func =
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
-                        new SinResidual(t_[i], omega_[i])); //确定拟合问题是横坐标问题，需要初始化第一个坐标为 0
+                        new SinResidual(t_[i], omega_[i]));
         problem.AddResidualBlock(cost_func, NULL, &a_, &w_,&phi_ );
     }
     problem.SetParameterLowerBound(&a_,0,0.780);
@@ -711,9 +763,10 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     //cout << "拟合数据下标起点：" << st_ << " " << omega_[st_] << " 拟合数据点数 ： " << omega.size() - st_ << " 函数中值：" << (2.09-min_w)/2 << endl;
 
     float sim_omega;
+    string win_name = "fit curve No. " + to_string(fit_cnt);
     for(int i=st_; i < omega_.size(); i++){
         sim_omega = IdealOmega(t_[i]);
-        omegaWave.displayWave(omega_[i],sim_omega,"curve fitting");
+        omegaWave.displayWave(omega_[i],sim_omega,win_name);
     }
 
     if(a_ < 0.780) a_ = 0.785;

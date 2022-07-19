@@ -96,26 +96,6 @@ namespace rm
 #if SAVE_LOG == 1
         logWrite.close();
 #endif
-        if(pthread_kill(producePThreadHandler,0) == ESRCH)
-        {
-            //LOGW("Child Thread Produce Thread Close Failed\n");
-        }
-
-        if(pthread_kill(detectPThreadHandler,0) == ESRCH)
-        {
-            //LOGW("Child Thread Detect Thread Close Failed\n");
-        }
-
-        if(pthread_kill(energyPThreadHandler,0) == ESRCH)
-        {
-            //LOGW("Child Thread EnergyDetector Thread Close Failed\n");
-        }
-
-        if(pthread_kill(feedbackPThreadHandler,0) == ESRCH)
-        {
-            //LOGW("Child Thread Feedback Thread Close Failed\n");
-        }
-
         exit(-1);
     }
 
@@ -144,10 +124,6 @@ namespace rm
             //stamp_mat(Mat::zeros(FRAMEWIDTH,FRAMEHEIGHT,CV_32FC1),0,receiveData)
     {
 
-//#if SAVE_LOG == 1
-//        logWrite<<"Find    "<<"TARGET X    "<<"TARGET Y    "<<"TARGET HEIGHT    "<<"TARGET WIDTH    "<<"YAW    "<<"PITCH    "\
-//    <<"SHOOT    "<<endl;
-//#endif
     }
     ImgProdCons::~ImgProdCons() {
         driver->StopGrab();

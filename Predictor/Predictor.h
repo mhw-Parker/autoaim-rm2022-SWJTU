@@ -21,12 +21,12 @@
 #include "mydefine.h"
 
 
-#ifndef STANDBY
-#define STANDBY 1
+#ifndef INIT
+#define INIT 1
 #endif
 
-#ifndef BEGIN
-#define BEGIN 2
+#ifndef STANDBY
+#define STANDBY 2
 #endif
 
 #ifndef ESTIMATE
@@ -157,10 +157,14 @@ private:
     bool omega_kf_flag = false;
 
     /**---- estimate big fan rotation speed parameters ----**/
+    bool FindWavePeak();
+    float max_omega = 0, min_omega = 5;
     void estimateParam(vector<float> &omega_, vector<float> &t_);
     int fit_cnt = 0;
     ceres::Problem problem;
-    double a_ = 0.85, w_ = 1.9, phi_ = CV_PI/2; //参数初值
+    double a_ = 0.9125; // 0.78 ~ 1.045       middle value: 0.9125
+    double w_ = 1.942;  // 1.884 ~ 2.0      middle: 1.942
+    double phi_ = CV_PI/2; //参数初值
     int st_ = 0, peak_st_ = 0;
     struct SinResidual{
         SinResidual(double t, double omega): omega_(omega), t_(t) {}
