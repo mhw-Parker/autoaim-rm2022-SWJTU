@@ -27,7 +27,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     }
     /// average bullet speed
     average_v_bullet = RMTools::average(v_vec, 4);
-    //average_v_bullet = v_;
+    //average_v_bullet = 28;
     Point2f target_point;
     if(target_pts.size() == 4)
         target_point = Point2f((target_pts[0].x+target_pts[2].x)/2, (target_pts[0].y+target_pts[2].y)/2);
@@ -50,7 +50,9 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
         JudgeFanRotation();
         if(mode == BIG_ENERGY_STATE) {
             FilterOmega(dt_);
+            //ctrl_mode = PREDICT; // TODO: turn it off
             if(EnergyStateSwitch()) {
+                est_flag = true;
                 float wt = IdealOmega(time_series.back());
                 float d_w = wt - filter_omega.back();
                 if(fabs(d_w) > 0.5 && fit_cnt/30 < 3) {
@@ -61,8 +63,8 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                     }
                 }
                 else {
-                    predict_rad = IdealRad(t_list.back(), t_list.back() + 0.4);
-                    omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
+                    predict_rad = IdealRad(t_list.back(), t_list.back() + latency);
+                    //omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
                     //FilterRad(latency);
                 }
             }
@@ -80,10 +82,20 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
-    //predict_xyz = GetGyroXYZ();
-    iterate_pitch = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
+    predict_xyz[1] += 120;
+    //cout << predict_xyz << endl << endl;
+    predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     back_ypd = predict_ypd + energy_offset;
+    //cout << back_ypd << endl << endl;
     latency = react_t + fly_t;
+//    if(showEnergy){
+//        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","yaw","latency"};
+//        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
+//                              average_v_bullet,predict_ypd[1],predict_ypd[0],latency};
+//        RMTools::showData(data,str,"energy param");
+//        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+//        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
+//    }
 }
 
 bool Predictor::EnergyStateSwitch() {
@@ -112,7 +124,9 @@ bool Predictor::EnergyStateSwitch() {
             return true;
     }
 }
-
+/**
+ * @brief find a peak or valley to init phi in order to make estimate much more precise
+ * */
 bool Predictor::FindWavePeak() {
     if(filter_omega.size() > 15) {
         vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); // 取 kalman滤波角速度 的后 6 个数
@@ -218,6 +232,9 @@ float Predictor::CalOmegaNStep(int step, float &total_theta) {
         return tmp_omega;
     }
 }
+/**
+ * @brief get rotate omega from estimate sin function parameters
+ * */
 float Predictor::IdealOmega(float &t_) {
     return a_ * sin( w_ * t_ + phi_) + 2.09 - a_;
 }
@@ -228,7 +245,7 @@ float Predictor::IdealRad(float t1, float t2) {
     return -a_/w_ * (cos(w_*t2+phi_) - cos(w_*t1+phi_)) + (2.09-a_)*(t2-t1);
 }
 /**
- * @brief 利用 kalman 平滑量测的角速度获得滤波后的角速度
+ * @brief use kalman filter to smoothen omega
  * */
 void Predictor::FilterOmega(const float& dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
@@ -241,15 +258,12 @@ void Predictor::FilterOmega(const float& dt) {
     omega_kf.correct(measure_vec);
     omega_kf_flag = true;
     filter_omega.push_back(energy_rotation_direction*omega_kf.state_post_[1]);
-//    if(showEnergy){
-//        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","send-pitch","latency"};
-//        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
-//                              average_v_bullet,iterate_pitch,predict_ypd[1],latency};
-//        RMTools::showData(data,str,"energy param");
-//        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
-//        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
-//    }
+
 }
+/**
+ * @brief get rad by determining phi with inverse solution
+ * @details abandoned
+ * */
 void Predictor::FilterRad(const float& latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
     vector<float> cut_time_series(time_series.end()-6,time_series.end());

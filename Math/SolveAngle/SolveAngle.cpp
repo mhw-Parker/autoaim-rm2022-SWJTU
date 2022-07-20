@@ -28,6 +28,7 @@ SolveAngle::SolveAngle() {
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             fit_gun_error = 0.2;
+            gim_xyz_error << 0, 43.8, 101.6;
             coeff = 0.025;
             break;
         case INFANTRY4:
@@ -113,8 +114,8 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             //printf("-- Big Armor ! --\n");
             break;
         case ENERGY_ARMOR:
-            targetHeight3D = 155; // 130
-            targetWidth3D = 245; // 225
+            targetHeight3D = 170; // 130
+            targetWidth3D = 270; // 225
             //printf("-- Energy Armor ! --\n");
             break;
         default:
@@ -151,6 +152,8 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vect
              false,
              SOLVEPNP_ITERATIVE);
     cv2eigen(tvecs,p_cam_xyz);
+    p_cam_xyz += gim_xyz_error; // transfer to gimbal xyz
+    //cout << p_cam_xyz << endl << endl;
     cv2eigen(rvecs,r_vec);
     cv::Rodrigues(rvecs,R);
     cv2eigen(R,r_mat);
@@ -233,7 +236,7 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     if(v < 13 || v > 35) v = 20;
     float x = target_xyz[0]/1000 ,y = target_xyz[1]/1000, z = target_xyz[2]/1000;
     float d = sqrt(x*x+z*z);
-    float h = -y + fit_gun_error;
+    float h = -y;
     float d_ = d, h_ = h, dh = 1; // temp value
     float pitch_;
     float v_x0, v_y0;

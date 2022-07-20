@@ -123,6 +123,7 @@ public:
     void EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float t_stamp);
     void EnergyRefresh();
     vector<Point2f> predict_pts;
+    bool est_flag = false;
 
 private:
     /** energy machine common function **/
@@ -140,10 +141,8 @@ private:
 
     Point2f last_point;
     float dt_ = 0.012;
-    float iterate_pitch ;
 
     int differ_step = 4;
-    bool peak_flag = false;
 
     int energy_rotation_direction = 1;//风车旋转方向 1:顺时针 -1：逆时针
     u_int8_t ctrl_mode = INIT;

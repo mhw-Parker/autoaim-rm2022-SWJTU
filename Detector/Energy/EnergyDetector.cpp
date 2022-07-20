@@ -165,7 +165,7 @@ Mat EnergyDetector::preprocess(Mat &src) {
 //        subtract(channels[0],channels[2],sub_mat);
 //    else
 //        subtract(channels[2],channels[0],sub_mat);
-    threshold(sub_mat,sub_mat,80,255,THRESH_BINARY);
+    threshold(sub_mat,sub_mat,130,255,THRESH_BINARY); // 80
 
     Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));
     morphologyEx(sub_mat,sub_mat,MORPH_CLOSE,element_close);
@@ -319,23 +319,6 @@ bool EnergyDetector::getCircleCenter(Mat &src){
             if(dist > 200) continue; // max point to point distance error
             p2c_dist.push_back(dist);
             p_vec.push_back(rect_center);
-//            if (ratio < 4 && ratio > 0.8) { //近似正方形
-//                //cout << "ratio : " << ratio << endl;
-//                int x = rect.x + rect.width / 2;
-//                int y = rect.y + rect.height / 2;
-//                Point2f cal_center = calR1P(); //反解的圆心位置用于判断检测圆心的可信度
-//                circle(outline, cal_center, 3, Scalar(238, 238, 0), 2, 8, 0);
-//                //cout << "--" << pointDistance(cal_center,Point2f(x,y)) << endl;
-//                if (pointDistance(cal_center,Point2f(x,y))< 100) {
-//                    circle_center_point = Point(x, y);
-//                    circle(outline, circle_center_point, 3, Scalar(255, 255, 255), 2, 8, 0);
-//                    //imshow("outline",outline);
-//                    //cout << "area : " << area << "\n" ;
-//                    return true;
-//                }
-//                //cout << area << '\t' << ratio << endl;
-//            }
-            //else cout << "ratio = " << ratio << endl;
         }
         if(p_vec.size()) {
             int min_loc = min_element(p2c_dist.begin(), p2c_dist.end()) - p2c_dist.begin();

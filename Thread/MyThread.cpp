@@ -359,6 +359,7 @@ namespace rm
                     predictionSt = getTickCount();
                     if(find_state) {
                         car_num = armorDetectorPtr->armorNumber;
+                        find_state = armorDetectorPtr->lostCnt <= max_lost;
                     } else {
                         car_num = 0;
                     }
@@ -387,6 +388,7 @@ namespace rm
                                                     v_bullet,
                                                     detect_stamp.stamp);
                     }
+                    //find_state = predictPtr->est_flag;
                     predictionTime = CalWasteTime(predictionSt, freq);
                     break;
                 default:
@@ -401,7 +403,12 @@ namespace rm
             }
             //
             show_fifo.push(detectFrame);
-
+            SendData send_data(predictPtr->back_ypd[0],
+                               predictPtr->back_ypd[1],
+                               find_state,
+                               car_num,
+                               predictPtr->shootCmd);
+            send_fifo.push(send_data);
             detectTime = CalWasteTime(st, freq);
         }while (!quitFlag);
     }
@@ -415,7 +422,7 @@ namespace rm
             /** package data and prepare for sending data to lower-machine **/
             serialPtr->pack(yaw_abs,
                             pitch_abs,
-                            armorDetectorPtr->lostCnt <= max_lost,
+                            find_state,
                             car_num,
                             predictPtr->shootCmd
                             );
@@ -457,11 +464,6 @@ namespace rm
     {
         do{
             double st = (double) getTickCount();
-//            serialPtr->ReadData(receiveData);
-//            receive_fifo.push(receiveData);
-//            curControlState = receiveData.targetMode;
-//            blueTarget = receiveData.targetColor;
-//            v_bullet = receiveData.bulletSpeed;
             if(serialPtr->ReadData(receiveData)) {
                 receive_fifo.push(receiveData);
                 curControlState = receiveData.targetMode;
@@ -503,6 +505,7 @@ namespace rm
                         line(show_img, predictPtr->predict_pts[i], predictPtr->predict_pts[(i + 1) % (4)],Scalar(180, 105, 255), 1, LINE_8);
                     }
                     circle(show_img, predictPtr->predict_point, 4, Scalar(180, 105, 255), 2);
+                    circle(show_img, Point(160, 115), 4, Scalar::all(255), 3);
                 }
                 imshow("Detect Frame", show_img);
                 if (carName == IMAGE) {

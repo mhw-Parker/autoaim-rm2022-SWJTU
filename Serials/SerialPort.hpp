@@ -63,23 +63,22 @@ using namespace std;
  */
 struct ReceiveData
 {
-//    uint8_t head = 0;
-//    uint8_t CmdID = 0;
-
     float yawAngle = 0;
     float pitchAngle = 0;
     float bulletSpeed = 0;
     uint8_t targetMode = 0;
     uint8_t targetColor = 0;// 0 red target, 1 blue target
-    //uint8_t end;
+};
 
-//    float pitchSpeed = 0;
-//    uint8_t direction = 0;
-//    uint8_t blankC = 0;
-//    uint8_t blankD = 0;
-//    uint8_t blankE = 0;
-
-
+class SendData
+{
+public:
+    SendData(float &yaw, float &pitch, bool find, int num, bool cmd) : yaw(yaw), pitch(pitch), find(find), id(num), cmd(cmd) {};
+    float yaw = 0;
+    float pitch = 0;
+    int id  = 0;
+    uint8_t find = 0;
+    uint8_t cmd = 0; // 1 shoot
 };
 
 /**

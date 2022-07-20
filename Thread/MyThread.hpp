@@ -50,6 +50,10 @@ namespace rm
          float stamp;
          ReceiveData mcuData;
      };
+     class sendData {
+     public:
+
+     };
 
     class ImgProdCons
     {
@@ -128,6 +132,7 @@ namespace rm
         FIFO<timeStampMat> frame_fifo;
         FIFO<ReceiveData> receive_fifo;
         FIFO<Mat> show_fifo;
+        FIFO<SendData> send_fifo;
         bool com_flag = true;
 
         /* 保存图像相关 */

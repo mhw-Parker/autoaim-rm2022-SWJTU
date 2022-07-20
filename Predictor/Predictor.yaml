@@ -6,8 +6,8 @@ Hero:
    yaw_offset: 0
    pitch_offset: 0
 Infantry3:
-   average_v_bullet: 14.5
-   react_t: 0.3
+   average_v_bullet: 25
+   react_t: 0.15
    yaw_offset: 0
    pitch_offset: 0
 Infantry4:
@@ -36,5 +36,5 @@ Video:
    yaw_offset: 0
    pitch_offset: 0
 Energy:
-   yaw_offset: -1.1
-   pitch_offset: 2.7
+   yaw_offset: -0.5
+   pitch_offset: 0
