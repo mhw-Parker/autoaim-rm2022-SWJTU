@@ -42,6 +42,9 @@ using namespace cv;
 using namespace Eigen;
 
 class Predictor{
+    /**
+     * @brief predictor for moving car
+     * */
 public:
     Predictor();
     ~Predictor();
@@ -113,6 +116,9 @@ private:
     float delta_t = 0.016;
     float predict_dt = 0.05; // 预测时拉长步长节省计算，sentry:0.03
 
+/**
+ * @brief predictor for rm energy machine
+ * */
 public:
     void EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point2f &center, const Vector3f &gimbal_ypd, float v_, float t_stamp);
     void EnergyRefresh();
@@ -148,7 +154,7 @@ private:
 
     /**---- energy machine kalman filter ----**/
     void FilterOmega(const float &dt);
-    void FilterRad(const float &latency);
+    void FilterRad(const float &latency); // abandon
     void initFanRotateKalman();
     void initFanRadKalman();
     EigenKalmanFilter omega_kf = EigenKalmanFilter(3, 2, 1);
