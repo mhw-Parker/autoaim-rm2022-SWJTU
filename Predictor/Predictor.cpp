@@ -72,25 +72,6 @@ void Predictor::Refresh() {
     EnergyRefresh();
 }
 
-void Predictor::EnergyRefresh(){
-    /** clear vector container **/
-    angle.clear();
-    omega.clear();
-    filter_omega.clear();
-    time_series.clear();
-    t_list.clear();
-    total_theta = 0;
-    /** init state **/
-    ctrl_mode = INIT;
-    omega_kf_flag = false;
-    est_flag = false;
-    clockwise_cnt = 0;
-    fit_cnt = 0;    // curve fitting times
-
-    initFanRadKalman();
-    initFanRotateKalman();
-}
-
 void Predictor::TimeRefresh() {
     total_t = 0;
     time_series.clear();

@@ -9,7 +9,28 @@
 
 /******************************************************************************************/
 /**
- * @brief 大能量机关预测
+ * @brief clear all
+ * */
+void Predictor::EnergyRefresh(){
+    /** clear vector container **/
+    angle.clear();
+    omega.clear();
+    filter_omega.clear();
+    time_series.clear();
+    t_list.clear();
+    total_theta = 0;
+    /** init state **/
+    ctrl_mode = INIT;
+    omega_kf_flag = false;
+    est_flag = false;
+    clockwise_cnt = 0;
+    fit_cnt = 0;    // curve fitting times
+
+    initFanRadKalman();
+    initFanRotateKalman();
+}
+/**
+ * @brief 大能量机关预测算法顶层接口
  * @param mode 大幅或小幅模式
  * @param target_pts 目标装甲板四点
  * @param center 旋转中心
@@ -69,11 +90,13 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
             }
             else {
-                predict_rad = (omega_kf_flag) ? filter_omega.back()*0.4 : 0;
+                predict_rad = (omega_kf_flag) ? filter_omega.back()*latency : 0;
             }
         }
-        else
+        else {
             predict_rad = 1.05 * latency;
+            est_flag = true;
+        }
     }
     predict_rad *= energy_rotation_direction;
     predict_point = calPredict(target_point,center,predict_rad); // 逆时针为负的预测弧度，顺时针为正 预测弧度
@@ -82,20 +105,20 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
-    predict_xyz[1] += 120;
+    predict_xyz[1] += 260; //120
     //cout << predict_xyz << endl << endl;
     predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     back_ypd = predict_ypd + energy_offset;
     //cout << back_ypd << endl << endl;
     latency = react_t + fly_t;
-//    if(showEnergy){
-//        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","yaw","latency"};
-//        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
-//                              average_v_bullet,predict_ypd[1],predict_ypd[0],latency};
-//        RMTools::showData(data,str,"energy param");
-//        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
-//        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
-//    }
+    if(showEnergy){
+        vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","gim_pitch","yaw","latency","rad"};
+        vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
+                              average_v_bullet,predict_ypd[1],gimbal_ypd[1],predict_ypd[0],latency,predict_rad};
+        RMTools::showData(data,str,"energy param");
+        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
+        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
+    }
 }
 
 bool Predictor::EnergyStateSwitch() {
@@ -360,7 +383,7 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     string win_name = "fit curve No. " + to_string(fit_cnt);
     for(int i=st_; i < omega_.size(); i++){
         sim_omega = IdealOmega(t_[i]);
-        omegaWave.displayWave(omega_[i],sim_omega,win_name);
+        //omegaWave.displayWave(omega_[i],sim_omega,win_name);
     }
 
     if(a_ < 0.780) a_ = 0.785;

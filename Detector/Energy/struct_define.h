@@ -27,21 +27,7 @@ struct WindmillParamFlow {
 	float flow_strip_fan_contour_area_ratio_max;
 	float flow_strip_fan_contour_area_ratio_min;
 
-	float Strip_Fan_Distance_max;//流动条到装甲板距离参数
-	float Strip_Fan_Distance_min;
-
-	float flow_strip_contour_area_max;//流动条相关参数筛选
-	float flow_strip_contour_area_min;
-	float flow_strip_contour_length_max;
-	float flow_strip_contour_length_min;
-	float flow_strip_contour_width_max;
-	float flow_strip_contour_width_min;
-	float flow_strip_contour_hw_ratio_max;
-	float flow_strip_contour_hw_ratio_min;
-	float flow_strip_contour_area_ratio_min;
-	float flow_strip_contour_intersection_area_min;
-
-	long target_intersection_contour_area_min;
+	float target_intersection_contour_area_min;
 
 	float twin_point_max;
 
@@ -89,33 +75,8 @@ typedef struct Blade_{
     }
 }Blade;
 
-struct McuData {
-	float curr_yaw;      // 当前云台yaw角度
-	float curr_pitch;    // 当前云台pitch角
-	uint8_t state;       // 当前状态，自瞄-大符-小符
-	uint8_t mark;        // 云台角度标记位
-	uint8_t anti_top;    // 是否为反陀螺模式
-	uint8_t enemy_color; // 敌方颜色
-	int delta_x;         // 能量机关x轴补偿量
-	int delta_y;         // 能量机关y轴补偿量
-};
 
-struct SinResidual{
-    SinResidual(double t, double omega): omega_(omega), t_(t) {}
 
-    template<class T>
-//    bool operator()(const T* const a, const T* const phi, T* residual) const{
-//        residual[0] = omega_ - (a[0] * sin(1.884 * t_ + phi[0]) + 2.09 - a[0]); // spd = a*sin(wt) + b
-//        return true;
-//    }
-    bool operator()(const T* const a,const T* const w, const T* const phi, T* residual) const{
-        residual[0] = omega_ - (a[0] * sin(w[0] * t_ + phi[0]) + 2.09 - a[0]); // spd = a*sin(w*t) + b
-        return true;
-    }
-private:
-    const double omega_;
-    const double t_;
-};
 
 
 

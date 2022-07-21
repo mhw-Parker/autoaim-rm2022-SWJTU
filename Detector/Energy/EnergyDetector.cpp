@@ -53,51 +53,8 @@ void EnergyDetector::initEnergy() {
  * @remark 初始化参数
  */
 void EnergyDetector::initEnergyPartParam() {
-    _flow.BLUE_GRAY_THRESH = 100;//敌方红色时的阈值
-    _flow.RED_GRAY_THRESH = 180;//敌方蓝色时的阈值
-    // area change to 1/3
-///装甲板的相关筛选参数
-    _flow.armor_contour_area_max = 2000;//1500
-    _flow.armor_contour_area_min = 500;//400
-    _flow.armor_contour_length_max = 90;//50
-    _flow.armor_contour_length_min = 40;//25
-    _flow.armor_contour_width_max = 50;//30
-    _flow.armor_contour_width_min = 15;//15
-    _flow.armor_contour_hw_ratio_max = 2.5;//3
-    _flow.armor_contour_hw_ratio_min = 1.3;//1
-
-///流动条所在扇叶的相关筛选参数
-    _flow.flow_strip_fan_contour_area_max = 6500; // 5500
-    _flow.flow_strip_fan_contour_area_min = 2500;
-    _flow.flow_strip_fan_contour_length_max = 250;
-    _flow.flow_strip_fan_contour_length_min = 80;
-    _flow.flow_strip_fan_contour_width_max = 140;
-    _flow.flow_strip_fan_contour_width_min = 50;
-    _flow.flow_strip_fan_contour_hw_ratio_max = 2.5;
-    _flow.flow_strip_fan_contour_hw_ratio_min = 1.2;
-    _flow.flow_strip_fan_contour_area_ratio_max = 0.75; // 0.65
-    _flow.flow_strip_fan_contour_area_ratio_min = 0.20;
-
-///流动条到装甲板距离参数
-    _flow.Strip_Fan_Distance_max = 56;
-    _flow.Strip_Fan_Distance_min = 28;
-
-///流动条相关参数筛选
-    _flow.target_intersection_contour_area_min = 40/4;//重合面积
-
-///中心R标筛选相关参数，中心亮灯面积约为装甲板面积的1/2
-    _flow.Center_R_Control_area_max = 800;
-    _flow.Center_R_Control_area_min = 150;
-    _flow.Center_R_Control_length_max = 70;
-    _flow.Center_R_Control_length_min = 6;
-    _flow.Center_R_Control_width_max = 70;
-    _flow.Center_R_Control_width_min = 6;
-    _flow.Center_R_Control_radio_max = 1.2;
-    _flow.Center_R_Control_radio_min = 1;
-    _flow.Center_R_Control_area_radio_min = 0.6;
-    _flow.Center_R_Control_area_intersection_area_min = 10;
-
     FileStorage fs("../Detector/Energy/fan_param.yaml", FileStorage::READ);
+    /* 装甲板的相关筛选参数 */
     fs["armor_contour_area_max"] >> _flow.armor_contour_area_max;
     fs["armor_contour_area_min"] >> _flow.armor_contour_area_min;
     fs["armor_contour_length_max"] >> _flow.armor_contour_length_max;
@@ -106,6 +63,30 @@ void EnergyDetector::initEnergyPartParam() {
     fs["armor_contour_width_min"] >> _flow.armor_contour_width_min;
     fs["armor_contour_hw_ratio_max"] >> _flow.armor_contour_hw_ratio_max;
     fs["armor_contour_hw_ratio_min"] >> _flow.armor_contour_hw_ratio_min;
+    /* 流动条相关参数筛选 */
+    fs["flow_strip_fan_contour_area_max"] >> _flow.flow_strip_fan_contour_area_max;
+    fs["flow_strip_fan_contour_area_min"] >> _flow.flow_strip_fan_contour_area_min;
+    fs["flow_strip_fan_contour_length_max"] >> _flow.flow_strip_fan_contour_length_max;
+    fs["flow_strip_fan_contour_length_min"] >> _flow.flow_strip_fan_contour_length_min;
+    fs["flow_strip_fan_contour_width_max"] >> _flow.flow_strip_fan_contour_width_max;
+    fs["flow_strip_fan_contour_width_min"] >> _flow.flow_strip_fan_contour_width_min;
+    fs["flow_strip_fan_contour_hw_ratio_max"] >> _flow.flow_strip_fan_contour_hw_ratio_max;
+    fs["flow_strip_fan_contour_hw_ratio_min"] >> _flow.flow_strip_fan_contour_hw_ratio_min;
+    fs["flow_strip_fan_contour_area_ratio_max"] >> _flow.flow_strip_fan_contour_area_ratio_max; // 0.65
+    fs["flow_strip_fan_contour_area_ratio_min"] >> _flow.flow_strip_fan_contour_area_ratio_min;
+    /* 重合面积参数 */
+    fs["target_intersection_contour_area_min"] >> _flow.target_intersection_contour_area_min;
+    /* 中心R标筛选相关参数 */
+    fs["Center_R_Control_area_max"] >> _flow.Center_R_Control_area_max;
+    fs["Center_R_Control_area_min"] >> _flow.Center_R_Control_area_min;
+    fs["Center_R_Control_length_max"] >> _flow.Center_R_Control_length_max;
+    fs["Center_R_Control_length_min"] >> _flow.Center_R_Control_length_min;
+    fs["Center_R_Control_width_max"] >> _flow.Center_R_Control_width_max;
+    fs["Center_R_Control_width_min"] >> _flow.Center_R_Control_width_min;
+    fs["Center_R_Control_radio_max"] >> _flow.Center_R_Control_radio_max;
+    fs["Center_R_Control_radio_min"] >> _flow.Center_R_Control_radio_min;
+    fs["Center_R_Control_area_radio_min"] >> _flow.Center_R_Control_area_radio_min;
+    fs["Center_R_Control_area_intersection_area_min"] >> _flow.Center_R_Control_area_intersection_area_min;
 }
 
 /**
@@ -165,7 +146,7 @@ Mat EnergyDetector::preprocess(Mat &src) {
 //        subtract(channels[0],channels[2],sub_mat);
 //    else
 //        subtract(channels[2],channels[0],sub_mat);
-    threshold(sub_mat,sub_mat,130,255,THRESH_BINARY); // 80
+    threshold(sub_mat,sub_mat,120,255,THRESH_BINARY); // 80
 
     Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));
     morphologyEx(sub_mat,sub_mat,MORPH_CLOSE,element_close);

@@ -316,7 +316,7 @@ namespace rm
             produceTime = CalWasteTime(st, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(11) == 32) {
+                if (waitKey(12) == 32) {
                     while (waitKey() != 32) {}
                 }
             }
@@ -388,7 +388,7 @@ namespace rm
                                                     v_bullet,
                                                     detect_stamp.stamp);
                     }
-                    //find_state = predictPtr->est_flag;
+                    find_state = predictPtr->est_flag && find_state;
                     predictionTime = CalWasteTime(predictionSt, freq);
                     break;
                 default:
