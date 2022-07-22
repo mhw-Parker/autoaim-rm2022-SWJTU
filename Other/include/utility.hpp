@@ -240,6 +240,7 @@ namespace RMTools {
                 max_v = 30;
                 break;
             case INFANTRY4:
+            case INFANTRY5:
                 min_v = 15;
                 max_v = 30;
                 break;

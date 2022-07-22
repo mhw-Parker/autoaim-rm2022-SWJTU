@@ -28,6 +28,9 @@ void Predictor::InitParams() {
         case INFANTRY4:
             whose_params = "Infantry4";
             break;
+        case INFANTRY5:
+            whose_params = "Infantry5";
+            break;
         case INFANTRY_TRACK:
             break;
         case SENTRYTOP:
@@ -83,9 +86,8 @@ void Predictor::TimeRefresh() {
  */
 inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
-    // z不置零，初始化为一个大概的距离
-    target_a_xyz << 0, 0, 0;
-    target_v_xyz << 0, 0, 0;
+    target_a_xyz << EPS, EPS, EPS;
+    target_v_xyz << EPS, EPS, EPS;
 }
 
 /**
@@ -124,36 +126,34 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     }
     // 取弹速平均值
     average_v_bullet = RMTools::average(v_vec, 4);
-    // 解算YPD
-    //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
-    solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
+    // 识别到
+    if (!lost_cnt) {
+        // 解算YPD
+        //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
+        solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
 //    /** test against spinning **/
 //    AgainstSpinning();
 //    /****/
-    delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
-    target_ypd = gimbal_ypd + delta_ypd;
-    // 通过目标xyz坐标计算yaw pitch distance
-    target_xyz = GetGyroXYZ();
-    // 识别到
-    if (last_xyz != target_xyz) {
+        delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
+        target_ypd = gimbal_ypd + delta_ypd;
+        // 通过目标xyz坐标计算yaw pitch distance
+        target_xyz = GetGyroXYZ();
+        // 和上一个目标的距离
         float distance = RMTools::GetDistance(last_xyz, target_xyz);
-        // 大范围更换目标认为是切换机器人
-        if (distance > 1000) {
-            // 深重置
-            KalmanRefresh();
-        }
         // 小范围更换目标认为是小陀螺场景
         ///TODO 同时考虑数字识别的结果更合理，距离参数待修改
-        else if (distance > 250 && distance < 550) {
+        if (distance > 250 && distance < 550) {
             // 进行浅重置，保留速度
             KalmanShallowRefresh();
         }
         // kalman预测要击打位置的xyz
         predict_xyz = KalmanPredict(average_v_bullet, latency);
+        //
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
         // 计算要转过的角度
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
         // 计算抬枪和子弹飞行时间
+        predict_xyz[1] += 50;
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
@@ -171,7 +171,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
     } else {
-        target_xyz << 0, 0, 3000;
+        ///好像不用初始化
+        //target_xyz << EPS, EPS, 3000;
         // 自动射击命令
         shootCmd = 0;
         KalmanRefresh();
@@ -183,30 +184,30 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 更新last值
     last_xyz = target_xyz;
     // 发回电控值加偏置
-    back_ypd = offset + back_ypd;
+    back_ypd = offset + predict_ypd;
 
     // 显示数据，会耗时17ms左右，一般关掉
-//    if (showArmorBox) {
-//        vector<float> data2;
-//        for (int len = 0; len < target_xyz.size(); len++)
-//            data2.push_back(target_xyz[len]);
-//        for (int len = 0; len < RMKF.state_post_.rows(); len++)
-//            data2.push_back(RMKF.state_post_[len]);
-//        for (int i = 0; i < 3; i++)
-//            data2.push_back(predict_ypd[i]);
-//        vector<string> str2 = {"m_x","m_y","m_z",
-//                               "kf_x","kf_y","kf_z",
-//                               "kf_vx","kf_vy","kf_vz",
-//                               "kf_ax","kf_ay","kf_az",
-//                               "pre_yaw","pre_pitch","pre_dist"};
-//        RMTools::showData(data2, str2, "data window");
-//        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
-//                               "v bullet","Average v","latency"};
-//        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
-//                               gimbal_ypd[1],predict_ypd[1] + offset[1],
-//                               v_,average_v_bullet,latency};
-//        RMTools::showData(data1,str1,"abs degree");
-//    }
+    if (showArmorBox) {
+        vector<float> data2;
+        for (int len = 0; len < target_xyz.size(); len++)
+            data2.push_back(target_xyz[len]);
+        for (int len = 0; len < RMKF.state_post_.rows(); len++)
+            data2.push_back(RMKF.state_post_[len]);
+        for (int i = 0; i < 3; i++)
+            data2.push_back(predict_ypd[i]);
+        vector<string> str2 = {"m_x","m_y","m_z",
+                               "kf_x","kf_y","kf_z",
+                               "kf_vx","kf_vy","kf_vz",
+                               "kf_ax","kf_ay","kf_az",
+                               "pre_yaw","pre_pitch","pre_dist"};
+        RMTools::showData(data2, str2, "data window");
+        vector<string> str1 = {"re-yaw:","pre-yaw","re-pitch:","pre-pit",
+                               "v bullet","Average v","latency"};
+        vector<float> data1 = {gimbal_ypd[0],predict_ypd[0] + offset[0],
+                               gimbal_ypd[1],predict_ypd[1] + offset[1],
+                               v_,average_v_bullet,latency};
+        RMTools::showData(data1,str1,"abs degree");
+    }
     //waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
 }
 

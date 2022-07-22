@@ -150,11 +150,8 @@ namespace rm
 #endif
                 break;
             case INFANTRY3:
-#ifdef MIND
-                driver = &mindCapture;
-#endif
-                break;
             case INFANTRY4:
+            case INFANTRY5:
 #ifdef MIND
                 driver = &mindCapture;
 #endif
@@ -184,7 +181,7 @@ namespace rm
         if(showEnergy)
             curControlState = BIG_ENERGY_STATE;
         Mat curImage;
-        if((driver->InitCam() && driver->SetCam() && driver->StartGrab())){
+        if((driver->InitCam() && driver->StartGrab())){
             freq = getTickFrequency();
             startT = getTickCount();
             /// log
@@ -262,12 +259,7 @@ namespace rm
                         }
                     }
                     curDetectMode = TRADITION_MODE;
-                } else {
-                    if (++armorDetectorPtr->lostCnt >= 2) {
-                        //curDetectMode = MODEL_MODE;
-                    }
                 }
-                break;
             }
         }
         //cout << "Armor Detect Mission Cost : " << CalWasteTime(armorTime,freq) << " ms" << endl;
@@ -316,7 +308,7 @@ namespace rm
             produceTime = CalWasteTime(st, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(12) == 32) {
+                if (waitKey(11) == 32) {
                     while (waitKey() != 32) {}
                 }
             }
@@ -330,6 +322,7 @@ namespace rm
             timeStampMat detect_stamp = frame_fifo.wait_and_pop();
             /** 计算上一次源图像执行耗时 **/
             last_mission_time = detect_stamp.stamp - last_stamp; //两次检测时间间隔 用当次时间序列值 - 上次时间序列值
+//            cout << "Last Mission Time: " << last_mission_time << endl;
             last_stamp = detect_stamp.stamp; //更新当次时间序列序号
             //cout << "t = " << detect_stamp.stamp << " s" <<endl;
             detectFrame = detect_stamp.frame.clone();
@@ -356,6 +349,10 @@ namespace rm
                     Armor();
                     recognitionTime = CalWasteTime(recognitionSt, freq);
                     find_state = armorDetectorPtr->findState;
+//                    if (!find_state) {
+//                        imwrite(OUTPUT_PATH + (string)"LostImg/" + getSysTime() + ".png",
+//                                detectFrame);
+//                    }
                     predictionSt = getTickCount();
                     if(find_state) {
                         car_num = armorDetectorPtr->armorNumber;
@@ -419,19 +416,20 @@ namespace rm
             // 给电控发数据
             yaw_abs = predictPtr->back_ypd[0];
             pitch_abs = predictPtr->back_ypd[1];
+            SendData data = send_fifo.wait_and_pop();
             /** package data and prepare for sending data to lower-machine **/
-            serialPtr->pack(yaw_abs,
-                            pitch_abs,
-                            find_state,
-                            car_num,
-                            predictPtr->shootCmd
+            serialPtr->pack(data.yaw,
+                            data.pitch,
+                            data.find,
+                            data.id,
+                            data.cmd
                             );
 #if SAVE_TEST_DATA == 1
             if(dataWrite.is_open())
                     dataWrite << time_stamp[last_cnt] << " " << predictPtr->cam_yaw << endl;
 #endif
             /// 发送数据，除了读取视频模式
-            if (carName != VIDEO && serialPtr->WriteData()) {
+            if (carName != VIDEO && carName != IMAGE && serialPtr->WriteData()) {
 #if SAVE_LOG == 1
                 logWrite<<"[Write Data to USB2TTL SUCCEED]"<<endl;
 #endif
@@ -464,7 +462,7 @@ namespace rm
     {
         do{
             double st = (double) getTickCount();
-            if(serialPtr->ReadData(receiveData)) {
+            if (carName != VIDEO && carName != IMAGE && serialPtr->ReadData(receiveData)) {
                 receive_fifo.push(receiveData);
                 curControlState = receiveData.targetMode;
                 blueTarget = receiveData.targetColor;

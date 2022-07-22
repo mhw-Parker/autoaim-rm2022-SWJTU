@@ -49,25 +49,31 @@ public:
     Predictor();
     ~Predictor();
     void Refresh();
+    // 初始值
+    const float EPS = 1e-15;
+
     cv::Point2f predict_point;
     // 预测时长
-    float latency = 0.5;
+    float latency = EPS;
     // 子弹飞行时长
     float fly_t = 0.2;
     // 电机响应时间
-    float react_t{};
-    Vector3f target_ypd, delta_ypd{0,0,0}, predict_ypd{};
+    float react_t = EPS;
+    Vector3f target_ypd = {EPS, EPS, EPS};
+    Vector3f delta_ypd = {EPS, EPS, EPS};
+    Vector3f predict_ypd = {EPS, EPS, EPS};
     // 各车偏置补偿
-    Vector3f offset{};
+    Vector3f offset = {EPS, EPS, EPS};
     // 打符专用补偿
-    Vector3f energy_offset{};
+    Vector3f energy_offset = {EPS, EPS, EPS};
     // 给电控发数据补偿
     Vector3f back_ypd{};
 
-    Vector3f target_xyz{}, predict_xyz{};
-    Vector3f last_xyz{};
-    Vector3f target_v_xyz{};
-    Vector3f target_a_xyz{};
+    Vector3f target_xyz = {EPS, EPS, EPS};
+    Vector3f predict_xyz = {EPS, EPS, EPS};
+    Vector3f last_xyz = {EPS, EPS, EPS};
+    Vector3f target_v_xyz = {EPS, EPS, EPS};
+    Vector3f target_a_xyz = {EPS, EPS, EPS};
     // 弹速相关
     float average_v_bullet;
     float v_vec[4]{};

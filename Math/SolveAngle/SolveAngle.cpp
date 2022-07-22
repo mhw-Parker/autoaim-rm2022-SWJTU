@@ -20,14 +20,12 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0.2;
             coeff = 0.035;
             break;
         case INFANTRY3:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0.2;
             gim_xyz_error << 0, 43.8, 101.6;
             coeff = 0.025;
             break;
@@ -35,7 +33,6 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0.15;
             coeff = 0.028;
             break;
         case INFANTRY_TRACK:
@@ -44,28 +41,25 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0;
             coeff = 0.025;
             break;
         case IMAGE:
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = 0;
             coeff = 0.025;
             break;
         case SENTRYTOP:
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = -0.11;
+            gim_xyz_error << 0, -55, 120;
             coeff = 0.025;
             break;
         case SENTRYDOWN:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            fit_gun_error = -0.11;
             coeff = 0.025;
             break;
         case UAV:
@@ -114,8 +108,8 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             //printf("-- Big Armor ! --\n");
             break;
         case ENERGY_ARMOR:
-            targetHeight3D = 170; // 130
-            targetWidth3D = 270; // 225
+            targetHeight3D = 155; // 130
+            targetWidth3D = 245; // 225
             //printf("-- Energy Armor ! --\n");
             break;
         default:
@@ -152,8 +146,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vect
              false,
              SOLVEPNP_ITERATIVE);
     cv2eigen(tvecs,p_cam_xyz);
-    p_cam_xyz += gim_xyz_error; // transfer to gimbal xyz
-    //cout << p_cam_xyz << endl << endl;
+    p_cam_xyz += gim_xyz_error;
     cv2eigen(rvecs,r_vec);
     cv::Rodrigues(rvecs,R);
     cv2eigen(R,r_mat);
@@ -280,6 +273,7 @@ Point2f SolveAngle::getBackProject2DPoint(Vector3f target_xyz) {
 Vector3f SolveAngle::World2Cam(Vector3f world_xyz) {
     Vector3f cam_xyz;
     cam_xyz = cam2world_mat.inverse() * world_xyz;
+    cam_xyz -= gim_xyz_error;
     return cam_xyz;
 }
 Vector3f SolveAngle::Cam2Pixel(Vector3f cam_xyz) {

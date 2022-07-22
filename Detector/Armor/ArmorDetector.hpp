@@ -144,8 +144,8 @@ namespace rm
 
         Lamp(RotatedRect bar, float angle, float avgB) :lightAngle(angle),avgRSubBVal(avgB) {
             ///TODO高度系数待实测
-            // 高度乘2.3
-            cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2.3));
+            // 高度乘k
+            cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2.27));
             rect = cv::RotatedRect(bar.center, exLSize, bar.angle);
         }
 
@@ -203,7 +203,7 @@ namespace rm
         void Preprocess(Mat &img);
         vector<Lamp> LampDetection(Mat& img);
         /***/
-        void GetRoi();
+        void GetRoi(const Mat& img);
 
         bool DetectArmor(Mat &img);
 
@@ -248,11 +248,11 @@ namespace rm
         /*target armor number*/
         int armorNumber;
 
-        /*clone of image passed in*/
-        //Mat img;
-
         /*loss cnt*/
         int lostCnt;
+
+        /*the number of frames that program get a target armor constantly*/
+        unsigned long long detectCnt = 0;
 
         /** variables would be used in functions**/
     private:
@@ -283,12 +283,6 @@ namespace rm
 
         /**the frequency information**/
     private:
-        /*the number of frames that program don't get a target armor constantly*/
-
-
-        /*the number of frames that program get a target armor constantly*/
-        unsigned long long detectCnt = 0;
-
         /*the counter for successfully detection of target armor*/
         int armorFoundCounter = 0;
 

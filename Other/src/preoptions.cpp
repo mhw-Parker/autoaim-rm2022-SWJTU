@@ -100,15 +100,21 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                 LOGM("UAV SET SAIL! COMMANDER!");
             }
                 }},
-    {"-melee0", {
+    {"-infantry3", {
                         "MELEE INFANTRY SET SAIL! COMMANDER!",[]() {
                 carName = INFANTRY3;
                 LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
             }
                 }},
-    {"-melee1", {
+    {"-infantry4", {
                         "MELEE INFANTRY SET SAIL! COMMANDER!",[]() {
                 carName = INFANTRY4;
+                LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
+            }
+                }},
+    {"-infantry5", {
+                   "MELEE INFANTRY SET SAIL! COMMANDER!",[]() {
+                carName = INFANTRY5;
                 LOGM("MELEE INFANTRY SET SAIL! COMMANDER!");
             }
                 }},

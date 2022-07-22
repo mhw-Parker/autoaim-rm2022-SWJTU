@@ -74,13 +74,14 @@ bool MindDriver::SetCam() {
     // 调整RGB三个通道增益
     int r_gain, g_gain, b_gain;
     CameraGetGain(hCamera, &r_gain, &g_gain, &b_gain);
-    CameraSetGain(hCamera, r_gain + 3.5, g_gain, b_gain);
+    CameraSetGain(hCamera, r_gain + 59, g_gain + 28, b_gain);
 
     if (carName == SENTRYTOP) { // 134
-        CameraSetExposureTime(hCamera, 5500); //设置曝光时间
-        CameraSetAnalogGainX(hCamera,2); //设置增益系数
+        CameraSetExposureTime(hCamera, 3500); //设置曝光时间
+        CameraSetAnalogGainX(hCamera,3.5); //设置增益系数
     } else { // 133
-        CameraSetExposureTime(hCamera, 5000); //设置曝光时间
+        CameraSetExposureTime(hCamera, 3000); //设置曝光时间
+        CameraSetAnalogGainX(hCamera,12.5); //设置增益系数
     }
 
 
