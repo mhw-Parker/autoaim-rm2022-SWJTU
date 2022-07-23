@@ -187,7 +187,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     back_ypd = offset + predict_ypd;
 
     // 显示数据，会耗时17ms左右，一般关掉
-    if (showArmorBox) {
+    if (debug) {
         vector<float> data2;
         for (int len = 0; len < target_xyz.size(); len++)
             data2.push_back(target_xyz[len]);

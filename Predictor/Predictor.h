@@ -50,15 +50,15 @@ public:
     ~Predictor();
     void Refresh();
     // 初始值
-    const float EPS = 1e-15;
+    const float EPS = 0;
 
     cv::Point2f predict_point;
     // 预测时长
-    float latency = EPS;
+    float latency = 0.5;
     // 子弹飞行时长
     float fly_t = 0.2;
     // 电机响应时间
-    float react_t = EPS;
+    float react_t = 0.1;
     Vector3f target_ypd = {EPS, EPS, EPS};
     Vector3f delta_ypd = {EPS, EPS, EPS};
     Vector3f predict_ypd = {EPS, EPS, EPS};

@@ -146,7 +146,7 @@ Mat EnergyDetector::preprocess(Mat &src) {
 //        subtract(channels[0],channels[2],sub_mat);
 //    else
 //        subtract(channels[2],channels[0],sub_mat);
-    threshold(sub_mat,sub_mat,120,255,THRESH_BINARY); // 80
+    threshold(sub_mat,sub_mat,90,255,THRESH_BINARY); // 80
 
     Mat element_close = getStructuringElement(MORPH_RECT, Size(5, 5));
     morphologyEx(sub_mat,sub_mat,MORPH_CLOSE,element_close);

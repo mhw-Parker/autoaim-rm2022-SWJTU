@@ -52,7 +52,7 @@ private:
 
     [[maybe_unused]] void GunXYZ2YPD(Vector3f cam_xyz);
 
-    Vector3f gim_xyz_error{};
+    Vector3f gim_xyz_error{0,0,0};
     Matrix3f Ry, Rp, cam2world_mat;
 
     float degree2rad = CV_PI / 180;

@@ -62,7 +62,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     angle.push_back(current_theta);     // a condition used to store angle
     /// estimate and predict
     if(angle.size() <= differ_step) {   // if differ_step = n, angle condition minimum size is n+1, so that we can get 4 time gap
-        predict_pts = target_pts;
+        predict_rad = 0;
     }
     else {
         current_omega = CalOmegaNStep(differ_step, total_theta);
@@ -85,8 +85,8 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
                 else {
                     predict_rad = IdealRad(t_list.back(), t_list.back() + latency);
-                    //omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
-                    //FilterRad(latency);
+                    if(debug)
+                        omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
                 }
             }
             else {
@@ -105,13 +105,16 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
-    predict_xyz[1] += 260; //120
+    if(average_v_bullet > 22) {
+        predict_xyz[1] += 130;
+    }else {
+        predict_xyz[1] += 260;
+    }
     //cout << predict_xyz << endl << endl;
     predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     back_ypd = predict_ypd + energy_offset;
-    //cout << back_ypd << endl << endl;
     latency = react_t + fly_t;
-    if(showEnergy){
+    if(debug){
         vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","gim_pitch","yaw","latency","rad"};
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,predict_ypd[1],gimbal_ypd[1],predict_ypd[0],latency,predict_rad};
@@ -119,6 +122,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
         //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
         //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
     }
+
 }
 
 bool Predictor::EnergyStateSwitch() {
@@ -424,6 +428,8 @@ float Predictor::spdPhi(float omega, int flag) {
     return flag ? phi : CV_PI - phi;
 }
 void Predictor::getPredictRect(Point2f &center, vector<Point2f> &pts, float theta) {
-    for(int i = 0;i<4;i++)
+    for(int i = 0;i<4;i++) {
         predict_pts[i] = calPredict(pts[i],center, theta);
+        //cout << predict_pts[i] << " ";
+    }
 }

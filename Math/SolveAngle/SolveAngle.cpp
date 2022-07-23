@@ -146,6 +146,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vect
              false,
              SOLVEPNP_ITERATIVE);
     cv2eigen(tvecs,p_cam_xyz);
+
     p_cam_xyz += gim_xyz_error;
     cv2eigen(rvecs,r_vec);
     cv::Rodrigues(rvecs,R);
