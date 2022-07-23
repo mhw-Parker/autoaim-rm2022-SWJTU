@@ -53,13 +53,14 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND134GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND134GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
-            gim_xyz_error << 0, -55, 120;
+            gim_xyz_error << 0, -55, 103;
             coeff = 0.025;
             break;
         case SENTRYDOWN:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
+            gim_xyz_error << 0, 38, 158;
             coeff = 0.025;
             break;
         case UAV:
@@ -128,7 +129,7 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
  * @param pts 装甲板 4 点坐标
  * @param v_ 弹速
  * */
-void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vector3f gimbal_ypd) {
+void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, const Vector3f& gimbal_ypd) {
     cv::Mat Rvec;
     cv::Mat_<float> Tvec;
     Generate3DPoints(armor_mode);
@@ -149,31 +150,15 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vect
 
     p_cam_xyz += gim_xyz_error;
     cv2eigen(rvecs,r_vec);
-    cv::Rodrigues(rvecs,R);
+    Rodrigues(rvecs,R);
     cv2eigen(R,r_mat);
     Vector3f w_cam_xyz = -r_mat.inverse() * p_cam_xyz;
+
     yaw_ = atan2(w_cam_xyz[2],w_cam_xyz[0]);
-    //cout << "旋转矩阵：\n" << w_cam_xyz << "\n" << yaw_/degree2rad << endl;
-    camXYZ2YPD(); //直接输出目标点 yaw pitch dist
-    //GunXYZ2YPD(p_cam_xyz);
+    //直接输出目标点 yaw pitch dist
+    camXYZ2YPD();
 
-//    if(carName == SENTRYTOP)
-//        gimbal_ypd += Vector3f {-90,0,0};
-
-    float sin_y = sin(gimbal_ypd[0] * degree2rad);
-    float cos_y = cos(gimbal_ypd[0] * degree2rad);
-    float sin_p, cos_p;
-    sin_p = sin(gimbal_ypd[1] * degree2rad);
-    cos_p = cos(gimbal_ypd[1] * degree2rad);
-
-    Ry <<   cos_y , 0     , -sin_y ,
-            0     , 1     , 0     ,
-            sin_y, 0     , cos_y ;
-    Rp <<   1     , 0     , 0     ,
-            0     , cos_p , -sin_p,
-            0     , sin_p , cos_p ;
-    cam2world_mat = Ry * Rp;
-    world_xyz = Cam2World();
+    world_xyz = Cam2World(gimbal_ypd);
 
     rectPoint2D.clear();
     targetPoints3D.clear();
@@ -287,7 +272,21 @@ Vector3f SolveAngle::Cam2Pixel(Vector3f cam_xyz) {
  * @param cam_xyz
  * @return
  */
-Vector3f SolveAngle::Cam2World() {
+Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypd) {
+    float sin_y = sin(gimbal_ypd[0] * degree2rad);
+    float cos_y = cos(gimbal_ypd[0] * degree2rad);
+    float sin_p, cos_p;
+    sin_p = sin(gimbal_ypd[1] * degree2rad);
+    cos_p = cos(gimbal_ypd[1] * degree2rad);
+
+    Ry <<   cos_y , 0     , -sin_y ,
+            0     , 1     , 0     ,
+            sin_y, 0     , cos_y ;
+    Rp <<   1     , 0     , 0     ,
+            0     , cos_p , -sin_p,
+            0     , sin_p , cos_p ;
+    cam2world_mat = Ry * Rp;
+
     Vector3f world_xyz;
     world_xyz = cam2world_mat * p_cam_xyz;
     return world_xyz;

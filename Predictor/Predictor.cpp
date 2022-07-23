@@ -86,8 +86,8 @@ void Predictor::TimeRefresh() {
  */
 inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
-    target_a_xyz << EPS, EPS, EPS;
-    target_v_xyz << EPS, EPS, EPS;
+    target_a_xyz << 0, 0, 0;
+    target_v_xyz << 0, 0, 0;
 }
 
 /**
@@ -153,7 +153,6 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 计算要转过的角度
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
         // 计算抬枪和子弹飞行时间
-        predict_xyz[1] += 50;
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
@@ -172,7 +171,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         latency = react_t + fly_t;
     } else {
         ///好像不用初始化
-        //target_xyz << EPS, EPS, 3000;
+        //target_xyz << 0, 0, 3000;
         // 自动射击命令
         shootCmd = 0;
         KalmanRefresh();

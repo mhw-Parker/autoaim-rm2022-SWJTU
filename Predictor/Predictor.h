@@ -49,31 +49,28 @@ public:
     Predictor();
     ~Predictor();
     void Refresh();
-    // 初始值
-    const float EPS = 0;
-
     cv::Point2f predict_point;
     // 预测时长
-    float latency = 0.5;
+    float latency = 0;
     // 子弹飞行时长
     float fly_t = 0.2;
     // 电机响应时间
-    float react_t = 0.1;
-    Vector3f target_ypd = {EPS, EPS, EPS};
-    Vector3f delta_ypd = {EPS, EPS, EPS};
-    Vector3f predict_ypd = {EPS, EPS, EPS};
+    float react_t = 0;
+    Vector3f target_ypd = {0, 0, 0};
+    Vector3f delta_ypd = {0, 0, 0};
+    Vector3f predict_ypd = {0, 0, 0};
     // 各车偏置补偿
-    Vector3f offset = {EPS, EPS, EPS};
+    Vector3f offset = {0, 0, 0};
     // 打符专用补偿
-    Vector3f energy_offset = {EPS, EPS, EPS};
+    Vector3f energy_offset = {0, 0, 0};
     // 给电控发数据补偿
     Vector3f back_ypd{};
 
-    Vector3f target_xyz = {EPS, EPS, EPS};
-    Vector3f predict_xyz = {EPS, EPS, EPS};
-    Vector3f last_xyz = {EPS, EPS, EPS};
-    Vector3f target_v_xyz = {EPS, EPS, EPS};
-    Vector3f target_a_xyz = {EPS, EPS, EPS};
+    Vector3f target_xyz = {0, 0, 0};
+    Vector3f predict_xyz = {0, 0, 0};
+    Vector3f last_xyz = {0, 0, 0};
+    Vector3f target_v_xyz = {0, 0, 0};
+    Vector3f target_a_xyz = {0, 0, 0};
     // 弹速相关
     float average_v_bullet;
     float v_vec[4]{};

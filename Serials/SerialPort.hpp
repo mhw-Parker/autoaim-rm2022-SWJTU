@@ -21,7 +21,7 @@
 
 //
 #define     SEND_LENGTH        13
-#define     RECEIVE_LENGTH      16
+#define     RECEIVE_LENGTH     16
 //起始字节,协议固定为0xA5
 #define    VISION_SOF         (0xA5)
 //end字节,协议固定为0xA5
@@ -96,12 +96,11 @@ private:
     int nStop;
     uint8_t buff[SEND_LENGTH];
     uint8_t  buffRead[100];
-
     int readCount;
     int maxReadTime;
     static int set_opt(int fd, int nSpeed, char nEvent, int nBits, int nStop);
-
 public:
+    bool serial_state{};
     explicit Serial(int nSpeed = 115200, char nEvent = 'N', int nBits = 8, int nStop = 1);
     ~Serial();
     void pack(float yaw, float pitch, uint8_t find, uint8_t CarID, uint8_t shoot);

@@ -40,13 +40,13 @@ bool MindDriver::InitCam() {
             channel = 3;
             CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BGR8);
         }
-        return 1;
+        return true;
     }
 }
 
 bool MindDriver::Grab(Mat &src) {
     //CameraGetFrameSpeed(hCamera,&fps);
-    double st = getTickCount();
+
     if (CameraGetImageBuffer(hCamera, &sFrameInfo, &pbyBuffer, 1000) == CAMERA_STATUS_SUCCESS) {
 
         CameraImageProcess(hCamera, pbyBuffer, g_pRgbBuffer, &sFrameInfo);
@@ -74,7 +74,7 @@ bool MindDriver::SetCam() {
     // 调整RGB三个通道增益
     int r_gain, g_gain, b_gain;
     CameraGetGain(hCamera, &r_gain, &g_gain, &b_gain);
-    CameraSetGain(hCamera, r_gain + 59, g_gain + 28, b_gain);
+    CameraSetGain(hCamera, r_gain + 40, g_gain + 20, b_gain);
 
     if (carName == SENTRYTOP) { // 134
         CameraSetExposureTime(hCamera, 3500); //设置曝光时间
@@ -83,8 +83,6 @@ bool MindDriver::SetCam() {
         CameraSetExposureTime(hCamera, 3000); //设置曝光时间
         CameraSetAnalogGainX(hCamera,2.5); //设置增益系数
     }
-
-
 
     /* 让SDK进入工作模式，开始接收来自相机发送的图像
         数据。如果当前相机是触发模式，则需要接收到

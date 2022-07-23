@@ -3,6 +3,7 @@
 //
 
 #include <csignal>
+#include <memory>
 #include <opencv2/opencv.hpp>
 #include <chrono>
 #include <iostream>
@@ -112,11 +113,11 @@ namespace rm
 
 
     ImgProdCons::ImgProdCons():
-            serialPtr(unique_ptr<Serial>(new Serial())),
-            armorDetectorPtr(unique_ptr<ArmorDetector>(new ArmorDetector())),
+            serialPtr(std::make_unique<Serial>()),
+            armorDetectorPtr(std::make_unique<ArmorDetector>()),
             kalman(unique_ptr<Kalman>(new Kalman())),
-            energyPtr(unique_ptr<EnergyDetector>(new EnergyDetector())),
-            predictPtr(unique_ptr<Predictor>(new Predictor())),
+            energyPtr(std::make_unique<EnergyDetector>()),
+            predictPtr(std::make_unique<Predictor>()),
             armorType(BIG_ARMOR),
             driver(),
             missCount(0),
@@ -130,11 +131,10 @@ namespace rm
         //timeWrite.close();
     }
 
-    bool ImgProdCons::Init()
-    {
+    bool ImgProdCons::Init() {
         /*initialize signal*/
         InitSignals();
-        if(!serialPtr->InitPort()){
+        if (!serialPtr->serial_state) {
             com_flag = false;
             cerr << "serial port set failed !" << endl;
         }
@@ -185,15 +185,13 @@ namespace rm
             freq = getTickFrequency();
             startT = getTickCount();
             /// log
-        }
-        else
-        {
+        } else {
             driver->StopGrab();
             exit(-1);
         }
         //尝试5次相机采集，视频模式尝试1次
         do {
-            if(driver->Grab(curImage)) {
+            if (driver->Grab(curImage)) {
                 FRAMEWIDTH = curImage.cols;
                 FRAMEHEIGHT = curImage.rows;
                 armorDetectorPtr->Init();
@@ -203,7 +201,7 @@ namespace rm
             if (carName == VIDEO && missCount) {
                 exit(-1);
             }
-            if(missCount > 5) {
+            if (missCount > 5) {
                 driver->StopGrab();
                 exit(-1);
             }
@@ -301,10 +299,11 @@ namespace rm
             }
             // put new frame which grab from camera in Fifo
             ReceiveData rd;
-            if(com_flag) rd = receive_fifo.wait_and_pop();
+            if (com_flag)
+                rd = receive_fifo.wait_and_pop();
             timeStampMat temp(frame,time_stamp,rd);
             frame_fifo.push(temp);
-            //printf("fifo time ： %f\n", CalWasteTime(s,getTickFrequency()));
+
             produceTime = CalWasteTime(st, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
@@ -328,7 +327,7 @@ namespace rm
             detectFrame = detect_stamp.frame.clone();
             //printf("time : %f\n",detect_stamp.stamp);
             Vector3f gimbal_ypd;
-            if(carName == VIDEO) {
+            if(carName == VIDEO || !com_flag) {
                 gimbal_ypd << 0,0,0;
             } else {
                 gimbal_ypd << detect_stamp.mcuData.yawAngle,

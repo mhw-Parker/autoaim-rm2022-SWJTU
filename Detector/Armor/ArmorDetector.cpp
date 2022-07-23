@@ -11,14 +11,14 @@ namespace rm {
     * @return none
     * @details none
     */
-
     Armor::Armor(Lamp L1, Lamp L2, double priority_) {
         errorAngle = fabs(L1.lightAngle - L2.lightAngle);
         armorWidth = fabs(static_cast<int>(L1.rect.center.x - L2.rect.center.x));
         armorHeight = fabs(static_cast<int>((L1.rect.size.height + L2.rect.size.height) / 2));
         center.x = static_cast<int>((L1.rect.center.x + L2.rect.center.x) / 2);
         center.y = static_cast<int>((L1.rect.center.y + L2.rect.center.y) / 2);
-        rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2), Size(armorWidth, armorHeight));
+        rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2),
+                    Size(armorWidth, armorHeight));
         armorType = (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
         priority = priority_;
         avgRSubBVal = (L1.avgRSubBVal + L2.avgRSubBVal) / 2;
@@ -31,7 +31,7 @@ namespace rm {
             L1.rect.points(pts_);
             if (L1.lightAngle < 0) {
                 pts[0] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[3] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[3] = Point2f((pts_[1] + pts_[2]) / 2);
             } else {
                 pts[3] = Point2f((pts_[0] + pts_[3]) / 2);
                 pts[0] = Point2f((pts_[1] + pts_[2]) / 2);
@@ -40,29 +40,29 @@ namespace rm {
             L2.rect.points(pts_);
             if (L2.lightAngle < 0) {
                 pts[1] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[2] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[2] = Point2f((pts_[1] + pts_[2]) / 2);
             } else {
                 pts[2] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[1] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[1] = Point2f((pts_[1] + pts_[2]) / 2);
             }
 
         } else {
             L2.rect.points(pts_);
             if (L2.lightAngle < 0) {
                 pts[0] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[3] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[3] = Point2f((pts_[1] + pts_[2]) / 2);
             } else {
                 pts[3] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[0] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[0] = Point2f((pts_[1] + pts_[2]) / 2);
             }
 
             L1.rect.points(pts_);
             if (L1.lightAngle < 0) {
                 pts[1] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[2] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[2] = Point2f((pts_[1] + pts_[2]) / 2);
             } else {
                 pts[2] = Point2f((pts_[0] + pts_[3]) / 2);
-                pts[1] = Point2f(pts_[1] / 2 + pts_[2] / 2);
+                pts[1] = Point2f((pts_[1] + pts_[2]) / 2);
             }
         }
     }
@@ -256,9 +256,35 @@ namespace rm {
         if (showBinaryImg) {
             imshow("binary_brightness_img", thresholdMap);
         }
-
+        // 检测灯条
         lights = LampDetection(imgRoi);
-
+        // 画灯条
+        if (showLamps) {
+            for (auto &light: lights) {
+                Point2f rect_point[4]; //
+                light.rect.points(rect_point);
+                for (int j = 0; j < 4; j++) {
+                    line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
+                         rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
+                         Scalar(0, 255, 255), 1);
+                }
+                vector<int> data{(int) (light.rect.size.height * light.rect.size.width / 2),
+                                 (int) (light.rect.size.height / light.rect.size.width / 2),
+                                 (int) light.rect.size.height / 2,
+                                 (int) light.rect.size.width,
+                                 (int) light.lightAngle,
+                                 (int) light.avgRSubBVal};
+                Point2f corner = Point2f(roiRect.x + light.rect.center.x + light.rect.size.width / 4,
+                                         roiRect.y + light.rect.center.y - light.rect.size.height / 4);
+                // 面积，高宽比，高，宽，角度，通道相减图平均权值
+                for (int j = 0; j < data.size(); j++) {
+                    putText(img, to_string(data[j]), corner + Point2f(0, 20 * j),
+                            FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
+                            2);
+                }
+            }
+        }
+        // 匹配灯条
         MaxMatch(lights);
 
         if (findState) {
@@ -275,38 +301,12 @@ namespace rm {
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
 
-            // 画灯条
-            if (showLamps) {
-                for (auto &light: lights) {
-                    Point2f rect_point[4]; //
-                    light.rect.points(rect_point);
-                    for (int j = 0; j < 4; j++) {
-                        line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
-                             rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
-                             Scalar(0, 255, 255), 1);
-                    }
-                    vector<int> data{(int) (light.rect.size.height * light.rect.size.width / 2),
-                                     (int) (light.rect.size.height / light.rect.size.width / 2),
-                                     (int) light.rect.size.height / 2,
-                                     (int) light.rect.size.width,
-                                     (int) light.lightAngle,
-                                     (int) light.avgRSubBVal};
-                    Point2f corner = Point2f(roiRect.x + light.rect.center.x + light.rect.size.width / 4,
-                                             roiRect.y + light.rect.center.y - light.rect.size.height / 4);
-                    // 面积，高宽比，高，宽，角度，通道相减图平均权值
-                    for (int j = 0; j < data.size(); j++) {
-                        putText(img, to_string(data[j]), corner + Point2f(0, 20 * j),
-                                FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
-                                2);
-                    }
-                }
-            }
             // 画装甲板
             if (showArmorBox) {
                 rectangle(img, roiRect, Scalar(255, 255, 255), 1);
                 for (int j = 0; j < 4; j++) {
                     line(img, targetArmor.pts[j], targetArmor.pts[(j + 1) % 4],
-                         Scalar(255, 0, 255), 2);
+                         Scalar(255, 0, 255), 1);
                 }
                 circle(img, targetArmor.center, 5, Scalar(0, 0, 255), -1);
             }
@@ -654,7 +654,7 @@ namespace rm {
             //warpPerspective to get armorImage
             warpPerspective(gray, warpPerspective_dst, warpPerspective_mat,
                             Size(2 * SVM_IMAGE_SIZE, SVM_IMAGE_SIZE));
-            warpPerspective_dst = warpPerspective_dst.colRange(12, 76).clone();
+            warpPerspective_dst = warpPerspective_dst.colRange(12, 68).clone();
         } else {
             dstPoints[0] = Point2f(0, 0);
             dstPoints[1] = Point2f(SVM_IMAGE_SIZE, 0);

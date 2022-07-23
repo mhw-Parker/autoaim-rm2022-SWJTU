@@ -1,6 +1,5 @@
 #include "SerialPort.hpp"
 
-bool wait_uart = false;
 
 /**
  * @brief list all the available uart resources
@@ -24,16 +23,7 @@ string get_uart_dev_name() {
  */
 Serial::Serial(int nSpeed, char nEvent, int nBits, int nStop) :
         nSpeed(nSpeed), nEvent(nEvent), nBits(nBits), nStop(nStop) {
-    if (wait_uart) {
-        InitPort(nSpeed, nEvent, nBits, nStop);
-    } else {
-        if (InitPort(nSpeed, nEvent, nBits, nStop)) {
-
-        } else {
-
-            //cout<<("Port set fail!")<<endl;
-        }
-    }
+    serial_state = InitPort(nSpeed, nEvent, nBits, nStop);
 }
 
 /**
@@ -59,7 +49,6 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
         return false;
     }
     if ((fd = open(name.data(), O_RDWR | O_APPEND | O_SYNC)) < 0) {
-
         return false;
     }
     return set_opt(fd, nSpeed_, nEvent_, nBits_, nStop_) >= 0;
@@ -91,9 +80,6 @@ void Serial::pack(float yaw, float pitch, uint8_t find, uint8_t CarID, uint8_t s
 bool Serial::WriteData() {
     int cnt = 0, curr = 0;
     if (fd <= 0) {
-        if (wait_uart) {
-            InitPort(nSpeed, nEvent, nBits, nStop);
-        }
         return false;
     }
 
@@ -102,11 +88,7 @@ bool Serial::WriteData() {
 
     if (curr < 0) {
         raise(SIGINT);
-
         close(fd);
-        if (wait_uart) {
-            InitPort(nSpeed, nEvent, nBits, nStop);
-        }
         return false;
     }
 
@@ -174,7 +156,6 @@ int Serial::set_opt(int fd, int nSpeed, char nEvent, int nBits, int nStop) {
     termios newtio{}, oldtio{};
 
     if (tcgetattr(fd, &oldtio) != 0) {
-
         return -1;
     }
     bzero(&newtio, sizeof(newtio));

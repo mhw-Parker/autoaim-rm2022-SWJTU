@@ -21,7 +21,7 @@ public:
 
     void Generate2DPoints(Rect rect);
 
-    void GetPoseV(const vector<Point2f>& pts, const int armor_mode, Vector3f gimbal_ypd); //Pnp模型
+    void GetPoseV(const vector<Point2f>& pts, int armor_mode, const Vector3f& gimbal_ypd); //Pnp模型
 
     float CalPitch(Vector3f target_xyz, float v, float &t) const;
     float iteratePitch(Vector3f target_xyz, float v, float &t);
@@ -29,7 +29,7 @@ public:
     void backProject2D(Mat &src, Vector3f target_xyz);
     Point2f getBackProject2DPoint(Vector3f target_xyz);
 
-    Vector3f Cam2World();
+    Vector3f Cam2World(const Vector3f&);
     Vector3f World2Cam(Vector3f world_xyz);
     Vector3f Cam2Pixel(Vector3f cam_xyz);
 
