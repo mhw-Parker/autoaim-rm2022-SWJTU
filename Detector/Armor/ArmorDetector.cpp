@@ -283,7 +283,7 @@ namespace rm {
                     for (int j = 0; j < 4; j++) {
                         line(img, rect_point[j] + Point2f(roiRect.x, roiRect.y),
                              rect_point[(j + 1) % 4] + Point2f(roiRect.x, roiRect.y),
-                             Scalar(0, 255, 255), 2);
+                             Scalar(0, 255, 255), 1);
                     }
                     vector<int> data{(int) (light.rect.size.height * light.rect.size.width / 2),
                                      (int) (light.rect.size.height / light.rect.size.width / 2),
@@ -339,7 +339,7 @@ namespace rm {
         } else {
             detectCnt = 0;
             lostCnt++;
-            if (lostCnt > maxLost) lostState = true;
+            if (lostCnt > max_lost) lostState = true;
             cout << "Lost: " << lostCnt << endl;
             return false;
         }
