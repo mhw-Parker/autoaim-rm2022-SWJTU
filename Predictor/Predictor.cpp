@@ -131,9 +131,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 解算YPD
         //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
-//    /** test against spinning **/
-//    AgainstSpinning();
-//    /****/
+    /** test against spinning **/
+    AgainstSpinning();
+    /****/
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance

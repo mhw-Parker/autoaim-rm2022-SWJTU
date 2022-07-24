@@ -413,8 +413,6 @@ namespace rm
         do {
             double st = (double) getTickCount();
             // 给电控发数据
-            yaw_abs = predictPtr->back_ypd[0];
-            pitch_abs = predictPtr->back_ypd[1];
             SendData data = send_fifo.wait_and_pop();
             /** package data and prepare for sending data to lower-machine **/
             serialPtr->pack(data.yaw,
