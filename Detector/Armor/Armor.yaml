@@ -6,7 +6,7 @@ normal:
    maxLightArea: 2100
    maxLightAngle: 25
    minLightH2W: 1.2
-   maxLightH2W: 8.5
+   maxLightH2W: 9
    maxLightW: 25
    minLightH: 0
    maxLightH: 100
@@ -19,7 +19,6 @@ normal:
    maxRatio: 2.5
    maxArmorAngle: 23
    maxDeviationAngle: 45
-   maxYDiff: 2
 
 sentry:
    minPointNum: 7
@@ -27,7 +26,7 @@ sentry:
    maxLightArea: 2100
    maxLightAngle: 18
    minLightH2W: 2
-   maxLightH2W: 8.5
+   maxLightH2W: 10
    maxLightW: 25
    minLightH: 12
    maxLightH: 80
@@ -38,6 +37,5 @@ sentry:
    maxLengthError: 0.1
    minRatio: 0.68
    maxRatio: 2.5
-   maxArmorAngle: 15
+   maxArmorAngle: 17
    maxDeviationAngle: 45
-   maxYDiff: 2

@@ -161,7 +161,6 @@ namespace rm {
         param_set["maxRatio"] >> param.maxRatio;
         param_set["maxArmorAngle"] >> param.maxArmorAngle;
         param_set["maxDeviationAngle"] >> param.maxDeviationAngle;
-        param_set["maxYDiff"] >> param.maxYDiff;
     }
 
     /**
@@ -250,12 +249,11 @@ namespace rm {
     bool ArmorDetector::DetectArmor(Mat &img) {
         findState = false;
         armorNumber = 0;
-
-        vector<Lamp> lights;
-
         if (showBinaryImg) {
             imshow("binary_brightness_img", thresholdMap);
         }
+
+        vector<Lamp> lights;
         // 检测灯条
         lights = LampDetection(imgRoi);
         // 画灯条
@@ -284,10 +282,15 @@ namespace rm {
                 }
             }
         }
+
+        vector<MatchLight> candidate_armors;
         // 匹配灯条
-        MaxMatch(lights);
+        candidate_armors = MatchLights(lights);
 
         if (findState) {
+            // 寻找最优的目标
+            GetOptimalMatch(candidate_armors, lights);
+
             lostState = false;
             detectCnt++;
             lostCnt = 0;
@@ -347,26 +350,6 @@ namespace rm {
     }
 
     /**
-    * @brief get the Rect instance that describe the target armor's geometry information
-    * @param none
-    * @return the Rect instance that describe the target armor's geometry information
-    * @details none
-    */
-    Rect ArmorDetector::GetArmorRect() const {
-        return targetArmor.rect;
-    }
-
-    /**
-    * @brief judge wheter the target armor is small armor or big armor
-    * @param none
-    * @return if the target is small armor then return true, otherwise return false
-    * @details this function just used for simplifying the using of targetArmor.armorType
-    */
-    bool ArmorDetector::IsSmall() const {
-        return (targetArmor.armorType == SMALL_ARMOR);
-    }
-
-    /**
      * 新版灯条检测
      * @param img
      * @return
@@ -420,28 +403,20 @@ namespace rm {
     }
 
     /**
-    * @brief match lamps to series of armors
-    * @param [lights] a vector of all the possible lamps in the image
-    * @return none
-    * @details none
-    */
-    void ArmorDetector::MaxMatch(vector<Lamp> &lights) {
-        static float deviationAngle, xDiff, yDiff;
+     * 寻找符合条件的匹配灯条，此过程不考虑数字
+     * @param lights
+     * @return 匹配灯条的vector
+     */
+    vector<MatchLight> ArmorDetector::MatchLights(vector<Lamp> &lights) {
+        static float deviationAngle;
         static float nW, nH;
         static float dAngle;
-        static float contourLen1;
-        static float contourLen2;
+        static float contourLen;
         static float ratio;
         static float nAngle;
         static float dAvgB;
-
         vector<MatchLight> matchLights;
 
-        static MatchLight matchLight;
-        float match_factor_;
-
-        if (lights.size() < 2)
-            return;
         //过滤器
         for (auto i = 0; i < lights.size() - 1; i++) {
             for (auto j = i + 1; j < lights.size(); j++) {
@@ -450,13 +425,9 @@ namespace rm {
                 if (dAngle > param.maxAngleError) continue;
 
                 /*the difference ratio of the two lights' height 灯条长度比例差 */
-                contourLen1 = abs(lights[i].rect.size.height - lights[j].rect.size.height) /
-                              (lights[i].rect.size.height + lights[j].rect.size.height) / 2;
-                if (contourLen1 > param.maxLengthError) continue;
-
-                /*the difference ratio of the two lights' width 灯条宽度比 */
-//                contourLen2 = abs(lights[i].rect.size.width - lights[j].rect.size.width) /
-//                              max(lights[i].rect.size.width, lights[j].rect.size.width);
+                contourLen = abs(lights[i].rect.size.height - lights[j].rect.size.height) /
+                             (lights[i].rect.size.height + lights[j].rect.size.height) / 2;
+                if (contourLen > param.maxLengthError) continue;
 
                 /*the average height of two lights(also the height of the armor defined by these two lights)*/
                 nH = (lights[i].rect.size.height + lights[j].rect.size.height) / 2;
@@ -478,10 +449,6 @@ namespace rm {
                                            / (lights[i].rect.center.x - lights[j].rect.center.x))) * 180 / CV_PI;
                 if (deviationAngle > param.maxDeviationAngle) continue;
 
-                /*the difference of the y coordinate of the two center points*/
-                yDiff = abs(lights[i].rect.center.y - lights[j].rect.center.y) / nH;
-                if (yDiff > param.maxYDiff) continue;
-
                 /*difference of average brightness*/
                 dAvgB = abs(lights[i].avgRSubBVal - lights[j].avgRSubBVal) /
                         (lights[i].avgRSubBVal + lights[j].avgRSubBVal) / 2;
@@ -494,17 +461,18 @@ namespace rm {
                                                             pow(FRAMEWIDTH / 2, 2));
 
                 /*The match factor is still rough now. A formula is more reasonable. */
+                float match_factor_;
                 if (carName == SENTRYTOP || carName == SENTRYDOWN) {
-                    match_factor_ = contourLen1 + dAvgB +
+                    match_factor_ = contourLen + dAvgB +
                                     dAngle / param.maxAngleError + deviationAngle / param.maxDeviationAngle +
                                     exp(MIN(fabs(ratio - 1.2), fabs(ratio - 2.2)));
                 } else {
-                    match_factor_ = center_ratio + contourLen1 + dAvgB +
+                    match_factor_ = center_ratio + contourLen + dAvgB +
                                     dAngle / param.maxAngleError + deviationAngle / param.maxDeviationAngle +
                                     MIN(fabs(ratio - 1.2), fabs(ratio - 2.2));
                 }
 
-                matchLight = MatchLight(i, j, match_factor_, nH);
+                MatchLight matchLight = MatchLight(i, j, match_factor_, nH);
                 matchLights.emplace_back(matchLight);
             }
         }
@@ -512,13 +480,22 @@ namespace rm {
         /*sort these pairs of lamps by match factor*/
         if (matchLights.empty()) {
             findState = false;
-            return;
+            return matchLights;
         }
 
         findState = true;
 
         sort(matchLights.begin(), matchLights.end(), compMatchFactor); //元素从小到大排序
 
+        return matchLights;
+    }
+
+    /**
+     * 从候选匹配灯条中选择最优目标
+     * @param armors
+     * @return
+     */
+    void ArmorDetector::GetOptimalMatch(vector<MatchLight> matchLights, vector<Lamp> &lights) {
 #if NUM_RECOGNIZE == 1
         uint8_t mostPossibleLampsIndex1 = matchLights[0].matchIndex1,
                 mostPossibleLampsIndex2 = matchLights[0].matchIndex2;
@@ -572,6 +549,7 @@ namespace rm {
 //        }
 #endif
     }
+
 
     /**
      * @brief compare two matched lamps' priority
@@ -679,6 +657,26 @@ namespace rm {
         warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
         int number = lround(svm->predict(svmParamMatrix));
         return number;
+    }
+
+    /**
+    * @brief get the Rect instance that describe the target armor's geometry information
+    * @param none
+    * @return the Rect instance that describe the target armor's geometry information
+    * @details none
+    */
+    Rect ArmorDetector::GetArmorRect() const {
+        return targetArmor.rect;
+    }
+
+    /**
+    * @brief judge wheter the target armor is small armor or big armor
+    * @param none
+    * @return if the target is small armor then return true, otherwise return false
+    * @details this function just used for simplifying the using of targetArmor.armorType
+    */
+    bool ArmorDetector::IsSmall() const {
+        return (targetArmor.armorType == SMALL_ARMOR);
     }
 
     /**

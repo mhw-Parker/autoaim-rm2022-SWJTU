@@ -80,8 +80,6 @@ namespace rm
         float maxArmorAngle = 23;
         //
         float maxDeviationAngle = 45;
-        // 灯条中心的竖直距离差 / 装甲板高度
-        float maxYDiff = 2;
     };
 
     /**
@@ -207,7 +205,9 @@ namespace rm
 
         bool DetectArmor(Mat &img);
 
-        void MaxMatch(vector<Lamp> &lights);
+        vector<MatchLight> MatchLights(vector<Lamp>&);
+
+        void GetOptimalMatch(vector<MatchLight>, vector<Lamp>&);
 
         void LoadSvmModel(const char *model_path, const Size& armorImgSize = Size(40, 40));
 
