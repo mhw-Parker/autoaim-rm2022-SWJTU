@@ -198,7 +198,7 @@ namespace rm {
         if (!findState || rectTemp.width == 0 || rectTemp.height == 0) {
             roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         } else if (detectCnt > 0) {
-            float scale = 3;
+            float scale = 2;
             int w = int(rectTemp.width * scale);
             int h = int(rectTemp.height * scale);
             int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);
@@ -418,8 +418,8 @@ namespace rm {
         vector<MatchLight> matchLights;
 
         //过滤器
-        for (auto i = 0; i < lights.size() - 1; i++) {
-            for (auto j = i + 1; j < lights.size(); j++) {
+        for (int i = 0; i < lights.size(); i++) {
+            for (int j = i + 1; j < lights.size(); j++) {
                 /* the difference between two angles 灯条角度 */
                 dAngle = fabs(lights[i].lightAngle - lights[j].lightAngle);
                 if (dAngle > param.maxAngleError) continue;

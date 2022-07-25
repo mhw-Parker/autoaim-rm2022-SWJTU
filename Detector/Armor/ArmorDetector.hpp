@@ -143,7 +143,7 @@ namespace rm
         Lamp(RotatedRect bar, float angle, float avgB) :lightAngle(angle),avgRSubBVal(avgB) {
             ///TODO高度系数待实测
             // 高度乘k
-            cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2.27));
+            cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2.18));
             rect = cv::RotatedRect(bar.center, exLSize, bar.angle);
         }
 
@@ -231,7 +231,7 @@ namespace rm
         Armor targetArmor;
 
         /*current find state*/
-        bool findState;
+        bool findState = false;
 
         /*Send this to CONTROL*/
         bool lostState = true;

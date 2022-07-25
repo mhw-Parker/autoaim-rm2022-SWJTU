@@ -287,7 +287,5 @@ Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypd) {
             0     , sin_p , cos_p ;
     cam2world_mat = Ry * Rp;
 
-    Vector3f world_xyz;
-    world_xyz = cam2world_mat * p_cam_xyz;
-    return world_xyz;
+    return cam2world_mat * p_cam_xyz;
 }

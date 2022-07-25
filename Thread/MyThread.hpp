@@ -172,8 +172,6 @@ namespace rm
         /*EnergyDetector buffer detector*/
         std::unique_ptr<EnergyDetector> energyPtr;
 
-        std::unique_ptr<Kalman> kalman;
-
         std::unique_ptr<Predictor> predictPtr;
         //Predictor predictPtr;
 

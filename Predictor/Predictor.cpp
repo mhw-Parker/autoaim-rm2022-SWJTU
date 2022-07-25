@@ -137,7 +137,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
-        target_xyz = GetGyroXYZ();
+        target_xyz = solveAngle.world_xyz;
         // 和上一个目标的距离
         float distance = RMTools::GetDistance(last_xyz, target_xyz);
         // 小范围更换目标认为是小陀螺场景

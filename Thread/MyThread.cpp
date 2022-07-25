@@ -115,17 +115,13 @@ namespace rm
     ImgProdCons::ImgProdCons():
             serialPtr(std::make_unique<Serial>()),
             armorDetectorPtr(std::make_unique<ArmorDetector>()),
-            kalman(unique_ptr<Kalman>(new Kalman())),
             energyPtr(std::make_unique<EnergyDetector>()),
             predictPtr(std::make_unique<Predictor>()),
             armorType(BIG_ARMOR),
             driver(),
             missCount(0),
-            showWave(100,300,500)
-            //stamp_mat(Mat::zeros(FRAMEWIDTH,FRAMEHEIGHT,CV_32FC1),0,receiveData)
-    {
+            showWave(100,300,500) {}
 
-    }
     ImgProdCons::~ImgProdCons() {
         driver->StopGrab();
         //timeWrite.close();
@@ -412,9 +408,6 @@ namespace rm
     void ImgProdCons::Feedback() {
         do {
             double st = (double) getTickCount();
-            // 给电控发数据
-            yaw_abs = predictPtr->back_ypd[0];
-            pitch_abs = predictPtr->back_ypd[1];
             SendData data = send_fifo.wait_and_pop();
             /** package data and prepare for sending data to lower-machine **/
             serialPtr->pack(data.yaw,
