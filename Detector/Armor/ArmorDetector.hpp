@@ -216,6 +216,8 @@ namespace rm
 
         int getArmorNumber(Armor &armor);
 
+        /** 7-23 test  **/
+        void minLampDetect(Mat &roi);
         /**tool functions**/
 
         Rect GetArmorRect() const;

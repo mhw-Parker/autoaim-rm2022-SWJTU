@@ -401,6 +401,37 @@ namespace rm {
         }
         return lampVector;
     }
+    /**
+     * @brief test min area Rect for detector
+     * */
+    void ArmorDetector::minLampDetect(Mat &roi) {
+        Mat dst = roi.clone();
+        vector<vector<Point>> contoursLight;
+        vector<Lamp> lamp_container;
+        findContours(thresholdMap, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+        /** find possible lamp **/
+        for(auto &light : contoursLight) {
+            if(light.size() < 25) continue;
+            RotatedRect lamp_rect = minAreaRect(light);
+            float d_angle = fabs(lamp_rect.angle) - 90;
+            float angle_ = (lamp_rect.angle > 90.0f) ? (lamp_rect.angle - 180.0f) : (lamp_rect.angle);
+            //if (fabs(d_angle) >= 15) continue;
+            float ratio = lamp_rect.size.height / lamp_rect.size.width;
+            //if ((ratio < 2.5) || (ratio > 15)) continue;
+            Lamp lamp_info(lamp_rect, angle_, 1);
+            lamp_container.emplace_back(lamp_info);
+            Point2f pts_[4];
+            lamp_rect.points(pts_);
+            for(int i = 0; i<4; i++) {
+                line(dst, pts_[i], pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
+            }
+            putText(dst, to_string(lamp_rect.angle), pts_[0],
+                    FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
+                    1);
+        }
+        /** match light **/
+        imshow("test",dst);
+    }
 
     /**
      * 寻找符合条件的匹配灯条，此过程不考虑数字
@@ -657,26 +688,6 @@ namespace rm {
         warpPerspective_dst.reshape(0, 1).convertTo(svmParamMatrix, CV_32F, 1.0 / 255);
         int number = lround(svm->predict(svmParamMatrix));
         return number;
-    }
-
-    /**
-    * @brief get the Rect instance that describe the target armor's geometry information
-    * @param none
-    * @return the Rect instance that describe the target armor's geometry information
-    * @details none
-    */
-    Rect ArmorDetector::GetArmorRect() const {
-        return targetArmor.rect;
-    }
-
-    /**
-    * @brief judge wheter the target armor is small armor or big armor
-    * @param none
-    * @return if the target is small armor then return true, otherwise return false
-    * @details this function just used for simplifying the using of targetArmor.armorType
-    */
-    bool ArmorDetector::IsSmall() const {
-        return (targetArmor.armorType == SMALL_ARMOR);
     }
 
     /**
