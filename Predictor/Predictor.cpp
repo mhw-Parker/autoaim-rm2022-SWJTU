@@ -132,7 +132,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
     /** test against spinning **/
-    AgainstSpinning();
+    //AgainstSpinning();
     /****/
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
         target_ypd = gimbal_ypd + delta_ypd;
@@ -184,6 +184,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     last_xyz = target_xyz;
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
+    //back_ypd = offset + target_ypd;
 
     // 显示数据，会耗时17ms左右，一般关掉
     if (debug) {

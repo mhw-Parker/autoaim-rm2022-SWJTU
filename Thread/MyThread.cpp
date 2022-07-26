@@ -293,10 +293,10 @@ namespace rm
                 time_stamp = CalWasteTime(startT,freq)/1000; // save logs which include time_stamp, yaw, pitch
                 saveMission = true;
             }
-            // put new frame which grab from camera in Fifo
             ReceiveData rd;
             if (com_flag)
                 rd = receive_fifo.wait_and_pop();
+            // put new frame which grab from camera in Fifo
             timeStampMat temp(frame,time_stamp,rd);
             frame_fifo.push(temp);
 

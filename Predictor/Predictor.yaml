@@ -22,7 +22,7 @@ Infantry5:
    pitch_offset: 0
 SentryTop:
    average_v_bullet: 28
-   react_t: 0.15
+   react_t: 0.18
    yaw_offset: 0
    pitch_offset: 0
 SentryDown:
