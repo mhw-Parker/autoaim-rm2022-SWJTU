@@ -29,7 +29,7 @@ SentryDown:
    average_v_bullet: 28
    react_t: 0.3
    yaw_offset: 0
-   pitch_offset: 0
+   pitch_offset: -1
 Video:
    average_v_bullet: 14.5
    react_t: 0.3

@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(2000,300,1000),
+Predictor::Predictor() : waveClass(20,300,1000),
                          omegaWave(3,600,1000),
                          poseAngle(CV_PI,600,1000) {
     predict_pts.assign(4,Point2f(0,0));
@@ -208,7 +208,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    //waveClass.displayWave(gimbal_ypd[1], predict_ypd[1] + offset[1], "y");
+    //waveClass.displayWave(target_ypd[0], target_ypd[1], "target_yp");
 }
 
 /**

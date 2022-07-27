@@ -124,12 +124,6 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
                 LOGM("TRACK INFANTRY SET SAIL! COMMANDER!");
             }
                }},
-    {"-sentry", {
-                          "SENTRYTOP SET SAIL! COMMANDER!",[]() {
-                carName = SENTRYTOP;
-                LOGM("SENTRYTOP SET SAIL! COMMANDER!");
-            }
-                  }},
     {"-sentrydown", {
                         "SENTRYDOWN SET SAIL! COMMANDER!",[]() {
                 carName = SENTRYDOWN;

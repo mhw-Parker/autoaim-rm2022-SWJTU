@@ -80,7 +80,7 @@ bool MindDriver::SetCam() {
         CameraSetExposureTime(hCamera, 3500); //设置曝光时间
         CameraSetAnalogGainX(hCamera,3.5); //设置增益系数
     } else { // 133
-        CameraSetExposureTime(hCamera, 2000); //设置曝光时间
+        CameraSetExposureTime(hCamera, 1000); //设置曝光时间
         CameraSetAnalogGainX(hCamera,2.5); //设置增益系数
     }
 
