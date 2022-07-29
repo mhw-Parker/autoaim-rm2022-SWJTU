@@ -64,7 +64,7 @@ public:
     // 打符专用补偿
     Vector3f energy_offset = {0, 0, 0};
     // 给电控发数据补偿
-    Vector3f back_ypd{};
+    Vector3f back_ypd{0,0,0};
 
     Vector3f target_xyz = {0, 0, 0};
     Vector3f predict_xyz = {0, 0, 0};

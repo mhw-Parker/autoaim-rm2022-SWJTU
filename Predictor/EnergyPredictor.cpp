@@ -101,7 +101,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     predict_rad *= energy_rotation_direction;
     predict_point = calPredict(target_point,center,predict_rad); // 逆时针为负的预测弧度，顺时针为正 预测弧度
     getPredictRect(center, target_pts, predict_rad); // 获得预测矩形
-    solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
+    solveAngle.GetPoseV(target_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
