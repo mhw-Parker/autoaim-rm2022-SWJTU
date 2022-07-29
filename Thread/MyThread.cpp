@@ -275,9 +275,6 @@ namespace rm
     void ImgProdCons::Produce()
     {
         do {
-            ReceiveData rd;
-            if (com_flag) // com port work normally
-                rd = receive_fifo.wait_and_pop();
             double st = (double) getTickCount();
             ReceiveData rd;
             if (com_flag)
