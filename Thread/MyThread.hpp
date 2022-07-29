@@ -121,6 +121,8 @@ namespace rm
         double recognitionTime;
         // 纯预测时间
         double predictionTime;
+        // Produce线程取串口数据时间
+        double receive_pop_time;
         // getTickFrequency()
         double freq;
 

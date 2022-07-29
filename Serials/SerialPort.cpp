@@ -64,13 +64,15 @@ bool Serial::InitPort(int nSpeed_, char nEvent_, int nBits_, int nStop_) {
  * @return none
  */
 void Serial::pack(float yaw, float pitch, uint8_t find, uint8_t CarID, uint8_t shoot) {
+    int BLANK = 0xffffff;
     buff[0] = VISION_SOF;
     memcpy(buff + 1, &yaw, 4);
     memcpy(buff + 5, &pitch, 4);
     memcpy(buff + 9, &find, 1);
     memcpy(buff + 10, &CarID, 1);
     memcpy(buff + 11, &shoot, 1);
-    buff[SEND_LENGTH-1] = static_cast<char>(VISION_TOF);
+    memcpy(buff + 12, &BLANK, 3);
+    buff[SEND_LENGTH - 1] = static_cast<char>(VISION_TOF);
 }
 
 /**

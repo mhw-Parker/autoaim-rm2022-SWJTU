@@ -95,7 +95,7 @@ public:
 
 private:
     Vector3f KalmanPredict(float v_, float t);
-    Vector3f GetGyroXYZ();
+    __attribute__((unused)) Vector3f GetGyroXYZ();
     Vector3f PredictKF(EigenKalmanFilter KF, const int& iterate_times);
     inline void KalmanRefresh();
     inline void KalmanShallowRefresh();

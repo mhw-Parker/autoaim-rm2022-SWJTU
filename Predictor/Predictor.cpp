@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(20,300,1000),
+Predictor::Predictor() : waveClass(30,300,1000),
                          omegaWave(3,600,1000),
                          poseAngle(CV_PI,600,1000) {
     predict_pts.assign(4,Point2f(0,0));
@@ -170,9 +170,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
     } else {
-        ///好像不用初始化
-        //target_xyz << 0, 0, 3000;
-        // 自动射击命令
+        // 自动射击命令清零
         shootCmd = 0;
         KalmanRefresh();
     }
@@ -208,14 +206,14 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    //waveClass.displayWave(target_ypd[0], target_ypd[1], "target_yp");
+    waveClass.displayWave(target_ypd[0], target_ypd[1], "target_yp");
 }
 
 /**
  * @brief 获得陀螺仪坐标系下的 x y z
  * @param target_ypd 目标的 yaw pitch dist
  * */
-Vector3f Predictor::GetGyroXYZ() {
+__attribute__((unused)) Vector3f Predictor::GetGyroXYZ() {
     pair<float, float> quadrant[4] = {{-1, 1},
                                       {-1, -1},
                                       {1, -1},

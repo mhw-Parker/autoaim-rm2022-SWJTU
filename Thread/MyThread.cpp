@@ -277,10 +277,12 @@ namespace rm
     void ImgProdCons::Produce()
     {
         do {
+            double st = (double) getTickCount();
             ReceiveData rd;
             if (com_flag)
                 rd = receive_fifo.wait_and_pop();
-            double st = (double) getTickCount();
+            receive_pop_time = CalWasteTime(st, freq);
+            double st1 = (double) getTickCount();
             if (!driver->Grab(frame) || frame.rows != FRAMEHEIGHT || frame.cols != FRAMEWIDTH) {
                 missCount++;
                 //LOGW("FRAME GRAB FAILED!\n");
@@ -299,8 +301,7 @@ namespace rm
             // put new frame which grab from camera in Fifo
             timeStampMat temp(frame,time_stamp,rd);
             frame_fifo.push(temp);
-
-            produceTime = CalWasteTime(st, freq);
+            produceTime = CalWasteTime(st1, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
                 if (waitKey(11) == 32) {
@@ -349,7 +350,7 @@ namespace rm
 //                                detectFrame);
 //                    }
                     predictionSt = getTickCount();
-                    if(find_state) {
+                    if (find_state) {
                         car_num = armorDetectorPtr->armorNumber;
                         find_state = armorDetectorPtr->lostCnt <= max_lost;
                     } else {
@@ -428,10 +429,10 @@ namespace rm
             } else {
                 //logWrite<<"[Write Data to USB2TTL FAILED]"<<endl;
             }
-            feedbackTime = CalWasteTime(st,freq);
 
             // 显示各任务耗时
 #if SHOWTIME == 1
+            cout << "Received data popping Mission Cost : " << receive_pop_time << " ms" << endl;
             cout << "Frame Produce Mission Cost : " << produceTime << " ms" << endl;
             cout << "Detect Mission Cost : " << detectTime << " ms" << endl;
             cout << "Armor/Energy Task Cost : " << recognitionTime << " ms" << endl;
@@ -447,6 +448,7 @@ namespace rm
                 cout << endl;
 #endif
             }
+            feedbackTime = CalWasteTime(st,freq);
         }while (!quitFlag);
     }
 

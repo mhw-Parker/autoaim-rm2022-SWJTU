@@ -19,8 +19,8 @@
 
 /*--------------------------------暂定协议-------------------------------------*/
 
-//
-#define     SEND_LENGTH        13
+// 四字节对齐，因此长度为4的整数
+#define     SEND_LENGTH        16
 #define     RECEIVE_LENGTH     16
 //起始字节,协议固定为0xA5
 #define    VISION_SOF         (0xA5)

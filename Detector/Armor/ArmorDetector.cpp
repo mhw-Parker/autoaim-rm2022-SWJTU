@@ -198,9 +198,10 @@ namespace rm {
         if (!findState || rectTemp.width == 0 || rectTemp.height == 0) {
             roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         } else if (detectCnt > 0) {
-            float scale = 2;
-            int w = int(rectTemp.width * scale);
-            int h = int(rectTemp.height * scale);
+            // 应该保证
+            float scale_w = 12, scale_h = 5;
+            int w = int(rectTemp.width * scale_w);
+            int h = int(rectTemp.height * scale_h);
             int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);
             int y = int(rectTemp.y - (h - rectTemp.height) * 0.5);
             roiRect = Rect(x, y, w, h);
@@ -507,16 +508,11 @@ namespace rm {
                 matchLights.emplace_back(matchLight);
             }
         }
-
-        /*sort these pairs of lamps by match factor*/
         if (matchLights.empty()) {
             findState = false;
             return matchLights;
         }
-
         findState = true;
-
-        sort(matchLights.begin(), matchLights.end(), compMatchFactor); //元素从小到大排序
 
         return matchLights;
     }
@@ -527,6 +523,9 @@ namespace rm {
      * @return
      */
     void ArmorDetector::GetOptimalMatch(vector<MatchLight> matchLights, vector<Lamp> &lights) {
+        // 按优先系数从小到大排序
+        sort(matchLights.begin(), matchLights.end(), compMatchFactor);
+
 #if NUM_RECOGNIZE == 1
         uint8_t mostPossibleLampsIndex1 = matchLights[0].matchIndex1,
                 mostPossibleLampsIndex2 = matchLights[0].matchIndex2;
@@ -588,7 +587,7 @@ namespace rm {
      * @param b matched lamp
      * @return Sort the elements from smallest matchFractor to largest matchFractor
      */
-    bool compMatchFactor(const MatchLight a, const MatchLight b) {
+    const bool compMatchFactor(const MatchLight& a, const MatchLight& b) {
         return a.matchFactor < b.matchFactor;
     }
 

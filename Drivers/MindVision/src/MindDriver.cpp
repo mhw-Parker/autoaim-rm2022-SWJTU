@@ -22,24 +22,20 @@ bool MindDriver::InitCam() {
     printf("state = %d\n", iStatus);
     if (iStatus != CAMERA_STATUS_SUCCESS) {     //初始化失败
         cout << "CamInit failed !" << endl;
-        return 0;
+        return false;
     } else {
         //获得相机的特性描述结构体。该结构体中包含了相机可设置的各种参数的范围信息。决定了相关函数的参数
         CameraGetCapability(hCamera, &tCapability);
-
+        // 数据缓存区
         g_pRgbBuffer = (unsigned char *) malloc(
                 tCapability.sResolutionRange.iHeightMax * tCapability.sResolutionRange.iWidthMax * 3);
-
         //设置相机的相关参数
         SetCam();
+        // 触发方式
 
-        if (tCapability.sIspCapacity.bMonoSensor) {
-            channel = 1;
-            CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_MONO8);
-        } else {
-            channel = 3;
-            CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BGR8);
-        }
+        // 设置为彩色
+        CameraSetIspOutFormat(hCamera, CAMERA_MEDIA_TYPE_BGR8);
+
         return true;
     }
 }
@@ -66,9 +62,6 @@ bool MindDriver::Grab(Mat &src) {
 }
 
 bool MindDriver::SetCam() {
-    CameraPause(hCamera); //停止采集，调整相机参数
-    CameraReleaseImageBuffer(hCamera, pbyBuffer); //释放缓存
-
     CameraSetAeState(hCamera, false); //设置为手动曝光
 
     // 调整RGB三个通道增益
@@ -77,11 +70,11 @@ bool MindDriver::SetCam() {
     CameraSetGain(hCamera, r_gain + 40, g_gain + 20, b_gain);
 
     if (carName == SENTRYTOP) { // 134
-        CameraSetExposureTime(hCamera, 3500); //设置曝光时间
-        CameraSetAnalogGainX(hCamera,3.5); //设置增益系数
+        CameraSetExposureTime(hCamera, 1250); //设置曝光时间
+        CameraSetAnalogGainX(hCamera, 3.5); //设置增益系数
     } else { // 133
         CameraSetExposureTime(hCamera, 1000); //设置曝光时间
-        CameraSetAnalogGainX(hCamera,2.5); //设置增益系数
+        CameraSetAnalogGainX(hCamera, 2.5); //设置增益系数
     }
 
     /* 让SDK进入工作模式，开始接收来自相机发送的图像
@@ -100,8 +93,4 @@ bool MindDriver::StopGrab() {
     CameraPause(hCamera);
     CameraReleaseImageBuffer(hCamera, pbyBuffer);
     return false;
-}
-
-void MindDriver::Record() {
-
 }

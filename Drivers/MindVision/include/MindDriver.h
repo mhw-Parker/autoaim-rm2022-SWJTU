@@ -26,8 +26,6 @@ public:
     bool Grab(Mat& src) override;
     bool StopGrab() override;
 
-    void Record();
-
 private:
     int                     hCamera;
     int                     iCameraCounts = 1;

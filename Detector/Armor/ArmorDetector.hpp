@@ -328,7 +328,7 @@ namespace rm
      * @param b another instance of a pair of matched lamps
      * @return if the match factor of b is larger than a, return true, otherwise return false.
      */
-    bool compMatchFactor(const MatchLight a, const MatchLight b);
+    const bool compMatchFactor(const MatchLight& a, const MatchLight& b);
 
     bool MakeRectSafe(cv::Rect &rect, const cv::Size& size);
 }
