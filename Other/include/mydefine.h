@@ -44,6 +44,14 @@
 #define  ENERGY_ARMOR 3
 #endif
 
+#ifndef S_ARMOR
+#define S_ARMOR 4
+#endif
+
+#ifndef B_ARMOR
+#define B_ARMOR 5
+#endif
+
 #ifndef FIND_ARMOR_YES
 #define  FIND_ARMOR_YES 7
 #endif

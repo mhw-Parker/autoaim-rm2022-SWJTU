@@ -182,9 +182,11 @@ namespace rm
         Point2i center;
         Rect rect;
         vector<Point2f> pts;
+        Point2f num_pts[4];
         float armorWidth;
         float armorHeight;
         int armorType;
+        float wh_ratio = 1;
         double priority;
         float avgRSubBVal{};
     };
@@ -227,18 +229,19 @@ namespace rm
         int getArmorNumber(Armor &armor);
 
         /** 7-23 test  **/
+        void TopDetectTask(Mat &roi);
         void BinaryMat(Mat &roi);
-        void MinLampDetect(Mat &roi);
-        void GetRealRect(RotatedRect &rect);
-        void MatchLamp(vector<Lamp> &possible_lamps, Mat &src);
+        vector<Lamp> MinLampDetect(Mat &roi);
+        vector<MatchLight> MatchLamps(vector<Lamp> &possible_lamps);
+        void FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps, Mat &src);
         bool possible_armor(Lamp &l_1, Lamp &l_2, float &score);
         Mat gray_binary_mat;
         Mat sub_binary_mat;
-        const float max_lamp_angle = 4;
-        const float max_incline_angle = 15;
+        const float max_lamp_angle = 6;
+        const float max_incline_angle = 25;
         const float small_armor_ratio = 2.33;
         const float big_armor_ratio = 3.83;
-        const float max_lamps_height_error = 10;
+        const float max_lamps_height_error = 20;
 
         const float k_[5] = {1,1,1,1,1}; // score weight
         /**tool functions**/
