@@ -54,7 +54,7 @@ std::map<std::string, std::pair<std::string, void(*)(void)>> options = {
               }},
     {"-debug", {
                       "debug mode", []() {
-                debug = true;
+                DEBUG = true;
                 LOGM("Enable save video");
             }
               }},

@@ -78,12 +78,12 @@
 enum CARNAME {HERO, INFANTRY3, INFANTRY4, INFANTRY5, INFANTRY_TRACK, SENTRYTOP, SENTRYDOWN, UAV, VIDEO, IMAGE, NOTDEFINED};
 #endif
 
-#ifndef DEBUG
-#define  DEBUG 0
-#endif
+//#ifndef DEBUG
+//#define  DEBUG 0
+//#endif
 
 #ifndef SHOWTIME
-#define SHOWTIME 0
+#define SHOWTIME 1
 #endif
 
 #ifndef DEBUG_MSG
@@ -132,7 +132,7 @@ extern bool showEnergy;
 extern bool blueTarget;
 extern bool saveVideo;
 extern bool saveSVM;
-extern bool debug;
+extern bool DEBUG;
 extern int FRAMEWIDTH;
 extern int FRAMEHEIGHT;
 // 丢失目标阈值

@@ -72,8 +72,11 @@ bool MindDriver::SetCam() {
     if (carName == SENTRYTOP) { // 134
         CameraSetExposureTime(hCamera, 1250); //设置曝光时间
         CameraSetAnalogGainX(hCamera, 3.5); //设置增益系数
-    } else { // 133
+    } else if (carName == SENTRYDOWN) { // 133
         CameraSetExposureTime(hCamera, 1000); //设置曝光时间
+        CameraSetAnalogGainX(hCamera, 2.5); //设置增益系数
+    } else { // 133
+        CameraSetExposureTime(hCamera, 1500); //设置曝光时间
         CameraSetAnalogGainX(hCamera, 2.5); //设置增益系数
     }
 

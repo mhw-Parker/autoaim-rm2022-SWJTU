@@ -127,7 +127,7 @@ void EnergyDetector::EnergyDetectTask(Mat &src) {
         }
         //circle(src, target_point, 2, Scalar(0, 255, 0), 3);
     }
-    if(debug)
+    if(DEBUG)
         imshow("outline",outline);
 }
 /**
@@ -485,7 +485,7 @@ bool EnergyDetector::isValidArmorContour(const vector<cv::Point> &armor_contour)
         //cout << "armor_contour_hw_ratio" << length_width_ratio <<endl;
         return false;
     }
-    if(debug) {
+    if(DEBUG) {
         printf("----- energy armor param -----\n");
         printf("armor_contour_area : %f\n", cur_contour_area);
         printf("armor_contour_hw_ratio : %f\n", length_width_ratio);
@@ -547,7 +547,7 @@ bool EnergyDetector::isValidFlowStripFanContour(cv::Mat &src, const vector<cv::P
         //cout << "flow_strip_fan_contour_area_ratio" << cur_contour_area / cur_size.area() << endl; //流动条轮廓占总面积的比例
         return false;
     }
-    if(debug) {
+    if(DEBUG) {
         printf("flow_strip_fan_contour_length : %f\n", length);
         printf("flow_strip_fan_contour_width : %f\n", width);
         printf("flow_strip_fan_contour_hw_ratio : %f\n", length_width_ratio);

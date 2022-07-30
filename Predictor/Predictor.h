@@ -116,7 +116,7 @@ private:
     // flag为false则初始化Kalman，否则更新Kalman
     bool RMKF_flag = false;
     // 状态转移方程中的dt
-    float delta_t = 0.016;
+    float delta_t = (DEBUG ? 0.015f : 0.005f);
     float predict_dt = 0.05; // 预测时拉长步长节省计算，sentry:0.03
 
 /**
