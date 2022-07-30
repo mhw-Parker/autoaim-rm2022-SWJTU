@@ -99,8 +99,8 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
     //because the armor is  incline,so the height of the armor should be smaller than reality.
     switch(targetSize) {
         case SMALL_ARMOR:
-            targetHeight3D = 126;
-            targetWidth3D = 131;
+            targetHeight3D = 126; //126
+            targetWidth3D = 131;  //131
             //printf("-- Small Armor ! --\n");
             break;
         case BIG_ARMOR:
@@ -112,6 +112,14 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             targetHeight3D = 155; // 130
             targetWidth3D = 245; // 225
             //printf("-- Energy Armor ! --\n");
+            break;
+        case S_ARMOR:
+            targetHeight3D = 65; //126
+            targetWidth3D = 131;  //131
+            break;
+        case B_ARMOR:
+            targetHeight3D = 65;
+            targetWidth3D = 225;
             break;
         default:
             targetHeight3D = 126;

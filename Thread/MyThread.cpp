@@ -1,5 +1,5 @@
 //
-// Created by luojunhui on 1/28/20.
+// Created by helios on 2021/12
 //
 
 #include <csignal>
@@ -261,8 +261,6 @@ namespace rm
 
     void ImgProdCons::Energy()
     {
-        /* do energy detection */
-        //energyPtr->EnergyTask(detectFrame, curControlState, last_mission_time, 0.15+fly_t);
         energyPtr->EnergyDetectTask(detectFrame);
 #if SAVE_TEST_DATA == 1
         // **** 当前相角  当前角速度  预测弧度值 **** //

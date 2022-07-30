@@ -146,12 +146,19 @@ namespace rm
             cv::Size exLSize(int(bar.size.width), int(bar.size.height * 2.18));
             rect = cv::RotatedRect(bar.center, exLSize, bar.angle);
         }
-
         RotatedRect rect;
 
         float lightAngle;
         // 红减蓝通道图片中平均值
         float avgRSubBVal;
+        /** new **/
+        Lamp(RotatedRect bar, float avg_b) : rect(bar), lightAngle(bar.angle), avgRSubBVal(avg_b){
+            Point2f pts[4];
+            bar.points(pts);
+            mid_p = (pts[0]+pts[2])/2;
+        }
+        Point2f mid_p;
+
     };
 
     /**
@@ -165,6 +172,9 @@ namespace rm
         }
 
         Armor(Lamp L1, Lamp L2, double priority_);
+
+        Armor(Lamp l_1, Lamp l_2);
+
         explicit Armor(Rect &rect);
         void init();
 
@@ -172,9 +182,11 @@ namespace rm
         Point2i center;
         Rect rect;
         vector<Point2f> pts;
+        Point2f num_pts[4];
         float armorWidth;
         float armorHeight;
         int armorType;
+        float wh_ratio = 1;
         double priority;
         float avgRSubBVal{};
     };
@@ -217,7 +229,21 @@ namespace rm
         int getArmorNumber(Armor &armor);
 
         /** 7-23 test  **/
-        void minLampDetect(Mat &roi);
+        void TopDetectTask(Mat &roi);
+        void BinaryMat(Mat &roi);
+        vector<Lamp> MinLampDetect(Mat &roi);
+        vector<MatchLight> MatchLamps(vector<Lamp> &possible_lamps);
+        void FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps, Mat &src);
+        bool possible_armor(Lamp &l_1, Lamp &l_2, float &score);
+        Mat gray_binary_mat;
+        Mat sub_binary_mat;
+        const float max_lamp_angle = 6;
+        const float max_incline_angle = 25;
+        const float small_armor_ratio = 2.33;
+        const float big_armor_ratio = 3.83;
+        const float max_lamps_height_error = 20;
+
+        const float k_[5] = {1,1,1,1,1}; // score weight
         /**tool functions**/
 
         Rect GetArmorRect() const;

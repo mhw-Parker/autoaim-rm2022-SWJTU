@@ -393,6 +393,15 @@ namespace RMTools {
         return result;
     }
 
+    /**
+     * @brief calculate distance between 2 points
+     * */
+    template<class T>
+    T point_distance(const Point &pts_1, const Point &pts_2){
+        Point d_pts = pts_1 - pts_2;
+        return sqrt(d_pts.x*d_pts.x + d_pts.y*d_pts.y);
+    }
+
 /**
  *  the descriptor of the point in the route, including the color, location, velocity and the situation of point.
  */
