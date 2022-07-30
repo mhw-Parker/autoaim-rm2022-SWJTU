@@ -102,12 +102,13 @@ namespace rm{
                 for(auto &i : match_lamps) {
                     //cout << i.matchIndex2 << pair.back().matchIndex1 << pair.back().matchIndex1 << endl;
                     if(i.matchIndex2 == match_lamps.back().matchIndex1 || i.matchIndex2 == match_lamps.back().matchIndex2) {  // if twice judge share
-                        //cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                         if(match_lamps.back().matchFactor < i.matchFactor) {
+                            cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                             match_lamps.pop_back();
                             break;
                         }
                         else if(match_lamps.back().matchFactor > i.matchFactor){
+                            cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                             swap(i, match_lamps.back());
                             match_lamps.pop_back();
                             break;
