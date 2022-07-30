@@ -12,7 +12,7 @@ bool showBinaryImg = false;
 bool blueTarget = false;
 bool saveVideo = false;
 bool saveSVM = false;
-bool debug = false;
+bool DEBUG = false;
 int max_lost = showArmorBox ? 3 : 5;
 
 int FRAMEWIDTH;

@@ -85,7 +85,7 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
                 else {
                     predict_rad = IdealRad(t_list.back(), t_list.back() + latency);
-                    if(debug)
+                    if(DEBUG)
                         omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
                 }
             }
@@ -108,13 +108,13 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     if(average_v_bullet > 22) {
         predict_xyz[1] += 130;
     }else {
-        predict_xyz[1] += 260;
+        predict_xyz[1] += 280;
     }
     //cout << predict_xyz << endl << endl;
     predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     back_ypd = predict_ypd + energy_offset;
     latency = react_t + fly_t;
-    if(debug){
+    if(DEBUG){
         vector<string> str = {"flat-dist","height","v-bullet","cal-pitch","gim_pitch","yaw","latency","rad"};
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,predict_ypd[1],gimbal_ypd[1],predict_ypd[0],latency,predict_rad};

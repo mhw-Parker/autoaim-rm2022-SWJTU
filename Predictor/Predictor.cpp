@@ -131,9 +131,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 解算YPD
         //云台参考为：左+ 右- 上+ 下-    解算参考为：左- 右+ 上+ 下-
         solveAngle.GetPoseV(target_pts,armor_type,gimbal_ypd);
-    /** test against spinning **/
-    //AgainstSpinning();
-    /****/
+        /** test against spinning **/
+        //AgainstSpinning();
+        /****/
         delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
         target_ypd = gimbal_ypd + delta_ypd;
         // 通过目标xyz坐标计算yaw pitch distance
@@ -182,10 +182,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     last_xyz = target_xyz;
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
-    //back_ypd = offset + target_ypd;
 
-    // 显示数据，会耗时17ms左右，一般关掉
-    if (debug) {
+    // 显示数据，一般关掉
+    if (DEBUG) {
         vector<float> data2;
         for (int len = 0; len < target_xyz.size(); len++)
             data2.push_back(target_xyz[len]);
@@ -206,7 +205,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
     }
-    waveClass.displayWave(target_ypd[0], target_ypd[1], "target_yp");
+//    waveClass.displayWave(target_ypd[0], target_ypd[1], "target_yp");
 }
 
 /**
@@ -278,14 +277,14 @@ void Predictor::InitKfAcceleration(const float dt) {
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
-    float temp[9] = {1, 1, 1, 1, 1, 1, 5, 5, 5};
+    float temp[9] = {1, 1, 1, 20, 5, 20, 100, 25, 100};
     RMKF.process_noise_.setIdentity();
     for (int i = 0; i < 9; i++) {
         RMKF.process_noise_(i, i) *= temp[i];
     }
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 1;
+    RMKF.measure_noise_ *= 0.1;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     for (int i = 3; i < 9; ++i) {
