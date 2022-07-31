@@ -53,7 +53,7 @@ namespace rm{
             float ratio_ = lamp_rect.size.height / lamp_rect.size.width;
             if (ratio_ < 2.5 || ratio_ > 16) continue;
             /// limit rect width
-            if (lamp_rect.size.width > param.maxLightW) continue;
+            if (lamp_rect.size.width > 35) continue;
             /// judge color
             Rect bounding_lamp = lamp_rect.boundingRect();
             MakeRectSafe(bounding_lamp, sub_binary_mat.size());
@@ -71,7 +71,7 @@ namespace rm{
                     line(src, pts_[i], pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
                 }
                 circle(src, pts_[0], 2, Scalar(0, 255, 0));
-                putText(src, to_string(int(avg_brightness[0])), pts_[0],
+                putText(src, to_string(int(lamp_rect.size.width)), pts_[0],
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
                         1);
             }

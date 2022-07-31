@@ -444,9 +444,9 @@ namespace rm
                 ShowImage();
 #if SHOWTIME == 1
                 cout << "Show Image Cost : " << showImgTime << " ms" << endl;
-                cout << endl;
 #endif
             }
+            cout << endl;
             feedbackTime = CalWasteTime(st,freq);
         }while (!quitFlag);
     }

@@ -158,18 +158,18 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         latency = react_t + fly_t;
     }
     // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
-    else if (lost_cnt <= max_lost) {
-        // 预测目标当前位置
-        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
-        // 预测目标要击打位置
-        predict_xyz = KalmanPredict(dt, latency);
-        // 计算要击打位置的YPD
-        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
-        // 计算抬枪和子弹飞行时间
-        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
-        //预测时长为：响应时延+飞弹时延
-        latency = react_t + fly_t;
-    }
+//    else if (lost_cnt <= max_lost) {
+//        // 预测目标当前位置
+//        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
+//        // 预测目标要击打位置
+//        predict_xyz = KalmanPredict(dt, latency);
+//        // 计算要击打位置的YPD
+//        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
+//        // 计算抬枪和子弹飞行时间
+//        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
+//        //预测时长为：响应时延+飞弹时延
+//        latency = react_t + fly_t;
+//    }
     else {
         // 自动射击命令清零
         shootCmd = 0;
