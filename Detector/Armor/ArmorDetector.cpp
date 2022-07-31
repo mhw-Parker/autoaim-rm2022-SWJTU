@@ -22,6 +22,7 @@ namespace rm {
         armorType = (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
         priority = priority_;
         avgRSubBVal = (L1.avgRSubBVal + L2.avgRSubBVal) / 2;
+
         //need to make sure how to set values to the points
         pts.resize(4);
         Point2f pts_[4];
@@ -401,6 +402,7 @@ namespace rm {
         }
         return lampVector;
     }
+
     /**
      * 寻找符合条件的匹配灯条，此过程不考虑数字
      * @param lights
@@ -486,8 +488,8 @@ namespace rm {
 
     /**
      * 从候选匹配灯条中选择最优目标
-     * @param armors
-     * @return
+     * @param matchLights 符合条件的匹配灯条对的数组
+     * @param lights 符号条件灯条的数组
      */
     void ArmorDetector::GetOptimalMatch(vector<MatchLight> matchLights, vector<Lamp> &lights) {
         // 按优先系数从小到大排序
@@ -566,7 +568,7 @@ namespace rm {
     * @details none
     */
     inline bool MakeRectSafe(cv::Rect &rect, const cv::Size &size) {
-        if (rect.x >= size.width || rect.y >= size.height)rect = Rect(0, 0, 0, 0);
+        if (rect.x >= size.width || rect.y >= size.height) rect = Rect(0, 0, 0, 0);
         if (rect.x < 0)
             rect.x = 0;
         if (rect.x + rect.width > size.width)

@@ -302,7 +302,7 @@ namespace rm
             produceTime = CalWasteTime(st1, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(11) == 32) {
+                if (waitKey(1) == 32) {
                     while (waitKey() != 32) {}
                 }
             }
@@ -343,6 +343,7 @@ namespace rm
                     Armor();
                     recognitionTime = CalWasteTime(recognitionSt, freq);
                     find_state = armorDetectorPtr->findState;
+                    // 保存未识别的帧
 //                    if (!find_state) {
 //                        imwrite(OUTPUT_PATH + (string)"LostImg/" + getSysTime() + ".png",
 //                                detectFrame);

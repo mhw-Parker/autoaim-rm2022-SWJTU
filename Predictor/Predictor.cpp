@@ -277,7 +277,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     }
     // 测量噪声协方差矩阵R
     RMKF.measure_noise_.setIdentity();
-    RMKF.measure_noise_ *= 0.1;
+    RMKF.measure_noise_ *= 1;
     // 误差估计协方差矩阵P
     RMKF.error_post_.setIdentity();
     for (int i = 3; i < 9; ++i) {
