@@ -142,6 +142,7 @@ namespace rm{
                 //roiRect = targetArmor.rect;
                 lostCnt = 0;
                 circle(src, (targetArmor.pts[0]+targetArmor.pts[2])/2, 2, Scalar(0, 255, 0),2);
+                circle(src, targetArmor.pts[0], 2, Scalar(0, 255, 0), 2);
             }
             if(showArmorBox) {
                 for (int j = 0; j < 4; j++) {

@@ -172,8 +172,8 @@ namespace rm {
     bool ArmorDetector::ArmorDetectTask(Mat &img_) {
         GetRoi(img_); //get roi
         TopDetectTask(img_);
-        //Preprocess(imgRoi);
-        //DetectArmor(img_);
+//        Preprocess(imgRoi);
+//        DetectArmor(img_);
 
 
 //        if (!showArmorBox) {
@@ -304,7 +304,7 @@ namespace rm {
             for (int i = 0; i < 4; i++) {
                 targetArmor.pts[i] = targetArmor.pts[i] + Point2f(roiRect.x, roiRect.y);
             }
-
+            circle(img, targetArmor.pts[0], 2, Scalar(0, 255, 0), 2);
             // 画装甲板
             if (showArmorBox) {
                 rectangle(img, roiRect, Scalar(255, 255, 255), 1);

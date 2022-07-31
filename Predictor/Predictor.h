@@ -102,6 +102,7 @@ private:
     void UpdateKF(const Vector3f& z_k);
     void InitKfAcceleration(const float dt);
     void InitKFATransMat(const float dt);
+    float get_pre_yaw(Vector3f predict_xyz);
 
     bool JudgeSpinning();
     void AgainstSpinning();

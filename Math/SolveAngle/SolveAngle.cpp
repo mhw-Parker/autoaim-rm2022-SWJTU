@@ -159,7 +159,8 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, cons
              SOLVEPNP_ITERATIVE);
     cv2eigen(tvecs,p_cam_xyz);
 
-    p_cam_xyz += gim_xyz_error;
+    world_xyz = Cam2World(gimbal_ypd, p_cam_xyz);
+
     cv2eigen(rvecs,r_vec);
     Rodrigues(rvecs,R);
     cv2eigen(R,r_mat);
@@ -169,7 +170,7 @@ void SolveAngle::GetPoseV(const vector<Point2f>& pts, const int armor_mode, cons
     //直接输出目标点 yaw pitch dist
     camXYZ2YPD();
 
-    world_xyz = Cam2World(gimbal_ypd);
+
 
     rectPoint2D.clear();
     targetPoints3D.clear();
@@ -192,27 +193,6 @@ void SolveAngle::camXYZ2YPD() {
     yaw = atan2(x,z) / degree2rad;
     pitch = -atan2(y,sqrt(x*x+z*z));
     dist = sqrt(x*x + y*y + z*z);
-}
-
-/**
- * @brief 计算pitch的补偿角
- * @param target_xyz 目标xyz坐标
- * @param target_ypd 目标yaw pitch distance
- * @param v 子弹速度
- * @return pitch相对于地面的角度
- */
-float SolveAngle::CalPitch(Vector3f target_xyz, float v, float &t) const {
-    if(v < 15 || v > 30) v = 15;
-    float x = target_xyz[0]/1000, y = target_xyz[1]/1000, z = target_xyz[2]/1000; //转换为m
-    float d = sqrt(x*x+z*z);
-    float a = 0.25 * g2;
-    float b = -(g*y + v*v);
-    float c = y*y + d*d;
-    float x_2 = (-b-sqrt(b*b-4*a*c)) /2/a;
-    t = sqrt(x_2);
-    float s_the = (0.5*g*t*t - y) / (v*t);
-    float theta = asin(s_the) / degree2rad;
-    return theta;
 }
 
 /**
@@ -246,44 +226,10 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     pitch_ /= degree2rad;
     return pitch_;
 }
-
 /**
- * @brief 将预测点反投影到图像上，世界坐标参考系参考与相机坐标系类似
- * @param src 图片
- * @param target_xyz 目标的陀螺仪绝对坐标
- * @param gimbal_ypd 云台角度
- * @details 使用前要先调用 getPoseV 获得当前的旋转矩阵
+ * @brief
  * */
-void SolveAngle::backProject2D(Mat &src, const Vector3f target_xyz) {
-    Vector3f temp_xyz, cam_xyz, pix_uv1;
-
-    cam_xyz = World2Cam(target_xyz);
-    pix_uv1 = Cam2Pixel(cam_xyz);
-    circle(src, Point2f(pix_uv1[0],pix_uv1[1]), 5, Scalar(100, 240, 15), 3);
-}
-Point2f SolveAngle::getBackProject2DPoint(Vector3f target_xyz) {
-    Vector3f cam_xyz, pix_uv1;
-    cam_xyz = World2Cam(target_xyz);
-    pix_uv1 = Cam2Pixel(cam_xyz);
-    return Point2f (pix_uv1[0],pix_uv1[1]);
-}
-Vector3f SolveAngle::World2Cam(Vector3f world_xyz) {
-    Vector3f cam_xyz;
-    cam_xyz = cam2world_mat.inverse() * world_xyz;
-    cam_xyz -= gim_xyz_error;
-    return cam_xyz;
-}
-Vector3f SolveAngle::Cam2Pixel(Vector3f cam_xyz) {
-    Vector3f pix_uv1;
-    pix_uv1 = cam_mat/cam_xyz[2] * cam_xyz;
-    return pix_uv1;
-}
-/**
- *
- * @param cam_xyz
- * @return
- */
-Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypd) {
+Matrix3f SolveAngle::GetRotateMat(const Vector3f &gimbal_ypd) {
     float sin_y = sin(gimbal_ypd[0] * degree2rad);
     float cos_y = cos(gimbal_ypd[0] * degree2rad);
     float sin_p, cos_p;
@@ -296,7 +242,65 @@ Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypd) {
     Rp <<   1     , 0     , 0     ,
             0     , cos_p , -sin_p,
             0     , sin_p , cos_p ;
-    cam2world_mat = Ry * Rp;
-
-    return cam2world_mat * p_cam_xyz;
+    return Ry * Rp;
+}
+/**
+ * @brief 将预测点反投影到图像上，世界坐标参考系参考与相机坐标系类似
+ * @param src 图片
+ * @param target_xyz 目标的陀螺仪绝对坐标
+ * @param gimbal_ypd 云台角度
+ * @details 使用前要先调用 getPoseV 获得当前的旋转矩阵
+ * */
+Point2f SolveAngle::getBackProject2DPoint(Vector3f target_xyz) {
+    Vector3f cam_xyz, pix_uv1;
+    cam_xyz = World2Cam(target_xyz);
+    pix_uv1 = Cam2Pixel(cam_xyz);
+    return Point2f (pix_uv1[0],pix_uv1[1]);
+}
+/**
+ * @brief
+ * */
+Vector3f SolveAngle::World2Cam(const Vector3f &world_xyz) {
+    Vector3f tmp_cam_xyz, tmp_gim_xyz;
+    tmp_gim_xyz = World2Gim(world_xyz);
+    tmp_cam_xyz = Gim2Cam(tmp_gim_xyz);
+    return tmp_cam_xyz;
+}
+Vector3f SolveAngle::World2Gim(const Vector3f &world_xyz) {
+    return cam2world_mat.inverse() * world_xyz;
+}
+Vector3f SolveAngle::Gim2Cam(const Vector3f &gim_xyz) {
+    return gim_xyz - gim_xyz_error;
+}
+Vector3f SolveAngle::Cam2Pixel(const Vector3f &cam_xyz) {
+    Vector3f pix_uv1;
+    pix_uv1 = cam_mat/cam_xyz[2] * cam_xyz;
+    return pix_uv1;
+}
+/**
+ *
+ * @param cam_xyz
+ * @return
+ */
+Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypd, const Vector3f &cam_xyz) {
+    cam2world_mat = GetRotateMat(gimbal_ypd);
+    gim_xyz = Cam2Gim(cam_xyz);
+    return Gim2World(gim_xyz);
+}
+Vector3f SolveAngle::Cam2Gim(const Vector3f &cam_xyz) {
+    return cam_xyz + gim_xyz_error;
+}
+Vector3f SolveAngle::Gim2World(const Vector3f &gim_xyz) {
+    return cam2world_mat * gim_xyz;
+}
+/**
+ *
+ * */
+Vector3f SolveAngle::xyz2ypd(const Vector3f &_xyz) {
+    Vector3f delta_ypd;
+    float x = _xyz[0], y = _xyz[1], z = _xyz[2];
+    delta_ypd[0] = -atan2(x,z) / degree2rad; //arctan(x/z)
+    delta_ypd[1] = -atan2(y, sqrt(x*x + z*z) ) / degree2rad; //arctan(y/sqrt(x^2 + z^2))
+    delta_ypd[2] = sqrt(x*x + y*y + z*z); //sqrt(x^2 + y^2 + z^2)
+    return delta_ypd;
 }

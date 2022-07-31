@@ -151,7 +151,9 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         //
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
         // 计算要转过的角度
-        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+        //predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz,target_xyz);
+        Vector3f relative_xyz = solveAngle.World2Gim(predict_xyz);
+        predict_ypd = gimbal_ypd + solveAngle.xyz2ypd(relative_xyz);
         // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
@@ -270,7 +272,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
-    float temp[9] = {1, 1, 1, 20, 5, 20, 100, 25, 100};
+    float temp[9] = {0.1, 0.1, 0.1, 50, 10, 50, 200, 40, 200};
     RMKF.process_noise_.setIdentity();
     for (int i = 0; i < 9; i++) {
         RMKF.process_noise_(i, i) *= temp[i];

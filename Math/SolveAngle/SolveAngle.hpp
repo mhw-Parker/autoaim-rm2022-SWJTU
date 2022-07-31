@@ -23,15 +23,23 @@ public:
 
     void GetPoseV(const vector<Point2f>& pts, int armor_mode, const Vector3f& gimbal_ypd); //Pnp模型
 
-    float CalPitch(Vector3f target_xyz, float v, float &t) const;
     float iteratePitch(Vector3f target_xyz, float v, float &t);
 
-    void backProject2D(Mat &src, Vector3f target_xyz);
     Point2f getBackProject2DPoint(Vector3f target_xyz);
-
-    Vector3f Cam2World(const Vector3f&);
-    Vector3f World2Cam(Vector3f world_xyz);
-    Vector3f Cam2Pixel(Vector3f cam_xyz);
+    /** get rotate matrix **/
+    Matrix3f GetRotateMat(const Vector3f &gimbal_ypd);
+    /** from camera to world **/
+    Vector3f Cam2World(const Vector3f &gimbal_ypd, const Vector3f &cam_xyz);
+    Vector3f Cam2Gim(const Vector3f &cam_xyz);
+    Vector3f Gim2World(const Vector3f &gim_xyz);
+    /** from world to camera **/
+    Vector3f World2Cam(const Vector3f &world_xyz);
+    Vector3f World2Gim(const Vector3f &world_xyz);
+    Vector3f Gim2Cam(const Vector3f &gim_xyz);
+    /** from cam to pixel **/
+    Vector3f Cam2Pixel(const Vector3f &cam_xyz);
+    /** from relative xyz to delta yaw, pitch, distance **/
+    Vector3f xyz2ypd(const Vector3f &_xyz);
 
     float scale = 0.99f;
     float f_ = 1500;
@@ -41,7 +49,8 @@ public:
     float dist{};
     vector<Point2f> rectPoint2D;
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
-    Vector3f world_xyz;
+    Vector3f gim_xyz; //平移到云台中心后的目标坐标
+    Vector3f world_xyz; //目标世界坐标
     Matrix3f r_mat;
     bool shoot;
     float yaw_;
