@@ -157,25 +157,32 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
-        latency = react_t + fly_t;
+        // 临时解决NaN
+        latency = react_t + fly_t > 1 ? latency : react_t + fly_t;
+        cout << 1 << endl;
     }
     // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
-//    else if (lost_cnt <= max_lost) {
-//        // 预测目标当前位置
-//        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
-//        // 预测目标要击打位置
-//        predict_xyz = KalmanPredict(dt, latency);
-//        // 计算要击打位置的YPD
-//        predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
-//        // 计算抬枪和子弹飞行时间
-//        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
-//        //预测时长为：响应时延+飞弹时延
-//        latency = react_t + fly_t;
-//    }
+    else if (lost_cnt <= max_lost) {
+        // 预测目标当前位置
+        target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
+        // 预测目标要击打位置
+        predict_xyz = KalmanPredict(dt, latency);
+        // 计算要击打位置的YPD
+        //predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
+        Vector3f relative_xyz = solveAngle.World2Gim(predict_xyz);
+        predict_ypd = gimbal_ypd + solveAngle.xyz2ypd(relative_xyz);
+        // 计算抬枪和子弹飞行时间
+        predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
+        //预测时长为：响应时延+飞弹时延
+        // 临时解决NaN
+        latency = react_t + fly_t > 1 ? latency : react_t + fly_t;
+        cout << 2 << endl;
+    }
     else {
         // 自动射击命令清零
         shootCmd = 0;
         KalmanRefresh();
+        cout << 3 << endl;
     }
     // 哨兵射击命令
     if (carName == SENTRYTOP || carName == SENTRYDOWN) {
@@ -183,9 +190,23 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     }
     // 更新last值
     last_xyz = target_xyz;
+    // 防止NaN的临时解决措施
+    if (predict_xyz[2] > 8000) {
+        predict_xyz = last_predict_xyz;
+        KalmanShallowRefresh();
+    }
+    if(isnan(predict_xyz[2]))
+        KalmanRefresh();
+    if(isnan(latency))
+        latency = 0.5;
+    last_predict_xyz = predict_xyz;
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
-    //back_ypd = offset + target_ypd;
+
+    cout << "lost: " << lost_cnt << endl;
+    cout << "target_xyz: " << endl << target_xyz << endl;
+    cout << "predict_xyz: " << endl << predict_xyz << endl;
+    cout << "latency: " << endl << latency << endl;
 
     // 显示数据，一般关掉
     if (DEBUG) {

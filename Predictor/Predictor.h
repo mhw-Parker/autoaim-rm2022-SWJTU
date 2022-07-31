@@ -69,6 +69,7 @@ public:
     Vector3f target_xyz = {0, 0, 0};
     Vector3f predict_xyz = {0, 0, 0};
     Vector3f last_xyz = {0, 0, 0};
+    Vector3f last_predict_xyz = {0, 0, 0};
     Vector3f target_v_xyz = {0, 0, 0};
     Vector3f target_a_xyz = {0, 0, 0};
     // 弹速相关
