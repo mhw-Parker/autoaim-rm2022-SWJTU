@@ -26,6 +26,7 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
+            // 新云台补偿
             gim_xyz_error << 0, 43.8, 101.6;
             coeff = 0.025;
             break;
@@ -33,6 +34,8 @@ SolveAngle::SolveAngle() {
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
+            // 新云台补偿
+            gim_xyz_error << 0, 43.8, 101.6;
             coeff = 0.028;
             break;
         case INFANTRY_TRACK:
