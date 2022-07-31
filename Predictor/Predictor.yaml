@@ -8,7 +8,7 @@ Hero:
 Infantry3:
    average_v_bullet: 18
    react_t: 0.11 #0.2
-   yaw_offset: -0.25
+   yaw_offset: -0.5
    pitch_offset: 0
 Infantry4:
    average_v_bullet: 28

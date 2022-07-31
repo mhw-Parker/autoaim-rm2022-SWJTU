@@ -243,7 +243,7 @@ namespace rm
         const float big_armor_ratio = 3.83;
         const float max_lamps_height_error = 20;
 
-        const float k_[5] = {2,2,1,1,1}; // score weight
+        const float k_[5] = {2,2,1,1,2}; // score weight
         /**tool functions**/
 
         Rect GetArmorRect() const;

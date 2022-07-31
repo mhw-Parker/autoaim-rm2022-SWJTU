@@ -101,6 +101,7 @@ private:
     inline void KalmanShallowRefresh();
     void UpdateKF(const Vector3f& z_k);
     void InitKfAcceleration(const float dt);
+    void InitKFATransMat(const float dt);
 
     bool JudgeSpinning();
     void AgainstSpinning();

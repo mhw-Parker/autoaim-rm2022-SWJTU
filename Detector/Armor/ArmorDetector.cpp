@@ -22,7 +22,6 @@ namespace rm {
         armorType = (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
         priority = priority_;
         avgRSubBVal = (L1.avgRSubBVal + L2.avgRSubBVal) / 2;
-
         //need to make sure how to set values to the points
         pts.resize(4);
         Point2f pts_[4];
@@ -171,18 +170,18 @@ namespace rm {
     */
     bool ArmorDetector::ArmorDetectTask(Mat &img_) {
         GetRoi(img_); //get roi
+        TopDetectTask(img_);
+        //Preprocess(imgRoi);
+        //DetectArmor(img_);
 
-        Preprocess(imgRoi);
 
-        DetectArmor(img_);
-
-        if (!showArmorBox) {
-            printf("----- Armor Detector Info -----\n");
-            if (findState) {
-                printf("Target Number: %d\n", armorNumber);
-            } else
-                printf("No target!\n\n");
-        }
+//        if (!showArmorBox) {
+//            printf("----- Armor Detector Info -----\n");
+//            if (findState) {
+//                printf("Target Number: %d\n", armorNumber);
+//            } else
+//                printf("No target!\n\n");
+//        }
 
         return findState;
     }
@@ -402,38 +401,6 @@ namespace rm {
         }
         return lampVector;
     }
-    /**
-     * @brief test min area Rect for detector
-     * */
-    void ArmorDetector::minLampDetect(Mat &roi) {
-        Mat dst = roi.clone();
-        vector<vector<Point>> contoursLight;
-        vector<Lamp> lamp_container;
-        findContours(thresholdMap, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-        /** find possible lamp **/
-        for(auto &light : contoursLight) {
-            if(light.size() < 25) continue;
-            RotatedRect lamp_rect = minAreaRect(light);
-            float d_angle = fabs(lamp_rect.angle) - 90;
-            float angle_ = (lamp_rect.angle > 90.0f) ? (lamp_rect.angle - 180.0f) : (lamp_rect.angle);
-            //if (fabs(d_angle) >= 15) continue;
-            float ratio = lamp_rect.size.height / lamp_rect.size.width;
-            //if ((ratio < 2.5) || (ratio > 15)) continue;
-            Lamp lamp_info(lamp_rect, angle_, 1);
-            lamp_container.emplace_back(lamp_info);
-            Point2f pts_[4];
-            lamp_rect.points(pts_);
-            for(int i = 0; i<4; i++) {
-                line(dst, pts_[i], pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
-            }
-            putText(dst, to_string(lamp_rect.angle), pts_[0],
-                    FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
-                    1);
-        }
-        /** match light **/
-        imshow("test",dst);
-    }
-
     /**
      * 寻找符合条件的匹配灯条，此过程不考虑数字
      * @param lights

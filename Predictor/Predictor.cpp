@@ -147,7 +147,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
             KalmanShallowRefresh();
         }
         // kalman预测要击打位置的xyz
-        predict_xyz = KalmanPredict(average_v_bullet, latency);
+        predict_xyz = KalmanPredict(dt, latency);
         //
         predict_point = solveAngle.getBackProject2DPoint(predict_xyz);
         // 计算要转过的角度
@@ -162,14 +162,15 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 预测目标当前位置
         target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
         // 预测目标要击打位置
-        predict_xyz = KalmanPredict(average_v_bullet, latency);
+        predict_xyz = KalmanPredict(dt, latency);
         // 计算要击打位置的YPD
         predict_ypd = target_ypd + RMTools::GetDeltaYPD(predict_xyz, last_xyz);
         // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
-    } else {
+    }
+    else {
         // 自动射击命令清零
         shootCmd = 0;
         KalmanRefresh();
@@ -182,6 +183,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     last_xyz = target_xyz;
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
+    //back_ypd = offset + target_ypd;
 
     // 显示数据，一般关掉
     if (DEBUG) {
@@ -235,11 +237,11 @@ __attribute__((unused)) Vector3f Predictor::GetGyroXYZ() {
 /**
  * @brief kalman 迭代预测
  * @param target_xyz 目标的绝对坐标 xyz
- * @param v_ 裁判系统读取的弹速
- * @param t 预测时间
+ * @param latency 预测时间
+ * @param dt 两针时间
  * */
-Vector3f Predictor::KalmanPredict(float v_, float t) {
-    int step = t / predict_dt;
+Vector3f Predictor::KalmanPredict(float dt, float latency) {
+    InitKFATransMat(dt);
     if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -254,7 +256,7 @@ Vector3f Predictor::KalmanPredict(float v_, float t) {
     }
     Vector3f pre_xyz;
     //pre_xyz = PredictKF(RMKF, step);
-    pre_xyz = target_xyz + target_v_xyz*t + 0.5*target_a_xyz*t*t;
+    pre_xyz = target_xyz + target_v_xyz*latency + 0.5*target_a_xyz*latency*latency;
     return pre_xyz;
 }
 
@@ -264,16 +266,7 @@ Vector3f Predictor::KalmanPredict(float v_, float t) {
  */
 void Predictor::InitKfAcceleration(const float dt) {
     // 转移矩阵
-    float t0 = 0.5f * dt * dt;
-    RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
-                        0, 1, 0, 0, dt, 0, 0, t0, 0,
-                        0, 0, 1, 0, 0, dt, 0, 0, t0,
-                        0, 0, 0, 1, 0, 0, dt, 0, 0,
-                        0, 0, 0, 0, 1, 0, 0, dt, 0,
-                        0, 0, 0, 0, 0, 1, 0, 0, dt,
-                        0, 0, 0, 0, 0, 0, 1, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 1, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 1;
+    InitKFATransMat(dt);
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
@@ -294,6 +287,18 @@ void Predictor::InitKfAcceleration(const float dt) {
     RMKF.state_post_ << target_xyz[0],target_xyz[1],target_xyz[2],
                         0,0,0,
                         0,0,0;
+}
+void Predictor::InitKFATransMat(const float dt) {
+    float t0 = 0.5f * dt * dt;
+    RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
+            0, 1, 0, 0, dt, 0, 0, t0, 0,
+            0, 0, 1, 0, 0, dt, 0, 0, t0,
+            0, 0, 0, 1, 0, 0, dt, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, dt, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, dt,
+            0, 0, 0, 0, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 1;
 }
 
 /**

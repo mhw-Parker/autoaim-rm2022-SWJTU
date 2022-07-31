@@ -6,11 +6,15 @@
 namespace rm{
     /***/
     void ArmorDetector::TopDetectTask(Mat &roi) {
+        double st = getTickCount();
         BinaryMat(roi);
+        //cout << "-- preprocess : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
+        st = getTickCount();
         vector<Lamp> possible_lamps = MinLampDetect(roi);
         /** match light **/
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         FindArmor(match_lamps, possible_lamps, roi);
+        //cout << "-- match : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
     }
     /**
      * @brief preprocess mat
@@ -44,10 +48,10 @@ namespace rm{
             /// limit rect rotate angle
             lamp_rect.angle = lamp_rect.angle > 90 ? lamp_rect.angle-180 : lamp_rect.angle;
             float angle_ = lamp_rect.angle;
-            if (fabs(angle_) >= 15) continue;
+            if (fabs(angle_) >= 17) continue;
             /// limit rect height / width ratio
             float ratio_ = lamp_rect.size.height / lamp_rect.size.width;
-            if (ratio_ < 2.5 || ratio_ > 15) continue;
+            if (ratio_ < 2.5 || ratio_ > 16) continue;
             /// limit rect width
             if (lamp_rect.size.width > param.maxLightW) continue;
             /// judge color
@@ -56,7 +60,7 @@ namespace rm{
             Mat_<u_int8_t > lamp_image = sub_binary_mat(bounding_lamp);
             Scalar_<float> avg_brightness = mean(lamp_image);
             avg_brightness[0] /= cos(angle_/180);
-            if(avg_brightness[0] < 40) continue;
+            if(avg_brightness[0] < 35) continue;
             /// store possible lamps
             Lamp lamp_info(lamp_rect, avg_brightness[0]);
             possible_lamps.emplace_back(lamp_info);
@@ -143,7 +147,7 @@ namespace rm{
                 for (int j = 0; j < 4; j++) {
                     line(src, possible_armor.pts[j], possible_armor.pts[(j + 1) % 4], color, 1);
                 }
-                putText(src, to_string(match_lamps[i].matchFactor), possible_armor.pts[0],
+                putText(src, to_string(possible_armor.wh_ratio), possible_armor.pts[0],
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
                         1);
             }
@@ -172,7 +176,7 @@ namespace rm{
         float avg_height = (l_1.rect.size.height + l_2.rect.size.height)/2;
         float lamps_width = RMTools::point_distance<float>(l_1.mid_p, l_2.mid_p);
         float wh_ratio = lamps_width / avg_height;
-        if(wh_ratio > 4.5 || wh_ratio < 1.5) return false;
+        if(wh_ratio > 5 || wh_ratio < 1.5) return false;
         float norm_wh_ratio = (wh_ratio < 2.5) ? fabs(wh_ratio-small_armor_ratio)/small_armor_ratio :
                               fabs(wh_ratio-big_armor_ratio)/big_armor_ratio;
         /** lamps brightness **/
