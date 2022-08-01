@@ -157,8 +157,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
-        // 临时解决NaN
-        latency = react_t + fly_t > 1 ? latency : react_t + fly_t;
+        latency = react_t + fly_t;
         cout << 1 << endl;
     }
     // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
@@ -174,8 +173,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         // 计算抬枪和子弹飞行时间
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
         //预测时长为：响应时延+飞弹时延
-        // 临时解决NaN
-        latency = react_t + fly_t > 1 ? latency : react_t + fly_t;
+        latency = react_t + fly_t;
         cout << 2 << endl;
     }
     else {
@@ -185,20 +183,24 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         cout << 3 << endl;
     }
     // 哨兵射击命令
+    // 临时解决NaN
     if (carName == SENTRYTOP || carName == SENTRYDOWN) {
         shootCmd = CheckShoot(gimbal_ypd, armor_type);
     }
     // 更新last值
     last_xyz = target_xyz;
-    // 防止NaN的临时解决措施
-    if (predict_xyz[2] > 8000) {
-        predict_xyz = last_predict_xyz;
-        KalmanShallowRefresh();
-    }
-    if(isnan(predict_xyz[2]))
+    // 临时解决NaN
+    if (fabs(predict_xyz[0]) > 8000 ||
+        fabs(predict_xyz[1]) > 2000 ||
+        fabs(predict_xyz[2]) > 8000) {
         KalmanRefresh();
-    if(isnan(latency))
+        predict_xyz = last_predict_xyz;
+        Vector3f relative_xyz = solveAngle.World2Gim(predict_xyz);
+        predict_ypd = gimbal_ypd + solveAngle.xyz2ypd(relative_xyz);
+    }
+    if (latency > 0.8) {
         latency = 0.5;
+    }
     last_predict_xyz = predict_xyz;
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
@@ -293,7 +295,7 @@ void Predictor::InitKfAcceleration(const float dt) {
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
-    float temp[9] = {0.1, 0.1, 0.1, 50, 10, 50, 200, 40, 200};
+    float temp[9] = {0.5, 1, 0.5, 50, 5, 50, 200, 25, 200};
     RMKF.process_noise_.setIdentity();
     for (int i = 0; i < 9; i++) {
         RMKF.process_noise_(i, i) *= temp[i];
@@ -311,17 +313,22 @@ void Predictor::InitKfAcceleration(const float dt) {
                         0,0,0,
                         0,0,0;
 }
+
+/**
+ * 初始化转移矩阵
+ * @param dt
+ */
 void Predictor::InitKFATransMat(const float dt) {
     float t0 = 0.5f * dt * dt;
     RMKF.trans_mat_ <<  1, 0, 0, dt, 0, 0, t0, 0, 0,
-            0, 1, 0, 0, dt, 0, 0, t0, 0,
-            0, 0, 1, 0, 0, dt, 0, 0, t0,
-            0, 0, 0, 1, 0, 0, dt, 0, 0,
-            0, 0, 0, 0, 1, 0, 0, dt, 0,
-            0, 0, 0, 0, 0, 1, 0, 0, dt,
-            0, 0, 0, 0, 0, 0, 1, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 1, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 1;
+                        0, 1, 0, 0, dt, 0, 0, t0, 0,
+                        0, 0, 1, 0, 0, dt, 0, 0, t0,
+                        0, 0, 0, 1, 0, 0, dt, 0, 0,
+                        0, 0, 0, 0, 1, 0, 0, dt, 0,
+                        0, 0, 0, 0, 0, 1, 0, 0, dt,
+                        0, 0, 0, 0, 0, 0, 1, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 1, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 1;
 }
 
 /**
