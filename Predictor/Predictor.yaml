@@ -6,18 +6,18 @@ Hero:
    yaw_offset: 0
    pitch_offset: 0
 Infantry3:
-   average_v_bullet: 18
-   react_t: 0.11 #0.2
+   average_v_bullet: 14
+   react_t: 0.05
    yaw_offset: -0.5
    pitch_offset: 0
 Infantry4:
-   average_v_bullet: 28
+   average_v_bullet: 14
    react_t: 0.05
    yaw_offset: -0.5
    pitch_offset: 0
 Infantry5:
-   average_v_bullet: 27.5
-   react_t: 0.3
+   average_v_bullet: 14
+   react_t: 0.05
    yaw_offset: 0
    pitch_offset: 0
 SentryTop:
