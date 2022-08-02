@@ -3,7 +3,7 @@
 //
 #include "Predictor.h"
 
-Predictor::Predictor() : waveClass(30,300,1000),
+Predictor::Predictor() : waveClass(5000,300,1000),
                          omegaWave(3,600,1000),
                          poseAngle(CV_PI,600,1000) {
     predict_pts.assign(4,Point2f(0,0));
@@ -88,6 +88,7 @@ inline void Predictor::KalmanRefresh() {
     RMKF_flag = false;
     target_a_xyz << 0, 0, 0;
     target_v_xyz << 0, 0, 0;
+    cout << "Refresh Kalman!" << endl;
 }
 
 /**
@@ -158,10 +159,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
-        cout << 1 << endl;
-    }
-    // 闪烁导致丢失目标时的处理策略为匀加速运动模型插值
-    else if (lost_cnt <= max_lost) {
+    } else if (lost_cnt < max_lost) {
+        cout << "Supplement Frame:" << lost_cnt << endl;
         // 预测目标当前位置
         target_xyz += target_v_xyz*dt + 0.5*target_a_xyz*dt*dt;
         // 预测目标要击打位置
@@ -174,13 +173,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         predict_ypd[1] = solveAngle.iteratePitch(predict_xyz,average_v_bullet,fly_t);
         //预测时长为：响应时延+飞弹时延
         latency = react_t + fly_t;
-        cout << 2 << endl;
-    }
-    else {
+    } else {
         // 自动射击命令清零
         shootCmd = 0;
         KalmanRefresh();
-        cout << 3 << endl;
     }
     // 哨兵射击命令
     // 临时解决NaN
@@ -193,6 +189,7 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     if (fabs(predict_xyz[0]) > 8000 ||
         fabs(predict_xyz[1]) > 2000 ||
         fabs(predict_xyz[2]) > 8000) {
+        cout << "Abnormal Data!" << endl;
         KalmanRefresh();
         predict_xyz = last_predict_xyz;
         Vector3f relative_xyz = solveAngle.World2Gim(predict_xyz);
@@ -205,10 +202,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
 
-    cout << "lost: " << lost_cnt << endl;
-    cout << "target_xyz: " << endl << target_xyz << endl;
-    cout << "predict_xyz: " << endl << predict_xyz << endl;
-    cout << "latency: " << endl << latency << endl;
+//    cout << "lost: " << lost_cnt << endl;
+//    cout << "target_xyz: " << endl << target_xyz << endl;
+//    cout << "predict_xyz: " << endl << predict_xyz << endl;
+//    cout << "latency: " << endl << latency << endl;
 
     // 显示数据，一般关掉
     if (DEBUG) {
@@ -231,8 +228,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
                                gimbal_ypd[1],predict_ypd[1] + offset[1],
                                v_,average_v_bullet,latency};
         RMTools::showData(data1,str1,"abs degree");
+        waveClass.displayWave(predict_xyz[2], 0, "target_yp");
     }
-//    waveClass.displayWave(target_ypd[0], target_ypd[1], "target_yp");
 }
 
 /**
@@ -266,7 +263,7 @@ __attribute__((unused)) Vector3f Predictor::GetGyroXYZ() {
  * @param dt 两针时间
  * */
 Vector3f Predictor::KalmanPredict(float dt, float latency) {
-    InitKFATransMat(dt);
+    //InitKFATransMat(dt);
     if (RMKF_flag) {
         UpdateKF(target_xyz);
         target_v_xyz << RMKF.state_post_[3],
@@ -291,11 +288,11 @@ Vector3f Predictor::KalmanPredict(float dt, float latency) {
  */
 void Predictor::InitKfAcceleration(const float dt) {
     // 转移矩阵
-    InitKFATransMat(dt);
+    InitKFATransMat(delta_t);
     // 测量值矩阵
     RMKF.measure_mat_.setIdentity();
     // 过程噪声协方差矩阵Q
-    float temp[9] = {0.5, 1, 0.5, 50, 5, 50, 200, 25, 200};
+    float temp[9] = {0.2, 1, 0.2, 50, 5, 50, 100, 25, 100};
     RMKF.process_noise_.setIdentity();
     for (int i = 0; i < 9; i++) {
         RMKF.process_noise_(i, i) *= temp[i];

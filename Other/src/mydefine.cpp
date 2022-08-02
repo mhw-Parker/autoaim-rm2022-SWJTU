@@ -13,7 +13,7 @@ bool blueTarget = false;
 bool saveVideo = false;
 bool saveSVM = false;
 bool DEBUG = false;
-int max_lost = DEBUG ? 5 : 2;
+int max_lost = DEBUG ? 20 : 12;
 
 int FRAMEWIDTH;
 int FRAMEHEIGHT;

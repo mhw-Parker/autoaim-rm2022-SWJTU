@@ -343,18 +343,16 @@ namespace rm
                     Armor();
                     recognitionTime = CalWasteTime(recognitionSt, freq);
                     find_state = armorDetectorPtr->findState;
-                    // 保存未识别的帧
-//                    if (!find_state) {
-//                        imwrite(OUTPUT_PATH + (string)"LostImg/" + getSysTime() + ".png",
-//                                detectFrame);
-//                    }
-                    predictionSt = getTickCount();
                     if (find_state) {
                         car_num = armorDetectorPtr->armorNumber;
                         find_state = armorDetectorPtr->lostCnt <= max_lost;
                     } else {
                         car_num = 0;
+                        // 保存未识别的帧
+//                        imwrite(OUTPUT_PATH + (string)"LostImg/" + getSysTime() + ".png",
+//                                detectFrame);
                     }
+                    predictionSt = getTickCount();
                     // 如果小于丢失的阈值则认为可以补帧预测
                     if (armorDetectorPtr->lostCnt <= max_lost) {
                         predictPtr->ArmorPredictor(armorDetectorPtr->targetArmor.pts,
@@ -438,6 +436,7 @@ namespace rm
             cout << "Prediction Task Cost : " << predictionTime << " ms" << endl;
             cout << "FeedBack Mission Cost : " << feedbackTime << " ms" << endl;
             cout << "receive Mission Cost : " << receiveTime << " ms" << endl;
+            cout << endl;
 #endif
             // 显示图像
             if (carName != IMAGE && (showArmorBox || showEnergy || showOrigin)) {
