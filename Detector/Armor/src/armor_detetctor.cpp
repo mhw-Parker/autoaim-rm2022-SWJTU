@@ -30,7 +30,7 @@ namespace rm{
         /** match lamps **/
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
-        findState = !(lostCnt++ > 5);
+        findState = lostCnt == 0;
         if(candidate_armor.size()) {
             targetArmor = candidate_armor.back();
             lostCnt = 0;
@@ -41,6 +41,8 @@ namespace rm{
                 RMTools::Connect4Pts(targetArmor.pts, img, Scalar(0,255,0));
                 circle(img, (targetArmor.pts[0]+targetArmor.pts[2])/2, 2, Scalar(0, 255, 0),2);
             }
+        } else {
+            lostCnt++;
         }
         MakeRectSafe(targetArmor.rect, img.size());
         //rectangle(img, roiRect, Scalar(255, 255, 255), 1);
@@ -149,9 +151,7 @@ namespace rm{
      * */
     vector<Armor> ArmorDetector::FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps) {
         vector<Armor> candidate_armor;
-        findState = !(lostCnt++ > 5);
         for(int i = 0; i < match_lamps.size(); i++) {
-
             Armor possible_armor(possible_lamps[match_lamps[i].matchIndex1], possible_lamps[match_lamps[i].matchIndex2], match_lamps[i].matchFactor);
             /* number detect */
             Mat num_roi = GetNumberRoi(possible_armor.pts, possible_armor.armorType);
