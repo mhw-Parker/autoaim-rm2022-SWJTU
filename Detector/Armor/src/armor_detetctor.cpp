@@ -6,9 +6,9 @@
 namespace rm{
     /***/
     void ArmorDetector::TopDetectTask(Mat &img) {
-        //GetRoi(img);
+        GetRoi(img);
         double st = getTickCount();
-        BinaryMat(img);
+        BinaryMat(imgRoi);
         cout << "-- preprocess : " << RMTools::CalWasteTime(st) << endl;
         st = getTickCount();
         /** detect lamps **/
@@ -18,10 +18,10 @@ namespace rm{
                 Point2f pts_[4];
                 l.rect.points(pts_);
                 for(int i = 0; i<4; i++) {
-                    line(img, pts_[i], pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
+                    line(img, (Point2f)roi_corner+pts_[i], (Point2f)roi_corner+pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
                 }
-                circle(img, pts_[0], 2, Scalar(0, 255, 0));
-                putText(img, to_string(int(l.rect.size.width)), pts_[0],
+                circle(img, (Point2f)roi_corner+pts_[0], 2, Scalar(0, 255, 0));
+                putText(img, to_string(int(l.rect.size.width)), (Point2f)roi_corner+pts_[0],
                         FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
                         1);
 
@@ -30,12 +30,25 @@ namespace rm{
         /** match lamps **/
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
-        findState = lostCnt == 0;
+        if(showArmorBox)
+            rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         if(candidate_armor.size()) {
             targetArmor = candidate_armor.back();
             lostCnt = 0;
+            // reset roi
+            MakeRectSafe(targetArmor.rect, img.size());
+            targetArmor.rect = targetArmor.rect + roi_corner;
+            targetArmor.center += roi_corner;
+            roiRect = targetArmor.rect;
+            for (int i = 0; i < 4; i++) {
+                targetArmor.pts[i] = targetArmor.pts[i] + (Point2f)roi_corner;
+            }
+
             if(showArmorBox){
                 for(auto &armor : candidate_armor){
+                    for (int i = 0; i < 4; i++) {
+                        armor.pts[i] = armor.pts[i] + (Point2f)roi_corner;
+                    }
                     RMTools::Connect4Pts(armor.pts, img);
                 }
                 RMTools::Connect4Pts(targetArmor.pts, img, Scalar(0,255,0));
@@ -44,8 +57,7 @@ namespace rm{
         } else {
             lostCnt++;
         }
-        MakeRectSafe(targetArmor.rect, img.size());
-        //rectangle(img, roiRect, Scalar(255, 255, 255), 1);
+        findState = lostCnt == 0;
         //cout << "-- match : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
     }
     /**
@@ -124,15 +136,12 @@ namespace rm{
                 MatchLight ml = pair.back(); // the max score from l1 - ln
                 match_lamps.emplace_back(ml);
                 for(auto &i : match_lamps) {
-                    //cout << i.matchIndex2 << pair.back().matchIndex1 << pair.back().matchIndex1 << endl;
                     if(i.matchIndex2 == match_lamps.back().matchIndex1 || i.matchIndex2 == match_lamps.back().matchIndex2) {  // if twice judge share
                         if(match_lamps.back().matchFactor < i.matchFactor) {
-                            //cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                             match_lamps.pop_back();
                             break;
                         }
                         else if(match_lamps.back().matchFactor > i.matchFactor){
-                            //cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                             swap(i, match_lamps.back());
                             match_lamps.pop_back();
                             break;
@@ -258,8 +267,8 @@ namespace rm{
                         Size(warp_width, warp_height),
                         INTER_NEAREST, BORDER_CONSTANT, Scalar(0));
         warp_dst_img = warp_dst_img.colRange(start_col, end_col);
-        threshold(warp_dst_img, warp_dst_img, 0, 255, cv::THRESH_OTSU);
         pyrDown(warp_dst_img,warp_dst_img,Size(NUM_IMG_SIZE,NUM_IMG_SIZE));
+        threshold(warp_dst_img, warp_dst_img, 0, 255, cv::THRESH_OTSU);
         return warp_dst_img;
     }
 

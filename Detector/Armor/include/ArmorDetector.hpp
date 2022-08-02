@@ -237,17 +237,19 @@ namespace rm
         bool IsArmor(Lamp &l_1, Lamp &l_2, float &score);
         Mat GetNumberRoi(vector<Point2f> &pts, uint8_t armor_type);
 
+        Mat gray_mat;
         Mat gray_binary_mat;
         Mat num_binary_mat;
         Mat sub_binary_mat;
-        Mat gray_mat;
-        const float max_lamp_angle = 6;
-        const float max_incline_angle = 25;
+
+        const float max_lamp_angle = 5;
+        const float max_incline_angle = 20;
         const float small_armor_ratio = 2.33;
         const float big_armor_ratio = 3.83;
         const float max_lamps_height_error = 20;
         const float k_[5] = {2,2,1,1,2}; // score weight
-        Point2f roi_corner;
+        Point roi_corner;
+        // warp perspective parameters
         const int lamp_height = 20;
         const int warp_height = 40;
         const int warp_small_width = 44;

@@ -50,10 +50,6 @@ namespace rm
          float stamp;
          ReceiveData mcuData;
      };
-     class sendData {
-     public:
-
-     };
 
     class ImgProdCons
     {
