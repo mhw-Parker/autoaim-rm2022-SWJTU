@@ -118,6 +118,10 @@ enum CARNAME {HERO, INFANTRY3, INFANTRY4, INFANTRY5, INFANTRY_TRACK, SENTRYTOP, 
 #define  SVM_IMAGE_SIZE 40
 #endif
 
+#ifndef NUM_IMG_SIZE
+#define  NUM_IMG_SIZE 20
+#endif
+
 #include "config.h"
 
 #ifndef OUTPUT_PATH

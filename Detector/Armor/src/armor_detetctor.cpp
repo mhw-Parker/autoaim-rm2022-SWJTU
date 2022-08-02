@@ -51,11 +51,10 @@ namespace rm{
      * @param roi maybe roi image or whole size;
      * */
     void ArmorDetector::BinaryMat(Mat &roi) {
-        Mat gray, sub_mat;
+        Mat sub_mat;
         vector<Mat> channels;
-        cvtColor(roi,gray,cv::COLOR_BGR2GRAY);
-        threshold(gray, gray_binary_mat, 50, 255, cv::THRESH_BINARY);
-        //threshold(gray, num_binary_mat, 15, 255, cv::THRESH_BINARY);
+        cvtColor(roi,gray_mat,cv::COLOR_BGR2GRAY);
+        threshold(gray_mat, gray_binary_mat, 50, 255, cv::THRESH_BINARY);
         split(roi, channels);
         if(blueTarget)
             subtract(channels[0],channels[2],sub_mat);
@@ -155,7 +154,8 @@ namespace rm{
 
             Armor possible_armor(possible_lamps[match_lamps[i].matchIndex1], possible_lamps[match_lamps[i].matchIndex2], match_lamps[i].matchFactor);
             /* number detect */
-
+            Mat num_roi = GetNumberRoi(possible_armor.pts, possible_armor.armorType);
+            imshow("num roi", num_roi);
             candidate_armor.emplace_back(possible_armor);
         }
         sort(candidate_armor.begin(), candidate_armor.end(), compPriority);
@@ -233,12 +233,34 @@ namespace rm{
         rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2 * 2.27),
                     Size(armorWidth, armorHeight * 2.27));
     }
-
-    Mat ArmorDetector::GetNumberRoi(vector<Point2f> &src_pts, Mat &src, uint8_t armor_type) {
+    /**
+     * @brief get number location roi
+     * @param pts the target 4 points
+     * @param armor_type small armor or big armor
+     * @return Mat
+     * */
+    Mat ArmorDetector::GetNumberRoi(vector<Point2f> &pts, uint8_t armor_type) {
         int warp_width = armor_type == SMALL ? warp_small_width : warp_large_width;
+        int l_top = warp_height/2 - lamp_height/2;
+        int l_bot = warp_height/2 + lamp_height/2;
         Point2f dst_pts[4] = {
-                //Point2f (0,)
+                Point2f (0, l_top),
+                Point2f (warp_width, l_top),
+                Point2f (warp_width, l_bot),
+                Point2f (0, l_bot)
         };
+        int start_col = warp_width/2 - lamp_height;
+        int end_col = warp_width/2 + lamp_height;
+        Point2f src_pts[4] = {pts[0],pts[1],pts[2],pts[3]};
+        auto warp_perspective_mat = getPerspectiveTransform(src_pts, dst_pts);
+        Mat warp_dst_img;
+        warpPerspective(gray_mat, warp_dst_img, warp_perspective_mat,
+                        Size(warp_width, warp_height),
+                        INTER_NEAREST, BORDER_CONSTANT, Scalar(0));
+        warp_dst_img = warp_dst_img.colRange(start_col, end_col);
+        threshold(warp_dst_img, warp_dst_img, 0, 255, cv::THRESH_OTSU);
+        pyrDown(warp_dst_img,warp_dst_img,Size(NUM_IMG_SIZE,NUM_IMG_SIZE));
+        return warp_dst_img;
     }
 
 }

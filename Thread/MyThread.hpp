@@ -21,7 +21,7 @@
 #include "VideoDriver.hpp"
 #include "ImageWriter.hpp"
 #include "utility.hpp"
-#include "Predictor/Predictor.h"
+#include "Predictor.h"
 #include "Fifo.h"
 
 #ifdef DAHUA
