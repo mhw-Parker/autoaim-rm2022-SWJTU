@@ -168,27 +168,27 @@ namespace rm
      */
     class Armor {
     public:
-        Armor() : errorAngle(0), armorWidth(0), armorHeight(0), armorType(BIG_ARMOR), priority(10000) {
+        Armor() : armorWidth(0), armorHeight(0), armorType(BIG_ARMOR), priority(10000) {
         }
 
         Armor(Lamp L1, Lamp L2, double priority_);
 
-        Armor(Lamp l_1, Lamp l_2);
+        Armor(Lamp l_1, Lamp l_2, float score);
 
         explicit Armor(Rect &rect);
         void init();
 
-        float errorAngle;
         Point2i center;
         Rect rect;
-        vector<Point2f> pts;
-        Point2f num_pts[4];
+        vector<Point2f> pts; // the 4 points of armor lamps
+        vector<Point2f> num_pts; // the 4 points of number roi
         float armorWidth;
         float armorHeight;
         int armorType;
         float wh_ratio = 1;
+
         double priority;
-        float avgRSubBVal{};
+        float match_score, shoot_score;
     };
 
     /**
@@ -229,21 +229,27 @@ namespace rm
         int getArmorNumber(Armor &armor);
 
         /** 7-23 test  **/
-        void TopDetectTask(Mat &roi);
+        void TopDetectTask(Mat &src);
         void BinaryMat(Mat &roi);
-        vector<Lamp> MinLampDetect(Mat &roi);
+        vector<Lamp> MinLampDetect();
         vector<MatchLight> MatchLamps(vector<Lamp> &possible_lamps);
-        void FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps, Mat &src);
-        bool possible_armor(Lamp &l_1, Lamp &l_2, float &score);
+        vector<Armor> FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps);
+        bool IsArmor(Lamp &l_1, Lamp &l_2, float &score);
+        Mat GetNumberRoi(vector<Point2f> &src_pts, Mat &src, uint8_t armor_type);
+
         Mat gray_binary_mat;
+        Mat num_binary_mat;
         Mat sub_binary_mat;
         const float max_lamp_angle = 6;
         const float max_incline_angle = 25;
         const float small_armor_ratio = 2.33;
         const float big_armor_ratio = 3.83;
         const float max_lamps_height_error = 20;
-
         const float k_[5] = {2,2,1,1,2}; // score weight
+        Point2f roi_corner;
+        const int warp_height = 28;
+        const int warp_small_width = 32;
+        const int warp_large_width = 54;
         /**tool functions**/
 
         Rect GetArmorRect() const;
@@ -355,7 +361,7 @@ namespace rm
      * @return if the match factor of b is larger than a, return true, otherwise return false.
      */
     const bool compMatchFactor(const MatchLight& a, const MatchLight& b);
-
+    const bool compPriority(const Armor &a, const Armor &b);
     bool MakeRectSafe(cv::Rect &rect, const cv::Size& size);
 }
 

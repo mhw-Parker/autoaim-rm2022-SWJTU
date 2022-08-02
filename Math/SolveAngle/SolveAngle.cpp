@@ -116,11 +116,11 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             targetWidth3D = 245; // 225
             //printf("-- Energy Armor ! --\n");
             break;
-        case S_ARMOR:
+        case SMALL:
             targetHeight3D = 65; //126
             targetWidth3D = 131;  //131
             break;
-        case B_ARMOR:
+        case LARGE:
             targetHeight3D = 65;
             targetWidth3D = 225;
             break;
@@ -196,9 +196,9 @@ void SolveAngle::camXYZ2YPD() {
 }
 
 /**
- * @brief 考虑f = -k * v^2得到的抬枪补偿
+ * @brief 考虑 f = -k * v^2 得到的抬枪补偿
  * @param target_xyz 目标xyz坐标
- * @param target_ypd 目标yaw pitch distance
+ * @param t_ 迭代最终输出的子弹飞行时间
  * @param v 子弹速度
  * @return pitch相对于地面的角度
  */
@@ -227,7 +227,9 @@ float SolveAngle::iteratePitch(Vector3f target_xyz, float v, float &t_) {
     return pitch_;
 }
 /**
- * @brief
+ * @brief calculate rotate matrix from camera xyz to static xyz
+ * @param gimbal_ypd angle data from gyro
+ * @return Matrix3f
  * */
 Matrix3f SolveAngle::GetRotateMat(const Vector3f &gimbal_ypd) {
     float sin_y = sin(gimbal_ypd[0] * degree2rad);
@@ -258,7 +260,8 @@ Point2f SolveAngle::getBackProject2DPoint(Vector3f target_xyz) {
     return Point2f (pix_uv1[0],pix_uv1[1]);
 }
 /**
- * @brief
+ * @brief point from world reference to camera reference
+ * @param world_xyz destination xyz
  * */
 Vector3f SolveAngle::World2Cam(const Vector3f &world_xyz) {
     Vector3f tmp_cam_xyz, tmp_gim_xyz;
@@ -278,12 +281,13 @@ Vector3f SolveAngle::Cam2Pixel(const Vector3f &cam_xyz) {
     return pix_uv1;
 }
 /**
- *
- * @param cam_xyz
- * @return
+ * @brief transfer from camera relative coordinates to world coordinates
+ * @param cam_xyz point under camera coordinates
+ * @param gimbal_ypr gyro yaw, pitch, roll angle
+ * @return Vector3f
  */
-Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypd, const Vector3f &cam_xyz) {
-    cam2world_mat = GetRotateMat(gimbal_ypd);
+Vector3f SolveAngle::Cam2World(const Vector3f& gimbal_ypr, const Vector3f &cam_xyz) {
+    cam2world_mat = GetRotateMat(gimbal_ypr);
     gim_xyz = Cam2Gim(cam_xyz);
     return Gim2World(gim_xyz);
 }
@@ -294,7 +298,8 @@ Vector3f SolveAngle::Gim2World(const Vector3f &gim_xyz) {
     return cam2world_mat * gim_xyz;
 }
 /**
- *
+ * @brief get yaw, pitch, distance from relative xyz (relative to gun)
+ * @return delta yaw & pitch , distance
  * */
 Vector3f SolveAngle::xyz2ypd(const Vector3f &_xyz) {
     Vector3f delta_ypd;

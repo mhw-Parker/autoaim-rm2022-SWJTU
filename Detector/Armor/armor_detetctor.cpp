@@ -5,42 +5,72 @@
 
 namespace rm{
     /***/
-    void ArmorDetector::TopDetectTask(Mat &roi) {
+    void ArmorDetector::TopDetectTask(Mat &img) {
+        //GetRoi(img);
         double st = getTickCount();
-        BinaryMat(roi);
-        //cout << "-- preprocess : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
+        BinaryMat(img);
+        cout << "-- preprocess : " << RMTools::CalWasteTime(st) << endl;
         st = getTickCount();
-        vector<Lamp> possible_lamps = MinLampDetect(roi);
-        /** match light **/
+        /** detect lamps **/
+        vector<Lamp> possible_lamps = MinLampDetect();
+        if(showLamps) {
+            for(auto &l : possible_lamps){
+                Point2f pts_[4];
+                l.rect.points(pts_);
+                for(int i = 0; i<4; i++) {
+                    line(img, pts_[i], pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
+                }
+                circle(img, pts_[0], 2, Scalar(0, 255, 0));
+                putText(img, to_string(int(l.rect.size.width)), pts_[0],
+                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
+                        1);
+
+            }
+        }
+        /** match lamps **/
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
-        FindArmor(match_lamps, possible_lamps, roi);
+        vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
+        findState = !(lostCnt++ > 5);
+        if(candidate_armor.size()) {
+            targetArmor = candidate_armor.back();
+            lostCnt = 0;
+            if(showArmorBox){
+                for(auto &armor : candidate_armor){
+                    RMTools::Connect4Pts(armor.pts, img);
+                }
+                RMTools::Connect4Pts(targetArmor.pts, img, Scalar(0,255,0));
+                circle(img, (targetArmor.pts[0]+targetArmor.pts[2])/2, 2, Scalar(0, 255, 0),2);
+            }
+        }
+        MakeRectSafe(targetArmor.rect, img.size());
+        //rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         //cout << "-- match : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
     }
     /**
      * @brief preprocess mat
+     * @param roi maybe roi image or whole size;
      * */
     void ArmorDetector::BinaryMat(Mat &roi) {
         Mat gray, sub_mat;
         vector<Mat> channels;
-        cvtColor(roi,gray,COLOR_BGR2GRAY);
-        threshold(gray, gray_binary_mat, 50, 255, THRESH_BINARY);
+        cvtColor(roi,gray,cv::COLOR_BGR2GRAY);
+        threshold(gray, gray_binary_mat, 50, 255, cv::THRESH_BINARY);
+        //threshold(gray, num_binary_mat, 15, 255, cv::THRESH_BINARY);
         split(roi, channels);
         if(blueTarget)
             subtract(channels[0],channels[2],sub_mat);
         else
             subtract(channels[2],channels[0],sub_mat);
         threshold(sub_mat,sub_binary_mat,100,255,THRESH_BINARY); // 80
-        //imshow("binary",gray_binary_mat);
+        //imshow("binary",num_binary_mat);
     }
     /**
      * @brief test min area Rect for armor detector
      * */
-    vector<Lamp> ArmorDetector::MinLampDetect(Mat &src) {
+    vector<Lamp> ArmorDetector::MinLampDetect() {
         vector<vector<Point>> contoursLight;
         vector<Lamp> possible_lamps;
-        //vector<RotatedRect> possible_lamps;
         findContours(gray_binary_mat, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-        int num = 0;
         /** find possible lamp **/
         for(auto &light : contoursLight) {
             if(light.size() < 25) continue;
@@ -64,17 +94,6 @@ namespace rm{
             /// store possible lamps
             Lamp lamp_info(lamp_rect, avg_brightness[0]);
             possible_lamps.emplace_back(lamp_info);
-            Point2f pts_[4];
-            lamp_rect.points(pts_);
-            if(showLamps) {
-                for(int i = 0; i<4; i++) {
-                    line(src, pts_[i], pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
-                }
-                circle(src, pts_[0], 2, Scalar(0, 255, 0));
-                putText(src, to_string(int(lamp_rect.size.width)), pts_[0],
-                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
-                        1);
-            }
         }
         return possible_lamps;
         //imshow("test",dst);
@@ -93,7 +112,7 @@ namespace rm{
             vector<MatchLight> pair;
             for(int l2 = l1+1; l2 < possible_lamps.size(); l2++) {
                 float score;
-                if(possible_armor(possible_lamps[l1], possible_lamps[l2], score)) {
+                if(IsArmor(possible_lamps[l1], possible_lamps[l2], score)) {
                     if(score > max_score) {
                         pair.emplace_back(MatchLight (l1, l2, score));
                         max_score = score;
@@ -107,12 +126,12 @@ namespace rm{
                     //cout << i.matchIndex2 << pair.back().matchIndex1 << pair.back().matchIndex1 << endl;
                     if(i.matchIndex2 == match_lamps.back().matchIndex1 || i.matchIndex2 == match_lamps.back().matchIndex2) {  // if twice judge share
                         if(match_lamps.back().matchFactor < i.matchFactor) {
-                            cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
+                            //cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                             match_lamps.pop_back();
                             break;
                         }
                         else if(match_lamps.back().matchFactor > i.matchFactor){
-                            cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
+                            //cout << "score: " << match_lamps.back().matchFactor << " " << i.matchFactor << endl;
                             swap(i, match_lamps.back());
                             match_lamps.pop_back();
                             break;
@@ -129,37 +148,25 @@ namespace rm{
      * @param match_lamps
      * @param possible_lamps
      * */
-    void ArmorDetector::FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps, Mat &src) {
-        findState = (lostCnt++ > 5) ? false : true;
+    vector<Armor> ArmorDetector::FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps) {
+        vector<Armor> candidate_armor;
+        findState = !(lostCnt++ > 5);
         for(int i = 0; i < match_lamps.size(); i++) {
-            Armor possible_armor(possible_lamps[match_lamps[i].matchIndex1], possible_lamps[match_lamps[i].matchIndex2]);
-            Scalar color = Scalar(255,255,255);
-            if(i == match_lamps.size()-1) {
-                color = Scalar (0,255,0);
-                /* get number */
-                armorNumber = 0;
-                targetArmor = possible_armor;
-                //roiRect = targetArmor.rect;
-                lostCnt = 0;
-                circle(src, (targetArmor.pts[0]+targetArmor.pts[2])/2, 2, Scalar(0, 255, 0),2);
-                circle(src, targetArmor.pts[0], 2, Scalar(0, 255, 0), 2);
-            }
-            if(showArmorBox) {
-                for (int j = 0; j < 4; j++) {
-                    line(src, possible_armor.pts[j], possible_armor.pts[(j + 1) % 4], color, 1);
-                }
-                putText(src, to_string(possible_armor.wh_ratio), possible_armor.pts[0],
-                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
-                        1);
-            }
+
+            Armor possible_armor(possible_lamps[match_lamps[i].matchIndex1], possible_lamps[match_lamps[i].matchIndex2], match_lamps[i].matchFactor);
+            /* number detect */
+
+            candidate_armor.emplace_back(possible_armor);
         }
+        sort(candidate_armor.begin(), candidate_armor.end(), compPriority);
+        return candidate_armor;
     }
 
     /**
      * @brief select possible armor
      * */
-    bool ArmorDetector::possible_armor(Lamp &l_1, Lamp &l_2, float &score) {
-        Mat background = imgRoi.clone();
+    bool ArmorDetector::IsArmor(Lamp &l_1, Lamp &l_2, float &score) {
+        //Mat background = imgRoi.clone();
         /** lamps angle **/
         float angle_error = fabs(l_1.lightAngle - l_2.lightAngle);
         if(angle_error > max_lamp_angle) return false;
@@ -189,17 +196,18 @@ namespace rm{
                 exp(-k_[4]*norm_bright);
         score /= 5;
 
-        line(background, l_1.mid_p, l_2.mid_p, Scalar(0,255,0));
-        putText(background, to_string(wh_ratio), (l_1.mid_p+l_2.mid_p)/2,
-                FONT_HERSHEY_SIMPLEX,0.5, Scalar(255, 255, 255),1);
-        //imshow("angle", background);
+//        line(background, l_1.mid_p, l_2.mid_p, Scalar(0,255,0));
+//        putText(background, to_string(score), (l_1.mid_p+l_2.mid_p)/2,
+//                FONT_HERSHEY_SIMPLEX,0.5, Scalar(255, 255, 255),1);
+//        imshow("angle", background);
         //waitKey();
         return true;
     }
 
-    Armor::Armor(Lamp L1, Lamp L2) {
+    Armor::Armor(Lamp L1, Lamp L2, float score_) {
         Point2f pts_[4];
-        pts.assign(4,Point2f(0,0));
+        match_score = score_;
+        pts.resize(4);
         if (L1.rect.center.x < L2.rect.center.x) {
             L1.rect.points(pts_);
             pts[0] = (pts_[1] + pts_[2]) / 2;
@@ -218,11 +226,19 @@ namespace rm{
         armorHeight = (L1.rect.size.height + L2.rect.size.height)/2;
         armorWidth = RMTools::point_distance<float>(L1.mid_p, L2.mid_p);
         wh_ratio = armorWidth / armorHeight;
-        armorType = (wh_ratio < 3) ? S_ARMOR : B_ARMOR;
+        shoot_score = armorHeight * armorWidth * score_;
+        armorType = (wh_ratio < 3) ? SMALL : LARGE;
         center.x = static_cast<int>((L1.rect.center.x + L2.rect.center.x) / 2);
         center.y = static_cast<int>((L1.rect.center.y + L2.rect.center.y) / 2);
-        rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2),
-                    Size(armorWidth, armorHeight));
+        rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2 * 2.27),
+                    Size(armorWidth, armorHeight * 2.27));
+    }
+
+    Mat ArmorDetector::GetNumberRoi(vector<Point2f> &src_pts, Mat &src, uint8_t armor_type) {
+        int warp_width = armor_type == SMALL ? warp_small_width : warp_large_width;
+        Point2f dst_pts[4] = {
+                //Point2f (0,)
+        };
     }
 
 }

@@ -221,6 +221,15 @@ namespace RMTools {
         waitKey(1);
         return true;
     }
+    inline bool Connect4Pts(vector<Point2f> &pts, Mat &img, Scalar color = Scalar::all(255)){
+        if(!pts.size()){
+            return false;
+        } else {
+            for(int i = 0; i<4; i++)
+                line(img, pts[i], pts[(i + 1) % 4],color, 1);
+            return true;
+        }
+    }
 
     /**
      * 检查收到子弹弹速数据是否正常

@@ -41,18 +41,16 @@ public:
     /** from relative xyz to delta yaw, pitch, distance **/
     Vector3f xyz2ypd(const Vector3f &_xyz);
 
-    float scale = 0.99f;
-    float f_ = 1500;
-
     float yaw{};
     float pitch{};
     float dist{};
     vector<Point2f> rectPoint2D;
+
     Vector3f p_cam_xyz; //相机坐标系下的x,y,z
     Vector3f gim_xyz; //平移到云台中心后的目标坐标
     Vector3f world_xyz; //目标世界坐标
     Matrix3f r_mat;
-    bool shoot;
+
     float yaw_;
 
 private:

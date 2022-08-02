@@ -12,7 +12,7 @@ namespace rm {
     * @details none
     */
     Armor::Armor(Lamp L1, Lamp L2, double priority_) {
-        errorAngle = fabs(L1.lightAngle - L2.lightAngle);
+        //errorAngle = fabs(L1.lightAngle - L2.lightAngle);
         armorWidth = fabs(static_cast<int>(L1.rect.center.x - L2.rect.center.x));
         armorHeight = fabs(static_cast<int>((L1.rect.size.height + L2.rect.size.height) / 2));
         center.x = static_cast<int>((L1.rect.center.x + L2.rect.center.x) / 2);
@@ -21,7 +21,7 @@ namespace rm {
                     Size(armorWidth, armorHeight));
         armorType = (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
         priority = priority_;
-        avgRSubBVal = (L1.avgRSubBVal + L2.avgRSubBVal) / 2;
+        //avgRSubBVal = (L1.avgRSubBVal + L2.avgRSubBVal) / 2;
 
         //need to make sure how to set values to the points
         pts.resize(4);
@@ -68,12 +68,9 @@ namespace rm {
     }
 
     Armor::Armor(Rect &rect) {
-        errorAngle = 0;
         center = rect.tl() + Point(rect.width / 2, rect.height / 2);
         this->rect = rect;
-
         pts.resize(4);
-
         pts[0] = rect.tl();
         pts[1] = rect.tl() + Point(rect.width, 0);
         pts[2] = rect.tl() + Point(rect.width, rect.height);
@@ -85,7 +82,6 @@ namespace rm {
         armorType = (armorWidth / armorHeight > 1.5) ? (BIG_ARMOR) : (SMALL_ARMOR);
 
         priority = 0;
-
     }
 
     /**
@@ -104,7 +100,6 @@ namespace rm {
      * @return none
     */
     void Armor::init() {
-        errorAngle = 0;
         armorWidth = 0;
         armorHeight = 0;
         armorType = BIG_ARMOR;
@@ -170,7 +165,7 @@ namespace rm {
     * @details: none
     */
     bool ArmorDetector::ArmorDetectTask(Mat &img_) {
-        GetRoi(img_); //get roi
+        //GetRoi(img_); //get roi
         TopDetectTask(img_);
 //        Preprocess(imgRoi);
 //        DetectArmor(img_);
@@ -197,7 +192,7 @@ namespace rm {
         Rect rectTemp = roiRect;
         if (!findState || rectTemp.width == 0 || rectTemp.height == 0) {
             roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
-        } else if (detectCnt > 0) {
+        } else if (!lostCnt) {
             // 应该保证
             float scale_w = 12, scale_h = 5;
             int w = int(rectTemp.width * scale_w);
@@ -210,6 +205,7 @@ namespace rm {
             }
         }
         imgRoi = img(roiRect);
+        roi_corner = Point2f(roiRect.x, roiRect.y);
     }
 
     /**
@@ -558,6 +554,9 @@ namespace rm {
      */
     const bool compMatchFactor(const MatchLight& a, const MatchLight& b) {
         return a.matchFactor < b.matchFactor;
+    }
+    const bool compPriority(const Armor &a, const Armor &b) {
+        return a.shoot_score < b.shoot_score;
     }
 
     /**

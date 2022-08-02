@@ -44,12 +44,12 @@
 #define  ENERGY_ARMOR 3
 #endif
 
-#ifndef S_ARMOR
-#define S_ARMOR 4
+#ifndef SMALL
+#define SMALL 4
 #endif
 
-#ifndef B_ARMOR
-#define B_ARMOR 5
+#ifndef LARGE
+#define LARGE 5
 #endif
 
 #ifndef FIND_ARMOR_YES
@@ -86,12 +86,8 @@
 enum CARNAME {HERO, INFANTRY3, INFANTRY4, INFANTRY5, INFANTRY_TRACK, SENTRYTOP, SENTRYDOWN, UAV, VIDEO, IMAGE, NOTDEFINED};
 #endif
 
-//#ifndef DEBUG
-//#define  DEBUG 0
-//#endif
-
 #ifndef SHOWTIME
-#define SHOWTIME 1
+#define SHOWTIME 0
 #endif
 
 #ifndef DEBUG_MSG
