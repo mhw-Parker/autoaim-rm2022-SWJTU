@@ -31,9 +31,10 @@
 #include <vector>
 #include <cstring>
 #include <omp.h>
-#include "log.h"
+
 #include "mydefine.h"
 #include "utility.hpp"
+#include "NumberClassifier.h"
 
 using namespace std;
 using namespace cv;
@@ -186,6 +187,7 @@ namespace rm
         float armorHeight;
         int armorType;
         float wh_ratio = 1;
+        int id = -1;
 
         double priority;
         float match_score, shoot_score;
@@ -254,6 +256,8 @@ namespace rm
         const int warp_height = 40;
         const int warp_small_width = 44;
         const int warp_large_width = 76;
+
+        NumberClassifier classifier;
         /**tool functions**/
 
         Rect GetArmorRect() const;

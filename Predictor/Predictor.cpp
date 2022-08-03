@@ -205,10 +205,10 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
     // 发回电控值加偏置
     back_ypd = offset + predict_ypd;
 
-    cout << "lost: " << lost_cnt << endl;
-    cout << "target_xyz: " << endl << target_xyz << endl;
-    cout << "predict_xyz: " << endl << predict_xyz << endl;
-    cout << "latency: " << endl << latency << endl;
+//    cout << "lost: " << lost_cnt << endl;
+//    cout << "target_xyz: " << endl << target_xyz << endl;
+//    cout << "predict_xyz: " << endl << predict_xyz << endl;
+//    cout << "latency: " << endl << latency << endl;
 
     // 显示数据，一般关掉
     if (DEBUG) {
@@ -397,7 +397,7 @@ bool Predictor::JudgeSpinning() {
     last_pose_yaw = solveAngle.yaw_;
     // while changing target armor the delta pose angle will meet a peak
     if (d_yaw > CV_PI / 3) {
-        cout << d_yaw << endl;
+        //cout << d_yaw << endl;
         if (!spin_flag) {
             last_t = time_series.back();
             spin_flag = true;
