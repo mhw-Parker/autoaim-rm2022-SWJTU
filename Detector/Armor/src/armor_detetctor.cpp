@@ -66,7 +66,9 @@ namespace rm{
         } else {
             lostCnt++;
         }
-        findState = lostCnt == 0;
+        findState = (lostCnt == 0);
+        if(showArmorBox && findState)
+            rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         //cout << "-- match : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
     }
     /**
@@ -252,7 +254,11 @@ namespace rm{
         armorType = (wh_ratio < 3) ? SMALL : LARGE;
         center.x = static_cast<int>((L1.rect.center.x + L2.rect.center.x) / 2);
         center.y = static_cast<int>((L1.rect.center.y + L2.rect.center.y) / 2);
-        rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2 * 2.27),
+        int angle = (L1.lightAngle + L2.lightAngle)/2;
+        // fuck
+        Point2i point_offset = Point2i (armorWidth*angle*0.2, -fabs(armorHeight*angle*0.1));
+        //cout << point_offset << endl;
+        rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2 * 2.27) + point_offset,
                     Size(armorWidth, armorHeight * 2.27));
     }
     /**

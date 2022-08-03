@@ -247,7 +247,7 @@ namespace rm
         Mat sub_binary_mat;
 
         const float max_lamp_angle = 5;
-        const float max_incline_angle = 20;
+        const float max_incline_angle = 30;
         const float small_armor_ratio = 2.33;
         const float big_armor_ratio = 3.83;
         const float max_lamps_height_error = 20;

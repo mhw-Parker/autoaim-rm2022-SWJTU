@@ -194,7 +194,7 @@ namespace rm {
             roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         } else if (!lostCnt) {
             // 应该保证
-            float scale_w = 12, scale_h = 4;
+            float scale_w = 7, scale_h = 4;
             int w = int(rectTemp.width * scale_w);
             int h = int(rectTemp.height * scale_h);
             int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);

@@ -9,7 +9,9 @@ namespace rm{
         LoadSvmModel(SVM_PARAM_PATH);
         LoadOnnxModel("../Detector/Armor/model/model_nin.onnx");
     }
-
+    /**
+     * @brief svm number detect
+     * */
     void NumberClassifier::LoadSvmModel(const char *model_path) {
         svm = cv::ml::StatModel::load<cv::ml::SVM>(model_path);
         if (svm.empty()) {
@@ -50,7 +52,7 @@ namespace rm{
                 if(detectionMat[i]> detectionMat[num])
                     num = i;
             }
-            // 置信度
+            // confidence
             vector<float> softmax_detect;
             float softmax_sum = 0;
             for(int i=0;i<detectionMat.size();i++){
