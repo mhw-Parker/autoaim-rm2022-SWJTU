@@ -53,7 +53,9 @@ namespace rm{
                         armor.pts[i] = armor.pts[i] + (Point2f)roi_corner;
                     }
                     RMTools::Connect4Pts(armor.pts, img);
-                    string id_str = "id:" + to_string(armor.id);
+//                    ostringstream out_str;
+//                    out_str << setiosflags(ios::fixed) << setprecision(2) << armor.conf;
+                    string id_str = "id:" + to_string(armor.id) + " " + to_string(armor.conf);
                     putText(img, id_str, armor.pts[0],
                             FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0),
                             1);
@@ -173,7 +175,7 @@ namespace rm{
             /* number detect */
             //possible_armor.id = classifier.SVMClassifier(num_roi);
             //double st = getTickCount();
-            possible_armor.id = classifier.FigureDetection(num_roi);
+            possible_armor.id = classifier.FigureDetection(num_roi, possible_armor.conf);
             //cout << "onnx inference time: " << RMTools::CalWasteTime(st) << endl;
             imshow("num roi", num_roi);
             candidate_armor.emplace_back(possible_armor);
@@ -269,8 +271,9 @@ namespace rm{
                 Point2f (warp_width, l_bot),
                 Point2f (0, l_bot)
         };
-        int start_col = warp_width/2 - lamp_height;
-        int end_col = warp_width/2 + lamp_height;
+        int half_num_width = lamp_height - 2;
+        int start_col = warp_width/2 - half_num_width;
+        int end_col = warp_width/2 + half_num_width;
         Point2f src_pts[4] = {pts[0],pts[1],pts[2],pts[3]};
         auto warp_perspective_mat = getPerspectiveTransform(src_pts, dst_pts);
         Mat warp_dst_img;
@@ -278,6 +281,7 @@ namespace rm{
                         Size(warp_width, warp_height),
                         INTER_NEAREST, BORDER_CONSTANT, Scalar(0));
         warp_dst_img = warp_dst_img.colRange(start_col, end_col);
+        resize(warp_dst_img, warp_dst_img, Size(SVM_IMAGE_SIZE, SVM_IMAGE_SIZE));
         pyrDown(warp_dst_img,warp_dst_img,Size(NUM_IMG_SIZE,NUM_IMG_SIZE));
         threshold(warp_dst_img, warp_dst_img, 0, 255, cv::THRESH_OTSU);
         return warp_dst_img;
