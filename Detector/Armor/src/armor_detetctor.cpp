@@ -13,6 +13,7 @@ namespace rm{
         st = getTickCount();
         /** detect lamps **/
         vector<Lamp> possible_lamps = MinLampDetect();
+        cout << "-- lamp : " << RMTools::CalWasteTime(st) << endl;
         if(showLamps) {
             for(auto &l : possible_lamps){
                 Point2f pts_[4];
@@ -21,16 +22,18 @@ namespace rm{
                     line(img, (Point2f)roi_corner+pts_[i], (Point2f)roi_corner+pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
                 }
                 circle(img, (Point2f)roi_corner+pts_[0], 2, Scalar(0, 255, 0));
-                putText(img, to_string(int(l.rect.size.width)), (Point2f)roi_corner+pts_[0],
-                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
-                        1);
+//                putText(img, to_string(int(l.rect.size.width)), (Point2f)roi_corner+pts_[0],
+//                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
+//                        1);
 
             }
         }
         /** match lamps **/
+        st = getTickCount();
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
-        if(showArmorBox)
+        cout << "-- match : " << RMTools::CalWasteTime(st) << endl;
+        if(showArmorBox && findState)
             rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         if(candidate_armor.size()) {
             targetArmor = candidate_armor.back();
@@ -44,12 +47,16 @@ namespace rm{
                 targetArmor.pts[i] = targetArmor.pts[i] + (Point2f)roi_corner;
             }
 
-            if(showArmorBox){
+            if(showArmorBox && findState){
                 for(auto &armor : candidate_armor){
                     for (int i = 0; i < 4; i++) {
                         armor.pts[i] = armor.pts[i] + (Point2f)roi_corner;
                     }
                     RMTools::Connect4Pts(armor.pts, img);
+                    string id_str = "id:" + to_string(armor.id);
+                    putText(img, id_str, armor.pts[0],
+                            FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0),
+                            1);
                 }
                 RMTools::Connect4Pts(targetArmor.pts, img, Scalar(0,255,0));
                 circle(img, (targetArmor.pts[0]+targetArmor.pts[2])/2, 2, Scalar(0, 255, 0),2);
@@ -162,8 +169,9 @@ namespace rm{
         vector<Armor> candidate_armor;
         for(int i = 0; i < match_lamps.size(); i++) {
             Armor possible_armor(possible_lamps[match_lamps[i].matchIndex1], possible_lamps[match_lamps[i].matchIndex2], match_lamps[i].matchFactor);
-            /* number detect */
             Mat num_roi = GetNumberRoi(possible_armor.pts, possible_armor.armorType);
+            /* number detect */
+            possible_armor.id = classifier.SVMClassifier(num_roi);
             imshow("num roi", num_roi);
             candidate_armor.emplace_back(possible_armor);
         }

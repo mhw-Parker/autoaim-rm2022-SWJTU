@@ -394,7 +394,7 @@ bool Predictor::JudgeSpinning() {
     last_pose_yaw = solveAngle.yaw_;
     // while changing target armor the delta pose angle will meet a peak
     if (d_yaw > CV_PI / 3) {
-        cout << d_yaw << endl;
+        //cout << d_yaw << endl;
         if (!spin_flag) {
             last_t = time_series.back();
             spin_flag = true;

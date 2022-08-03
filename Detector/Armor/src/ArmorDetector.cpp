@@ -555,6 +555,9 @@ namespace rm {
     const bool compMatchFactor(const MatchLight& a, const MatchLight& b) {
         return a.matchFactor < b.matchFactor;
     }
+    /**
+     * @brief compare 2 armors' shooting score
+     * */
     const bool compPriority(const Armor &a, const Armor &b) {
         return a.shoot_score < b.shoot_score;
     }
