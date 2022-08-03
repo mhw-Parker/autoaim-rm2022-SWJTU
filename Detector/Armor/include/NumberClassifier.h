@@ -16,15 +16,19 @@
 #include "mydefine.h"
 
 using namespace std;
+using namespace cv;
 
 namespace rm{
     class NumberClassifier{
     public:
         NumberClassifier();
         int SVMClassifier(cv::Mat &num_roi);
+        int FigureDetection(cv::Mat &num_gray_roi);
 
     private:
         void LoadSvmModel(const char *model_path);
+        void LoadOnnxModel(const string &model_path);
+        cv::dnn::Net net;
         cv::Mat svm_param_matrix;
         cv::Ptr<cv::ml::SVM> svm;
     };

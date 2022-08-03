@@ -171,7 +171,10 @@ namespace rm{
             Armor possible_armor(possible_lamps[match_lamps[i].matchIndex1], possible_lamps[match_lamps[i].matchIndex2], match_lamps[i].matchFactor);
             Mat num_roi = GetNumberRoi(possible_armor.pts, possible_armor.armorType);
             /* number detect */
-            possible_armor.id = classifier.SVMClassifier(num_roi);
+            //possible_armor.id = classifier.SVMClassifier(num_roi);
+            //double st = getTickCount();
+            possible_armor.id = classifier.FigureDetection(num_roi);
+            //cout << "onnx inference time: " << RMTools::CalWasteTime(st) << endl;
             imshow("num roi", num_roi);
             candidate_armor.emplace_back(possible_armor);
         }
