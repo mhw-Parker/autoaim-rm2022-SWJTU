@@ -187,7 +187,9 @@ namespace rm
         float armorHeight;
         int armorType;
         float wh_ratio = 1;
+
         int id = -1;
+        float conf = 0;
 
         double priority;
         float match_score, shoot_score;

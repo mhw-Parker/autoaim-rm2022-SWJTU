@@ -9,11 +9,11 @@ namespace rm{
         GetRoi(img);
         double st = getTickCount();
         BinaryMat(imgRoi);
-        cout << "-- preprocess : " << RMTools::CalWasteTime(st) << endl;
+        //cout << "-- preprocess : " << RMTools::CalWasteTime(st) << endl;
         st = getTickCount();
         /** detect lamps **/
         vector<Lamp> possible_lamps = MinLampDetect();
-        cout << "-- lamp : " << RMTools::CalWasteTime(st) << endl;
+        //cout << "-- lamp : " << RMTools::CalWasteTime(st) << endl;
         if(showLamps) {
             for(auto &l : possible_lamps){
                 Point2f pts_[4];
@@ -32,7 +32,7 @@ namespace rm{
         st = getTickCount();
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
-        cout << "-- match : " << RMTools::CalWasteTime(st) << endl;
+        //cout << "-- match : " << RMTools::CalWasteTime(st) << endl;
         if(showArmorBox && findState)
             rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         if(candidate_armor.size()) {
@@ -53,7 +53,9 @@ namespace rm{
                         armor.pts[i] = armor.pts[i] + (Point2f)roi_corner;
                     }
                     RMTools::Connect4Pts(armor.pts, img);
-                    string id_str = "id:" + to_string(armor.id);
+//                    ostringstream out_str;
+//                    out_str << setiosflags(ios::fixed) << setprecision(2) << armor.conf;
+                    string id_str = "id:" + to_string(armor.id) + " " + to_string(armor.conf);
                     putText(img, id_str, armor.pts[0],
                             FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0),
                             1);
@@ -173,7 +175,7 @@ namespace rm{
             /* number detect */
             //possible_armor.id = classifier.SVMClassifier(num_roi);
             //double st = getTickCount();
-            possible_armor.id = classifier.FigureDetection(num_roi);
+            possible_armor.id = classifier.FigureDetection(num_roi, possible_armor.conf);
             //cout << "onnx inference time: " << RMTools::CalWasteTime(st) << endl;
             imshow("num roi", num_roi);
             candidate_armor.emplace_back(possible_armor);

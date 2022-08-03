@@ -38,16 +38,24 @@ namespace rm{
     /**
      * @brief top task
      * */
-    int NumberClassifier::FigureDetection(cv::Mat &num_gray_roi) {
+    int NumberClassifier::FigureDetection(cv::Mat &num_gray_roi, float &conf) {
         Mat inputBlob= dnn::blobFromImage(num_gray_roi,1);
         net.setInput(inputBlob);
         vector<float> detectionMat = net.forward();
-        Mat dec=net.forward();
+        Mat dec = net.forward();
         int num=0;
-        for(int i=0;i<detectionMat.size();i++){
+        for(int i = 0; i < detectionMat.size(); i++){
             if(detectionMat[i]> detectionMat[num])
-                num=i;
+                num = i;
         }
+        // 置信度
+        vector<float> softmax_detect;
+        float softmax_sum = 0;
+        for(int i=0;i<detectionMat.size();i++){
+            softmax_detect.push_back(detectionMat[i]/255.F);
+            softmax_sum += exp(softmax_detect[i]);
+        }
+        conf = exp(softmax_detect[num])/softmax_sum;
         return num;
     }
 

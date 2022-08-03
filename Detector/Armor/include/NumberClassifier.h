@@ -23,7 +23,7 @@ namespace rm{
     public:
         NumberClassifier();
         int SVMClassifier(cv::Mat &num_roi);
-        int FigureDetection(cv::Mat &num_gray_roi);
+        int FigureDetection(cv::Mat &num_gray_roi, float &conf);
 
     private:
         void LoadSvmModel(const char *model_path);
