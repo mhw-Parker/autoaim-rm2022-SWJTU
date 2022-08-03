@@ -99,6 +99,10 @@ inline void Predictor::KalmanShallowRefresh() {
         RMKF.state_pre_[i] = target_xyz[i];
         RMKF.state_post_[i] = target_xyz[i];
     }
+    RMKF.state_pre_[5] *= -1;
+    RMKF.state_pre_[8] *= -1;
+    RMKF.state_post_[5] *= -1;
+    RMKF.state_post_[8] *= -1;
 }
 
 void Predictor::UpdateTimeStamp(float &dt) {
@@ -146,6 +150,8 @@ void Predictor::ArmorPredictor(vector<Point2f> &target_pts, const int& armor_typ
         if (distance > 250 && distance < 550) {
             // 进行浅重置，保留速度
             KalmanShallowRefresh();
+        } else if (distance > 550) {
+            KalmanRefresh();
         }
         // kalman预测要击打位置的xyz
         predict_xyz = KalmanPredict(dt, latency);

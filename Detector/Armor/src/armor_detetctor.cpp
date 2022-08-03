@@ -9,11 +9,11 @@ namespace rm{
         GetRoi(img);
         double st = getTickCount();
         BinaryMat(imgRoi);
-        cout << "-- preprocess : " << RMTools::CalWasteTime(st) << endl;
+//        cout << "-- preprocess : " << RMTools::CalWasteTime(st) << endl;
         st = getTickCount();
         /** detect lamps **/
         vector<Lamp> possible_lamps = MinLampDetect();
-        cout << "-- lamp : " << RMTools::CalWasteTime(st) << endl;
+//        cout << "-- lamp : " << RMTools::CalWasteTime(st) << endl;
         if(showLamps) {
             for(auto &l : possible_lamps){
                 Point2f pts_[4];
@@ -32,7 +32,7 @@ namespace rm{
         st = getTickCount();
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
-        cout << "-- match : " << RMTools::CalWasteTime(st) << endl;
+//        cout << "-- match : " << RMTools::CalWasteTime(st) << endl;
         if(showArmorBox && findState)
             rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         if(candidate_armor.size()) {
