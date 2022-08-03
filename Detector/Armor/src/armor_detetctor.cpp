@@ -33,7 +33,7 @@ namespace rm{
         vector<MatchLight> match_lamps = MatchLamps(possible_lamps);
         vector<Armor> candidate_armor = FindArmor(match_lamps, possible_lamps);
         cout << "-- match : " << RMTools::CalWasteTime(st) << endl;
-        if(showArmorBox)
+        if(showArmorBox && findState)
             rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         if(candidate_armor.size()) {
             targetArmor = candidate_armor.back();
@@ -47,7 +47,7 @@ namespace rm{
                 targetArmor.pts[i] = targetArmor.pts[i] + (Point2f)roi_corner;
             }
 
-            if(showArmorBox){
+            if(showArmorBox && findState){
                 for(auto &armor : candidate_armor){
                     for (int i = 0; i < 4; i++) {
                         armor.pts[i] = armor.pts[i] + (Point2f)roi_corner;
