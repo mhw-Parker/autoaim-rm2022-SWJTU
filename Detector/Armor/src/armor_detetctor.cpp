@@ -271,8 +271,9 @@ namespace rm{
                 Point2f (warp_width, l_bot),
                 Point2f (0, l_bot)
         };
-        int start_col = warp_width/2 - lamp_height;
-        int end_col = warp_width/2 + lamp_height;
+        int half_num_width = lamp_height - 2;
+        int start_col = warp_width/2 - half_num_width;
+        int end_col = warp_width/2 + half_num_width;
         Point2f src_pts[4] = {pts[0],pts[1],pts[2],pts[3]};
         auto warp_perspective_mat = getPerspectiveTransform(src_pts, dst_pts);
         Mat warp_dst_img;
@@ -280,6 +281,7 @@ namespace rm{
                         Size(warp_width, warp_height),
                         INTER_NEAREST, BORDER_CONSTANT, Scalar(0));
         warp_dst_img = warp_dst_img.colRange(start_col, end_col);
+        resize(warp_dst_img, warp_dst_img, Size(SVM_IMAGE_SIZE, SVM_IMAGE_SIZE));
         pyrDown(warp_dst_img,warp_dst_img,Size(NUM_IMG_SIZE,NUM_IMG_SIZE));
         threshold(warp_dst_img, warp_dst_img, 0, 255, cv::THRESH_OTSU);
         return warp_dst_img;
