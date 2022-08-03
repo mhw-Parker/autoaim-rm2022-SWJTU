@@ -7,6 +7,7 @@
 namespace rm{
     NumberClassifier::NumberClassifier() {
         LoadSvmModel(SVM_PARAM_PATH);
+        LoadOnnxModel("../Detector/Armor/model/model_nin.onnx");
     }
 
     void NumberClassifier::LoadSvmModel(const char *model_path) {
@@ -25,6 +26,29 @@ namespace rm{
         } else {
             return -1;
         }
+    }
+    /**
+     * @Author ChenZhen
+     * @brief use onnx to inference
+     * */
+    void NumberClassifier::LoadOnnxModel(const string &model_path) {
+        net = cv::dnn::readNetFromONNX(model_path);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    }
+    /**
+     * @brief top task
+     * */
+    int NumberClassifier::FigureDetection(cv::Mat &num_gray_roi) {
+        Mat inputBlob= dnn::blobFromImage(num_gray_roi,1);
+        net.setInput(inputBlob);
+        vector<float> detectionMat = net.forward();
+        Mat dec=net.forward();
+        int num=0;
+        for(int i=0;i<detectionMat.size();i++){
+            if(detectionMat[i]> detectionMat[num])
+                num=i;
+        }
+        return num;
     }
 
 }
