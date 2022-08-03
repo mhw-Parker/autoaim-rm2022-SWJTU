@@ -29,7 +29,7 @@ namespace rm{
     }
     /**
      * @Author ChenZhen
-     * @brief use onnx to inference
+     * @brief use onnx to inference number
      * */
     void NumberClassifier::LoadOnnxModel(const string &model_path) {
         net = cv::dnn::readNetFromONNX(model_path);
@@ -37,26 +37,32 @@ namespace rm{
     }
     /**
      * @brief top task
+     * @param num_gray_roi input image 20*20
      * */
-    int NumberClassifier::FigureDetection(cv::Mat &num_gray_roi, float &conf) {
-        Mat inputBlob= dnn::blobFromImage(num_gray_roi,1);
-        net.setInput(inputBlob);
-        vector<float> detectionMat = net.forward();
-        Mat dec = net.forward();
-        int num=0;
-        for(int i = 0; i < detectionMat.size(); i++){
-            if(detectionMat[i]> detectionMat[num])
-                num = i;
+    int NumberClassifier::FigureDetection(cv::Mat &num_roi, float &conf) {
+        if(num_roi.rows == NUM_IMG_SIZE && num_roi.cols == NUM_IMG_SIZE){
+            Mat inputBlob= dnn::blobFromImage(num_roi,1);
+            net.setInput(inputBlob);
+            vector<float> detectionMat = net.forward();
+            Mat dec = net.forward();
+            int num=0;
+            for(int i = 0; i < detectionMat.size(); i++){
+                if(detectionMat[i]> detectionMat[num])
+                    num = i;
+            }
+            // 置信度
+            vector<float> softmax_detect;
+            float softmax_sum = 0;
+            for(int i=0;i<detectionMat.size();i++){
+                softmax_detect.push_back(detectionMat[i]/255.F);
+                softmax_sum += exp(softmax_detect[i]);
+            }
+            conf = exp(softmax_detect[num])/softmax_sum;
+            return num;
+        } else {
+            return -1;
         }
-        // 置信度
-        vector<float> softmax_detect;
-        float softmax_sum = 0;
-        for(int i=0;i<detectionMat.size();i++){
-            softmax_detect.push_back(detectionMat[i]/255.F);
-            softmax_sum += exp(softmax_detect[i]);
-        }
-        conf = exp(softmax_detect[num])/softmax_sum;
-        return num;
+
     }
 
 }
