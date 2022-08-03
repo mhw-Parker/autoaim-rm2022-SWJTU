@@ -21,6 +21,7 @@ SolveAngle::SolveAngle() {
             fs["Intrinsic_Matrix_MIND133GC-0"] >> cameraMatrix;
             cv2eigen(cameraMatrix,cam_mat);
             coeff = 0.035;
+            gim_xyz_error << 0, -80, 120;
             break;
         case INFANTRY3:
             fs["Distortion_Coefficients5_MIND133GC-0"] >> distortionCoefficients;

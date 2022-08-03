@@ -302,7 +302,7 @@ namespace rm
             produceTime = CalWasteTime(st1, freq);
             // 读取视频空格暂停
             if (carName == VIDEO) {
-                if (waitKey(1) == 32) {
+                if (waitKey(8) == 32) {
                     while (waitKey() != 32) {}
                 }
             }

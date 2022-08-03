@@ -165,11 +165,12 @@ namespace rm {
     * @details: none
     */
     bool ArmorDetector::ArmorDetectTask(Mat &img_) {
-        //GetRoi(img_); //get roi
+
         TopDetectTask(img_);
+
+//        GetRoi(img_); //get roi
 //        Preprocess(imgRoi);
 //        DetectArmor(img_);
-
 
 //        if (!showArmorBox) {
 //            printf("----- Armor Detector Info -----\n");
@@ -194,7 +195,7 @@ namespace rm {
             roiRect = Rect(0, 0, FRAMEWIDTH, FRAMEHEIGHT);
         } else if (!lostCnt) {
             // 应该保证
-            float scale_w = 7, scale_h = 4;
+            float scale_w = 8, scale_h = 4;
             int w = int(rectTemp.width * scale_w);
             int h = int(rectTemp.height * scale_h);
             int x = int(rectTemp.x - (w - rectTemp.width) * 0.5);

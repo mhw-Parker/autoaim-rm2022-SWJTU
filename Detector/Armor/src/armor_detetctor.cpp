@@ -22,9 +22,9 @@ namespace rm{
                     line(img, (Point2f)roi_corner+pts_[i], (Point2f)roi_corner+pts_[(i + 1) % 4],Scalar(255, 0, 255), 1);
                 }
                 circle(img, (Point2f)roi_corner+pts_[0], 2, Scalar(0, 255, 0));
-//                putText(img, to_string(int(l.rect.size.width)), (Point2f)roi_corner+pts_[0],
-//                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
-//                        1);
+                putText(img, to_string(int(l.avgRSubBVal)), (Point2f)roi_corner+pts_[0],
+                        FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255),
+                        1);
 
             }
         }
@@ -67,8 +67,8 @@ namespace rm{
             lostCnt++;
         }
         findState = (lostCnt == 0);
-        if(showArmorBox && findState)
-            rectangle(img, roiRect, Scalar(255, 255, 255), 1);
+//        if(showArmorBox && findState)
+//            rectangle(img, roiRect, Scalar(255, 255, 255), 1);
         //cout << "-- match : " << RMTools::CalWasteTime(st,getTickFrequency()) << endl;
     }
     /**
@@ -86,7 +86,7 @@ namespace rm{
         else
             subtract(channels[2],channels[0],sub_mat);
         threshold(sub_mat,sub_binary_mat,100,255,THRESH_BINARY); // 80
-        //imshow("binary",num_binary_mat);
+        imshow("binary",gray_binary_mat);
     }
     /**
      * @brief test min area Rect for armor detector
@@ -97,15 +97,15 @@ namespace rm{
         findContours(gray_binary_mat, contoursLight, RETR_EXTERNAL, CHAIN_APPROX_NONE);
         /** find possible lamp **/
         for(auto &light : contoursLight) {
-            if(light.size() < 25) continue;
+            if(light.size() < param.minPointNum) continue;
             RotatedRect lamp_rect = fitEllipse(light);
             /// limit rect rotate angle
             lamp_rect.angle = lamp_rect.angle > 90 ? lamp_rect.angle-180 : lamp_rect.angle;
             float angle_ = lamp_rect.angle;
-            if (fabs(angle_) >= 17) continue;
+            if (fabs(angle_) >= param.maxLightAngle) continue;
             /// limit rect height / width ratio
             float ratio_ = lamp_rect.size.height / lamp_rect.size.width;
-            if (ratio_ < 2.5 || ratio_ > 16) continue;
+            if (ratio_ < 1.2 || ratio_ > 16) continue;
             /// limit rect width
             if (lamp_rect.size.width > 35) continue;
             /// judge color
@@ -114,7 +114,8 @@ namespace rm{
             Mat_<u_int8_t > lamp_image = sub_binary_mat(bounding_lamp);
             Scalar_<float> avg_brightness = mean(lamp_image);
             avg_brightness[0] /= cos(angle_/180);
-            if(avg_brightness[0] < 35) continue;
+            if (avg_brightness[0] < param.minAverageBrightness || avg_brightness[0] > param.maxAverageBrightness)
+                continue;
             /// store possible lamps
             Lamp lamp_info(lamp_rect, avg_brightness[0]);
             possible_lamps.emplace_back(lamp_info);
