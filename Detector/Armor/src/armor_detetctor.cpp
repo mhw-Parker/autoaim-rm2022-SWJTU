@@ -308,9 +308,8 @@ namespace rm{
         center.x = static_cast<int>((L1.rect.center.x + L2.rect.center.x) / 2);
         center.y = static_cast<int>((L1.rect.center.y + L2.rect.center.y) / 2);
         int angle = (L1.lightAngle + L2.lightAngle)/2;
-        // fuck
+        // fuck dynamic roi, give a point offset associated to incline angle in order to approximately locate the car center
         Point2i point_offset = Point2i (armorWidth*angle*0.2, -fabs(armorHeight*angle*0.1));
-        //cout << point_offset << endl;
         rect = Rect(center - Point2i(armorWidth / 2, armorHeight / 2 * 2.27) + point_offset,
                     Size(armorWidth, armorHeight * 2.27));
     }
