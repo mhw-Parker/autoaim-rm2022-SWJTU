@@ -189,7 +189,7 @@ namespace rm
         float wh_ratio = 1;
 
         int id = -1;
-        float conf = 0;
+        float num_conf = 0;
 
         double priority;
         float match_score, shoot_score;
@@ -237,13 +237,13 @@ namespace rm
         void BinaryMat(Mat &roi);
         vector<Lamp> MinLampDetect();
         vector<MatchLight> MatchLamps(vector<Lamp> &possible_lamps);
-        vector<Armor> FindArmor(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps);
+        vector<Armor> FindArmors(vector<MatchLight> &match_lamps, vector<Lamp> &possible_lamps);
         bool IsArmor(Lamp &l_1, Lamp &l_2, float &score);
         Mat GetNumberRoi(vector<Point2f> &pts, uint8_t armor_type);
+        Armor GetTargetArmor(vector<Armor> &candidate_armor);
 
         Mat gray_mat;
         Mat gray_binary_mat;
-        Mat num_binary_mat;
         Mat sub_binary_mat;
 
         const float max_lamp_angle = 5;
