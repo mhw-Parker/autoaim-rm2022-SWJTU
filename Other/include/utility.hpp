@@ -216,6 +216,17 @@ namespace RMTools {
             }
             return background;
         }
+        /**
+         * @brief clear wave
+         * */
+        void clear(){
+            cnt = 0;
+            background = Mat(h, w, CV_8UC3, Scalar::all(0));
+            line(background, Point2f(0, mid_h), Point2f(w, mid_h), Scalar::all(255));
+            for(auto &p : last_pts){
+                p = Point2f(0,mid_h);
+            }
+        }
 
     };
 

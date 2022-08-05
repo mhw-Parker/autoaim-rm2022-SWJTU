@@ -19,6 +19,7 @@ void Predictor::EnergyRefresh(){
     filter_omega.clear();
     time_series.clear();
     t_list.clear();
+    omegaWave.clear();
     total_theta = 0;
     /** init state **/
     ctrl_mode = INIT;
@@ -87,12 +88,14 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 else {
                     predict_rad = IdealRad(t_list.back(), t_list.back() + latency);
                 }
-                if(DEBUG)
-                    imshow("omega", omegaWave.Oscilloscope(filter_omega.back(),energy_rotation_direction*current_omega));
+//                if(showEnergy)
+                    imshow("omega", omegaWave.Oscilloscope(filter_omega.back(),energy_rotation_direction*current_omega, wt));
+                waitKey(1);
             }
             else {
                 predict_rad = (omega_kf_flag) ? filter_omega.back()*latency : 0;
             }
+
         }
         else {
             predict_rad = 1.05 * latency;
@@ -115,8 +118,6 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
         vector<float> data = {sqrt(predict_xyz[0]*predict_xyz[0]+predict_xyz[2]*predict_xyz[2]),-predict_xyz[1],
                               average_v_bullet,predict_ypd[1],gimbal_ypd[1],predict_ypd[0],latency,predict_rad};
         RMTools::showData(data,str,"energy param");
-        //omegaWave.displayWave(predict_rad,filter_omega.back(),"omega");
-        //omegaWave.displayWave(total_theta,filter_omega.back(),"total_theta");
     }
 
 }
@@ -379,12 +380,12 @@ void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
     std::cout << "Final   a: " << a_ << " w: " << w_ << " phi: " << phi_ <<"\n";
     //cout << "拟合数据下标起点：" << st_ << " " << omega_[st_] << " 拟合数据点数 ： " << omega.size() - st_ << " 函数中值：" << (2.09-min_w)/2 << endl;
 
-    float sim_omega;
-    string win_name = "fit curve No. " + to_string(fit_cnt);
-    for(int i=st_; i < omega_.size(); i++){
-        sim_omega = IdealOmega(t_[i]);
-        //omegaWave.displayWave(omega_[i],sim_omega,win_name);
-    }
+//    float sim_omega;
+//    string win_name = "fit curve No. " + to_string(fit_cnt);
+//    for(int i=st_; i < omega_.size(); i++){
+//        sim_omega = IdealOmega(t_[i]);
+//        omegaWave.displayWave(omega_[i],sim_omega,win_name);
+//    }
 
     if(a_ < 0.780) a_ = 0.785;
     else if(a_ > 1.045 ) a_ = 1.045;

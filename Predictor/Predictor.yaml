@@ -36,5 +36,5 @@ Video:
    yaw_offset: 0
    pitch_offset: 0
 Energy:
-   yaw_offset: -1
+   yaw_offset: -0.5
    pitch_offset: 1.2
