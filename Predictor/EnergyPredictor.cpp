@@ -4,12 +4,13 @@
 #include "Predictor.h"
 
 /******************************************************************************************/
-
+/**                                                                                      **/
 /**----------------------- Helios 2022赛季能量机关预测部分 ---------------------------------**/
-
+/**                                                                                      **/
 /******************************************************************************************/
+
 /**
- * @brief clear all
+ * @brief clear all container
  * */
 void Predictor::EnergyRefresh(){
     /** clear vector container **/
@@ -80,13 +81,14 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                     fit_cnt++;
                     if(fit_cnt%30 == 0){
                         ctrl_mode = STANDBY; // if the difference value between ideal omega and filter omega is too big
-                        st_ = filter_omega.size() - 50;// use 200 points refit the ideal omega
+                        st_ = filter_omega.size() - 70;// use 200 points refit the ideal omega
                     }
                 }
                 else {
                     predict_rad = IdealRad(t_list.back(), t_list.back() + latency);
                     if(DEBUG)
-                        omegaWave.displayWave(wt, energy_rotation_direction*current_omega, "omega");
+                        imshow("omega", omegaWave.Oscilloscope(filter_omega.back(),energy_rotation_direction*current_omega));
+
                 }
             }
             else {
@@ -137,7 +139,7 @@ bool Predictor::EnergyStateSwitch() {
             }
             return false;
         case STANDBY:
-            if(time_series.back() - time_series[st_] > 1 && time_series.size() - st_ > 150) {
+            if(time_series.back() - time_series[st_] > 1.5) {
                 ctrl_mode = ESTIMATE;
             }
             return false;
@@ -274,7 +276,7 @@ float Predictor::IdealRad(float t1, float t2) {
 /**
  * @brief use kalman filter to smoothen omega
  * */
-void Predictor::FilterOmega(const float& dt) {
+void Predictor::FilterOmega(const float &dt) {
     omega_kf.trans_mat_ <<  1, dt,0.5*dt*dt,
             0, 1, dt,
             0, 0, 1;
@@ -291,7 +293,7 @@ void Predictor::FilterOmega(const float& dt) {
  * @brief get rad by determining phi with inverse solution
  * @details abandoned
  * */
-void Predictor::FilterRad(const float& latency) {
+void Predictor::FilterRad(const float &latency) {
     vector<float> cut_filter_omega(filter_omega.end()-6,filter_omega.end()); //取 av_omega 的后 6 个数
     vector<float> cut_time_series(time_series.end()-6,time_series.end());
     Eigen::MatrixXd rate = RMTools::LeastSquare(cut_time_series,cut_filter_omega,1); //一元函数最小二乘
@@ -357,7 +359,7 @@ void Predictor::initFanRadKalman() {
  * @param times 用于曲线拟合的数据点数量
  * */
 void Predictor::estimateParam(vector<float> &omega_, vector<float> &t_) {
-    for(int i = st_; i < omega_.size(); i++){
+    for(int i = st_; i < omega_.size(); i=i+2){
         ceres::CostFunction* cost_func =
                 new ceres::AutoDiffCostFunction<SinResidual,1,1,1,1>(
                         new SinResidual(t_[i], omega_[i]));

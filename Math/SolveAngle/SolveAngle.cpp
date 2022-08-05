@@ -113,8 +113,8 @@ void SolveAngle::Generate3DPoints(const int targetSize) {
             //printf("-- Big Armor ! --\n");
             break;
         case ENERGY_ARMOR:
-            targetHeight3D = 155; // 130
-            targetWidth3D = 245; // 225
+            targetHeight3D = 157; // 130
+            targetWidth3D = 230; // 225
             //printf("-- Energy Armor ! --\n");
             break;
         case SMALL:

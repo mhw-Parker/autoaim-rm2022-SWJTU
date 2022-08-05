@@ -60,6 +60,10 @@ namespace RMTools {
         Mat background;
         Point2f last_p1;
         Point2f last_p2;
+
+        cv::Scalar color[4] = {Scalar(0,255,0), Scalar(0,255,255),
+                               Scalar(255, 0, 255), Scalar(255,255,0)};
+        Point2f last_pts[4], cur_pts[4];
         int cnt = 0;
 
     public:
@@ -88,11 +92,19 @@ namespace RMTools {
             copy = src.clone();
         };
 
+        /**
+         * @brief a constructor about the wave tool
+         * @param dataRange the absolute maximum among the data
+         * @param height the window's height
+         * @param width the window's width
+         * */
         DisPlayWaveCLASS(float dataRange, int height, int width) : ratio((height / 2) / dataRange), h(height), w(width),
                                                                    mid_h(height / 2) {
             background = Mat(h, w, CV_8UC3, Scalar::all(0));
-            copy = background.clone();
-            line(copy, Point2f(0, height / 2), Point2f(w, height / 2), Scalar::all(255));
+            line(background, Point2f(0, height / 2), Point2f(w, height / 2), Scalar::all(255));
+            for(auto &p : last_pts){
+                p = Point2f(0,mid_h);
+            }
         }
 
         void DisplayWave() {
@@ -158,11 +170,11 @@ namespace RMTools {
             Point2f cur_p2 = Point2f(cnt, amplitude2);
 
             if (last_p1 != Point2f(0, 0)) {
-                line(copy, cur_p1, last_p1, Scalar(0, 255, 0));     // line input 1
-                line(copy, cur_p2, last_p2, Scalar(0, 255, 255));   // line input 2
+                line(background, cur_p1, last_p1, Scalar(0, 255, 0));     // line input 1
+                line(background, cur_p2, last_p2, Scalar(0, 255, 255));   // line input 2
             }
 
-            imshow(win_name, copy);
+            imshow(win_name, background);
             waitKey(1);
 
             cnt += 2;
@@ -173,9 +185,36 @@ namespace RMTools {
                 cnt = 0;
                 last_p1 = Point2f(0, 0);
                 last_p2 = Point2f(0, 0);
-                copy = background.clone();
+                background = Mat(h, w, CV_8UC3, Scalar::all(0));
                 line(copy, Point2f(0, h / 2), Point2f(w, h / 2), Scalar::all(255));
             }
+        }
+        /**
+         * @brief a brief oscilloscope used to show the wave of the data
+         * @param line1 green line
+         * @param line2 yellow line
+         * @param line3 pink line
+         * @param line4 sky blue line
+         * */
+        inline cv::Mat Oscilloscope(float line1=0, float line2=0, float line3=0, float line4=0){
+            float data[4] = {line1,line2,line3,line4};
+            for(int i=0; i<4; i++){
+                int a = mid_h - ratio * data[i];
+                a = (a<0) ? 0 : a;
+                a = (a>h) ? h : a;
+                cur_pts[i] = Point2f(cnt, a);
+                line(background, cur_pts[i], last_pts[i], color[i]);
+                last_pts[i] = cur_pts[i];
+            }
+            cnt += 2;
+            if(cnt > w) {
+                cnt = 0;
+                for(auto &p : last_pts)
+                    p.x = cnt;
+                background = Mat(h, w, CV_8UC3, Scalar::all(0));
+                line(background, Point2f(0, mid_h), Point2f(w, mid_h), Scalar::all(255));
+            }
+            return background;
         }
 
     };
