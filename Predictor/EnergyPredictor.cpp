@@ -86,10 +86,9 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
                 }
                 else {
                     predict_rad = IdealRad(t_list.back(), t_list.back() + latency);
-                    if(DEBUG)
-                        imshow("omega", omegaWave.Oscilloscope(filter_omega.back(),energy_rotation_direction*current_omega));
-
                 }
+                if(DEBUG)
+                    imshow("omega", omegaWave.Oscilloscope(filter_omega.back(),energy_rotation_direction*current_omega));
             }
             else {
                 predict_rad = (omega_kf_flag) ? filter_omega.back()*latency : 0;
@@ -103,15 +102,10 @@ void Predictor::EnergyPredictor(uint8_t mode, vector<Point2f> &target_pts, Point
     predict_rad *= energy_rotation_direction;
     predict_point = calPredict(target_point,center,predict_rad); // 逆时针为负的预测弧度，顺时针为正 预测弧度
     getPredictRect(center, target_pts, predict_rad); // 获得预测矩形
-    solveAngle.GetPoseV(target_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
+    solveAngle.GetPoseV(predict_pts, ENERGY_ARMOR, gimbal_ypd); /// 测试弹道 predict_pts -> target_pts
     delta_ypd << -solveAngle.yaw, solveAngle.pitch, solveAngle.dist;
     predict_ypd = gimbal_ypd + delta_ypd;
     predict_xyz = solveAngle.world_xyz;
-    if(average_v_bullet > 22) {
-        predict_xyz[1] += 130;
-    }else {
-        predict_xyz[1] += 280;
-    }
     //cout << predict_xyz << endl << endl;
     predict_ypd[1] = solveAngle.iteratePitch(predict_xyz, average_v_bullet, fly_t);
     back_ypd = predict_ypd + energy_offset;
