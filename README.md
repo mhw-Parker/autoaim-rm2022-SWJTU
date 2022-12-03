@@ -7,7 +7,6 @@
 |  硬件   | 型号  |
 |  ----  | ----  |
 | 视觉开发板  | NVIDIA XAVIER NX |
-| 视觉开发板  | NVIDIA JETSON NANO |
 | 视觉开发板  | Intel NUC i5|
 | 摄像头  | MV-SUA133GC-T |
 | 摄像头  | MV-SUA134GC-T |
@@ -16,11 +15,15 @@
 - 二级文件树列表
 
 <pre><font color="#3465A4"><b>.</b></font>
-├── <span style="background-color:#4E9A06"><font color="#3465A4">Armor</font></span>
-│   ├── <span style="background-color:#4E9A06"><font color="#3465A4">include</font></span>
-│   ├── <font color="#3465A4"><b>resource</b></font>
-│   └── <span style="background-color:#4E9A06"><font color="#3465A4">src</font></span>
 ├── <font color="#4E9A06"><b>CMakeLists.txt</b></font>
+├── <font color="#4E9A06"><b>config.h</b></font>
+├── <font color="#4E9A06"><b>config.h.in</b></font>
+├── <font color="#4E9A06"><b>main.cpp</b></font>
+├── <font color="#4E9A06"><b>RMSelfStart.sh</b></font>
+├── <span style="background-color:#4E9A06"><font color="#3465A4">Detector</font></span>
+│   ├── <span style="background-color:#4E9A06"><font color="#3465A4">Armor</font></span>
+│   ├── <font color="#3465A4"><b>Energy</b></font>
+│   └── <span style="background-color:#4E9A06"><font color="#3465A4">resource</font></span>
 ├── <span style="background-color:#4E9A06"><font color="#3465A4">Drivers</font></span>
 │   ├── <span style="background-color:#4E9A06"><font color="#3465A4">DAHUA</font></span>
 │   ├── <font color="#4E9A06"><b>Driver.h</b></font>
