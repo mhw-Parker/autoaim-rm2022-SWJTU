@@ -15,7 +15,7 @@
 - 二级文件树列表
 
 <pre><font color="#3465A4"><b>.</b></font>
-├── <font color="#4E9A06"><b>CMakeLists.txt</b></font>
+├── <font color="#4E9A06"><b>CMakeLists.txt</font>
 ├── <font color="#4E9A06"><b>config.h</b></font>
 ├── <font color="#4E9A06"><b>config.h.in</b></font>
 ├── <font color="#4E9A06"><b>main.cpp</b></font>
