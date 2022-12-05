@@ -14,11 +14,15 @@
 | 摄像头  | KS1A522 |
 
 ## 必要的库
-Eigen >= 3.3.9
+- OpenCV + OpenCV Contrib >= 4.5.4
 
-Ceres-Solver
+- Eigen >= 3.3.9
 
-- 二级文件树列表
+- Ceres-Solver
+
+- glog
+
+## 二级文件树列表
 
 <pre><font color="#3465A4"><b>.</b></font>
 ├── <font color="#4E9A06"><b>CMakeLists.txt</font>
